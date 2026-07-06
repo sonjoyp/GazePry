@@ -4,15 +4,6 @@
 
 *A Threat-Model Assessment for the GazePry Project*
 
-| | |
-|---|---|
-| **Prepared for** | Doctoral Supervisor |
-| **Prepared by** | Sonjoy |
-| **Project** | GazePry — Privacy & Security of In-Browser Gaze Tracking |
-| **Affiliation** | Texas A&M University |
-| **Date** | 30 June 2026 |
-| **Status** | Internal technical report (working assessment) |
-
 ---
 
 ## Contents

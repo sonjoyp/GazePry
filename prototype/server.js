@@ -11,7 +11,6 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
-const url = require("url");
 const reid = require("./reid-core");
 
 function arg(name, def) {
@@ -96,8 +95,9 @@ function serveStatic(req, res, pathname) {
 
 // ---- server -------------------------------------------------------------
 const server = http.createServer(async (req, res) => {
-  const parsed = url.parse(req.url, true);
-  const pathname = parsed.pathname;
+  const u = new URL(req.url, "http://" + (req.headers.host || "localhost"));
+  const pathname = u.pathname;
+  const query = u.searchParams;
 
   if (req.method === "OPTIONS") return send(res, 204, "");
 
@@ -119,7 +119,7 @@ const server = http.createServer(async (req, res) => {
 
   // GET /status — which tasks this participant/session has completed
   if (req.method === "GET" && pathname === "/status") {
-    const p = parsed.query.participant, s = parsed.query.session;
+    const p = query.get("participant"), s = query.get("session");
     const tasks = loadGallery()
       .filter((g) => g.participant === p && g.session === s)
       .map((g) => g.task);

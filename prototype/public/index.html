@@ -85,15 +85,26 @@
       GazePry.saveIdentity(pid.value.trim(), sid.value);
       document.getElementById("whoPill").textContent =
         GazePry.identity.participant + " · " + GazePry.identity.session;
-      document.getElementById("idNote").textContent = "Starting camera…";
-      await GazePry.calibrate({ clicksPerDot: 5, fresh: true });
-      document.getElementById("step-id").style.display = "none";
-      document.getElementById("step-tasks").style.display = "block";
-      markDone();
+      var note = document.getElementById("idNote");
+      note.textContent = "Starting camera… (allow webcam access, then the calibration dots appear)";
+      startBtn.disabled = true;
+      try {
+        await GazePry.calibrate({ clicksPerDot: 5, fresh: true });
+        document.getElementById("step-id").style.display = "none";
+        document.getElementById("step-tasks").style.display = "block";
+        markDone();
+      } catch (e) {
+        console.error("calibration error:", e);
+        note.textContent = "Camera/calibration failed: " + (e && e.message ? e.message : e) +
+          ". Check the browser console (F12) and that webcam access was allowed.";
+        startBtn.disabled = false;
+      }
     });
 
     document.getElementById("calBtn").addEventListener("click", function () {
-      GazePry.calibrate({ clicksPerDot: 5 });
+      GazePry.calibrate({ clicksPerDot: 5 }).catch(function (e) {
+        console.error("recalibration error:", e);
+      });
     });
 
     // mark tasks completed this session (server tells us; fallback to localStorage)

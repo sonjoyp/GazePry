@@ -63,15 +63,36 @@
   GazePry.startEngine = async function () {
     if (this._engineReady) return;
     if (!window.webgazer) throw new Error("webgazer.js not loaded before gazepry-tracker.js");
-    await webgazer
+    console.log("[GazePry] starting WebGazer engine…");
+
+    var beginPromise = webgazer
       .setRegression("ridge")
       .saveDataAcrossSessions(this.config.saveAcrossSessions)
       .setGazeListener(function () {}) // real listener attached per task
       .begin();
-    webgazer.showVideoPreview(true).showPredictionPoints(true).applyKalmanFilter(true);
-    // shrink the preview so it does not obscure task content
-    try { webgazer.params.videoViewerWidth = 160; webgazer.params.videoViewerHeight = 120; } catch (e) {}
+
+    // begin() only resolves after WebGazer's first prediction loop completes;
+    // in some environments that first getPrediction() stalls, leaving begin()
+    // pending forever. The webcam and the click-to-train mouse listeners are
+    // already live by the time the video appears, so don't block the UI on it:
+    // race begin() against a timeout and proceed either way. Attach a catch so a
+    // late rejection never becomes a silent unhandled rejection.
+    var settled = Promise.resolve(beginPromise)
+      .then(function () { return "ready"; })
+      .catch(function (e) { console.error("[GazePry] webgazer.begin() error:", e); return "error"; });
+    var timeout = new Promise(function (res) { setTimeout(function () { res("timeout"); }, 6000); });
+    var outcome = await Promise.race([settled, timeout]);
+    if (outcome === "timeout")
+      console.warn("[GazePry] begin() slow to resolve after 6s; proceeding (webcam is live, click-training is active).");
+
+    try {
+      webgazer.showVideoPreview(true).showPredictionPoints(true).applyKalmanFilter(true);
+      webgazer.params.videoViewerWidth = 160; // shrink preview so it doesn't cover content
+      webgazer.params.videoViewerHeight = 120;
+    } catch (e) { console.warn("[GazePry] preview config warning:", e); }
+
     this._engineReady = true;
+    console.log("[GazePry] engine ready (outcome: " + outcome + ").");
   };
 
   GazePry.hidePreview = function (hide) {
@@ -87,7 +108,8 @@
     var clicksPerDot = opts.clicksPerDot || 5;
     var self = this;
 
-    return new Promise(async function (resolve) {
+    return new Promise(async function (resolve, reject) {
+     try {
       await self.startEngine();
       if (opts.fresh && window.webgazer) {
         try { webgazer.clearData(); } catch (e) {} // reset model for a new session
@@ -140,6 +162,11 @@
       });
 
       document.body.appendChild(overlay);
+     } catch (e) {
+      console.error("[GazePry] calibration failed:", e);
+      GazePry._toast("Calibration/engine error: " + (e && e.message ? e.message : e) + " — see console (F12).");
+      reject(e);
+     }
     });
   };
 
@@ -150,7 +177,8 @@
     var durationMs = (opts.durationSec || 60) * 1000;
     var self = this;
 
-    return new Promise(async function (resolve) {
+    return new Promise(async function (resolve, reject) {
+     try {
       await self.startEngine();
       self.hidePreview(true); // capture cleanly; preview off during the task
       self._samples = [];
@@ -219,6 +247,11 @@
         });
         if (left <= 0) finish();
       }, 200);
+     } catch (e) {
+      console.error("[GazePry] capture failed:", e);
+      GazePry._toast("Capture/engine error: " + (e && e.message ? e.message : e) + " — see console (F12).");
+      reject(e);
+     }
     });
   };
 
@@ -226,7 +259,8 @@
   GazePry.captureProbe = function (durationSec) {
     var self = this;
     var durationMs = (durationSec || 20) * 1000;
-    return new Promise(async function (resolve) {
+    return new Promise(async function (resolve, reject) {
+     try {
       await self.startEngine();
       self.hidePreview(true);
       var samples = [];
@@ -260,6 +294,11 @@
           live: samples.length && samples[samples.length - 1].x != null });
         if (left <= 0) finish();
       }, 200);
+     } catch (e) {
+      console.error("[GazePry] probe capture failed:", e);
+      GazePry._toast("Probe/engine error: " + (e && e.message ? e.message : e) + " — see console (F12).");
+      reject(e);
+     }
     });
   };
 
@@ -322,6 +361,18 @@
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date(0).toUTCString() + ";path=/");
     });
     if (window.webgazer) { try { webgazer.clearData(); } catch (e) {} }
+  };
+
+  // Small on-screen error banner so failures aren't silent for console-less users.
+  GazePry._toast = function (msg) {
+    var t = document.createElement("div");
+    t.textContent = msg;
+    t.style.cssText =
+      "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:2147483647;" +
+      "background:#f87171;color:#250606;padding:10px 16px;border-radius:8px;" +
+      "font:600 14px system-ui,sans-serif;max-width:80vw;box-shadow:0 8px 24px rgba(0,0,0,.4);";
+    document.body.appendChild(t);
+    setTimeout(function () { t.remove(); }, 9000);
   };
 
   window.GazePry = GazePry;

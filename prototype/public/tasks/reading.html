@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reading task — GazePry</title>
+  <link rel="stylesheet" href="../tracker.css" />
+  <style>
+    .reading { max-width: 720px; margin: 0 auto; padding: 28px 24px 120px; font-size: 1.12rem; }
+    .reading h1 { font-size: 1.5rem; }
+    .reading p { margin: 0 0 1.1em; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-startbar" id="gp-startbar">
+    <span class="gp-note">Task: <b>Reading</b> · <span id="gp-who"></span></span>
+    <button class="gp-btn" type="button" id="gp-start" data-task="reading" data-duration="90">Start recording</button>
+  </div>
+
+  <article class="reading">
+    <h1>The Peculiar Economics of Lighthouses</h1>
+    <p>For most of the twentieth century, the lighthouse was economists' favorite example of a good that markets could not provide. The reasoning seemed airtight. A lighthouse casts its beam across the water indiscriminately; it cannot shine for the ship that has paid and go dark for the one that has not. Its benefit is non-excludable. And one ship's use of the light does not diminish another's. Its benefit is non-rival. A good that is both non-excludable and non-rival is the textbook definition of a public good, and public goods, the argument runs, will be under-supplied by private enterprise because no one can be made to pay for them.</p>
+    <p>The economist Ronald Coase found this tidy story irritating precisely because it was so often repeated without anyone checking whether it was true. In 1974 he went looking at the actual history of lighthouses in England and Wales, and what he found did not match the theory. For centuries, lighthouses there had been built and operated by private individuals who recovered their costs through tolls collected at nearby ports. A ship that benefited from the light paid a fee when it docked; refuse to pay, and you would find it difficult to use the harbor at all.</p>
+    <p>The mechanism that made this work was not some clever exclusion of the light itself but the coupling of the light to a service that <em>was</em> excludable: the use of the port. You could not easily bill photons, but you could bill a berth. This is a recurring pattern in the provision of so-called public goods. The good that looks impossible to sell is bundled with an adjacent good that is perfectly ordinary to sell, and the bundle finances the whole.</p>
+    <p>None of this proves that markets always provide such goods well, or that governments have no role. Coase's point was narrower and, in a way, more unsettling. The lighthouse had been chosen as the canonical example of market failure not because anyone had studied lighthouses, but because it made for a vivid classroom illustration. The example had taken on a life independent of the facts. A generation of students learned that lighthouses could not be privately provided at the very moment when a short walk to the archives would have shown that they had been, for two hundred years.</p>
+    <p>The episode is remembered less for what it says about lighthouses than for what it says about how economists reason. It is easy to construct an example, harder to check it, and easiest of all to pass a convenient example down through textbooks until it hardens into something everyone knows and no one has verified. The light, in the end, illuminated the historians of the discipline as much as it ever did the sea.</p>
+  </article>
+
+  <script src="../lib/webgazer.js"></script>
+  <script src="../gazepry-tracker.js"></script>
+  <script src="../task-runner.js"></script>
+</body>
+</html>

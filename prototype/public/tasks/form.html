@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Form / typing task — GazePry</title>
+  <link rel="stylesheet" href="../tracker.css" />
+  <style>
+    .formwrap { max-width: 560px; margin: 0 auto; padding: 24px 24px 120px; }
+    .formwrap .hint { color: var(--gp-muted); font-size: .9rem; margin-bottom: 16px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-startbar" id="gp-startbar">
+    <span class="gp-note">Task: <b>Form / typing</b> · <span id="gp-who"></span></span>
+    <button class="gp-btn" type="button" id="gp-start" data-task="form" data-duration="75">Start recording</button>
+  </div>
+
+  <div class="formwrap">
+    <h1>Create your account</h1>
+    <p class="hint">Fill this in with any made-up (non-real) details. The gaze between the fields and the on-screen labels is what we record — do not enter anything sensitive.</p>
+    <form onsubmit="return false" autocomplete="off">
+      <div class="two">
+        <div><label for="fn">First name</label><input type="text" id="fn" /></div>
+        <div><label for="ln">Last name</label><input type="text" id="ln" /></div>
+      </div>
+      <label for="em">Email</label><input type="email" id="em" placeholder="name@example.com" />
+      <label for="un">Username</label><input type="text" id="un" />
+      <div class="two">
+        <div><label for="ci">City</label><input type="text" id="ci" /></div>
+        <div><label for="zp">Postal code</label><input type="text" id="zp" /></div>
+      </div>
+      <label for="bio">Short bio</label>
+      <textarea id="bio" rows="3" placeholder="A sentence or two…"></textarea>
+      <div class="gp-mt"><button class="gp-btn secondary" type="button">Create account (does nothing)</button></div>
+    </form>
+  </div>
+
+  <script src="../lib/webgazer.js"></script>
+  <script src="../gazepry-tracker.js"></script>
+  <script src="../task-runner.js"></script>
+</body>
+</html>

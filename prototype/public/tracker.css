@@ -1,0 +1,110 @@
+/* GazePry capture UI — shared across all task "sites" */
+:root {
+  --gp-bg: #0f1220;
+  --gp-panel: #171a2b;
+  --gp-ink: #e7e9f3;
+  --gp-muted: #9aa0bd;
+  --gp-accent: #6ea8fe;
+  --gp-good: #4ade80;
+  --gp-warn: #fbbf24;
+  --gp-bad: #f87171;
+  --gp-border: #2a2f4a;
+}
+
+* { box-sizing: border-box; }
+
+body.gp-body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--gp-ink);
+  background: var(--gp-bg);
+  line-height: 1.5;
+}
+
+.gp-wrap { max-width: 820px; margin: 0 auto; padding: 32px 24px 80px; }
+
+.gp-card {
+  background: var(--gp-panel);
+  border: 1px solid var(--gp-border);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 18px 0;
+}
+
+h1, h2 { line-height: 1.2; }
+h1 { font-size: 1.7rem; margin: 0 0 6px; }
+.gp-sub { color: var(--gp-muted); margin: 0 0 18px; }
+a { color: var(--gp-accent); }
+
+label { display: block; font-weight: 600; margin: 14px 0 4px; }
+input[type="text"], input[type="email"], textarea, select {
+  width: 100%; padding: 10px 12px; border-radius: 8px;
+  border: 1px solid var(--gp-border); background: #0c0f1c; color: var(--gp-ink);
+  font-size: 1rem;
+}
+
+.gp-btn {
+  display: inline-block; cursor: pointer; border: none; border-radius: 8px;
+  padding: 11px 18px; font-size: 1rem; font-weight: 600;
+  background: var(--gp-accent); color: #0b1020; text-decoration: none;
+}
+.gp-btn:disabled { opacity: .45; cursor: not-allowed; }
+.gp-btn.secondary { background: transparent; color: var(--gp-ink); border: 1px solid var(--gp-border); }
+.gp-btn.danger { background: var(--gp-bad); color: #250606; }
+
+.gp-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.gp-tasklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 12px; }
+.gp-tasklist a { display: block; padding: 16px; border: 1px solid var(--gp-border);
+  border-radius: 10px; text-decoration: none; color: var(--gp-ink); background: #0c0f1c; }
+.gp-tasklist a small { color: var(--gp-muted); }
+.gp-tasklist a.done { border-color: var(--gp-good); }
+
+/* Heads-up display during capture */
+#gp-hud {
+  position: fixed; top: 12px; right: 12px; z-index: 2147483000;
+  background: rgba(23,26,43,.94); border: 1px solid var(--gp-border);
+  border-radius: 10px; padding: 12px 14px; width: 220px; font-size: .85rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+#gp-hud .gp-hud-title { font-weight: 700; margin-bottom: 6px; }
+#gp-hud .gp-metric { display: flex; justify-content: space-between; color: var(--gp-muted); }
+#gp-hud .gp-metric b { color: var(--gp-ink); }
+#gp-hud .gp-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background: var(--gp-bad); margin-right:6px; }
+#gp-hud .gp-dot.live { background: var(--gp-good); }
+#gp-hud button { width: 100%; margin-top: 10px; }
+
+/* Calibration overlay */
+#gp-cal {
+  position: fixed; inset: 0; z-index: 2147483001; background: rgba(8,10,20,.86);
+}
+#gp-cal .gp-cal-msg {
+  position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
+  text-align: center; color: var(--gp-ink); font-size: 1rem; max-width: 560px;
+}
+.gp-cal-dot {
+  position: absolute; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--gp-warn); border: 2px solid #fff; cursor: pointer;
+  transform: translate(-50%, -50%); transition: background .15s, opacity .15s;
+  display: flex; align-items: center; justify-content: center; font-size: .7rem; color:#000; font-weight:700;
+}
+.gp-cal-dot.done { background: var(--gp-good); opacity: .35; cursor: default; }
+
+/* task-page helpers */
+.gp-startbar {
+  position: sticky; top: 0; z-index: 2147482000;
+  display: flex; gap: 12px; align-items: center; justify-content: space-between;
+  background: var(--gp-panel); border-bottom: 1px solid var(--gp-border);
+  padding: 12px 18px;
+}
+.gp-startbar .gp-note { margin: 0; }
+.gp-done {
+  position: fixed; left: 0; right: 0; bottom: 0; margin: 0 auto 24px;
+  max-width: 520px; z-index: 2147483000;
+}
+.gp-inline-w { width: auto !important; }
+.gp-mt { margin-top: 16px; }
+
+.gp-note { font-size: .85rem; color: var(--gp-muted); }
+.gp-pill { display:inline-block; padding:2px 8px; border-radius:999px; background:#0c0f1c;
+  border:1px solid var(--gp-border); font-size:.8rem; color:var(--gp-muted); }
+code { background:#0c0f1c; border:1px solid var(--gp-border); border-radius:4px; padding:1px 5px; }

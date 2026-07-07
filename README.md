@@ -1,61 +1,62 @@
-Note: this repository is now out of date and there is a newer version. Please use https://github.com/brownhci/WebGazer/tree/master/www/search instead
+# GazePry
 
-# [SearchGazer](https://webgazer.cs.brown.edu/search)
+**A security/privacy research project on information leakage from webcam-based eye tracking.**
 
-SearchGazer is an eye tracking library that uses common webcams to infer the eye-gaze locations of visitors on a search engine in real time. In addition, SearchGazer predicts in real-time which area of interest within a search engine result page is being examined by a visitor at any moment. SearchGazer extends WebGazer and its eye tracking model that self-calibrates by watching web visitors interact with the web page and trains a mapping between the features of the eye and positions on the screen. SearchGazer is written entirely in JavaScript and with only a few lines of code can be integrated in any search engine that wishes to conduct remote eye tracking studies. SearchGazer runs entirely in the client browser, therefore no video data needs to be sent to a server. SearchGazer runs only if the user consents in giving access to their webcam.
+GazePry studies what a *drive-by web adversary* — a first- or third-party script
+that obtains camera access and runs gaze estimation client-side — can infer about
+a user, on commodity laptops/desktops with no special hardware. It builds on the
+WebGazer / SearchGazer lineage but reframes it as a threat model.
 
+> The root of this repo still contains the original **SearchGazer (2016/2017)**
+> demo files (`searchgazer.js`, `index.html`, `examples/`, `css/`, `media/`) for
+> historical reference. That library is out of date. **New work uses the current
+> [brownhci/WebGazer](https://github.com/brownhci/WebGazer) v3.5.3**, bundled in
+> the prototype below.
 
+## Contents
 
-* [Official website](https://webgazer.cs.brown.edu/search)
+- **[`GazePry_Information_Leakage_Report.md`](GazePry_Information_Leakage_Report.md)**
+  — threat-model assessment: two regimes of gaze leakage (content-dependent vs
+  content-independent), leakage vectors D1–D6, form-factor analysis, evidence
+  table, and a full bibliography.
+- **[`GazePry_Direction1_ReID_Study_Protocol.md`](GazePry_Direction1_ReID_Study_Protocol.md)**
+  — the study protocol for the lead research direction: *cross-site gaze
+  re-identification as an unclearable web tracking vector*. Threat model, research
+  questions, apparatus (incl. the Gazepoint ground-truth rig), conditions matrix,
+  metrics, and target venues.
+- **[`prototype/`](prototype/)** — a working prototype for Direction 1:
+  a WebGazer v3.5.3 capture harness (five task "sites" sharing one tracking tag),
+  a zero-dependency Node ingestion + live re-ID server, and a Python evaluation
+  pipeline (content-independent features, cross-task/cross-session rank-1 / EER /
+  CMC) that is verifiable end-to-end on synthetic data. See
+  [`prototype/README.md`](prototype/README.md).
 
+## Quick start
 
+```bash
+cd prototype
+node server.js            # http://localhost:8080 — capture harness + re-ID demo
+```
 
-## How to install
-Download the searchgazer.js file located [here](https://webgazer.cs.brown.edu/search#download).
+```bash
+cd prototype/analysis     # verify the analysis pipeline without a webcam
+pip install -r requirements.txt
+python simulate.py --out ../data_sim
+python reid.py --data ../data_sim --plot ../data_sim/cmc.png
+```
 
-## Examples
+## Credit & license
 
-Examples of how SearchGazer.js works can be found [here](https://webgazer.cs.brown.edu/search#examples).
+The eye-tracking engine is [WebGazer](https://webgazer.cs.brown.edu) by the
+Brown HCI Group; the search instrumentation derives from SearchGazer
+(Papoutsaki, Laskey, Huang, CHIIR 2017). This project is licensed under GPLv3
+(see [`LICENSE.md`](LICENSE.md) / [`gplv3.md`](gplv3.md)).
 
-
-## Browser Support
-
-The following browsers support WebGazer.js:
-
-* Google Chrome
-* Microsoft Edge
-* Mozilla Firefox
-* Opera
-
-Your browser needs to support the getUserMedia API as seen [here](http://caniuse.com/#feat=stream).
-
-## Search Engine Support
-SearchGazer supports the following search engines for identification of areas of interest:
-
-* Bing
-* Google
-
-## Citation
-
-	@inproceedings{papoutsaki2017searchgazer,
-	author = {Alexandra Papoutsaki and James Laskey and Jeff Huang},
-	title = {SearchGazer: Webcam Eye Tracking for Remote Studies of Web Search},
-	booktitle = {Proceedings of the ACM SIGIR Conference on Human Information Interaction \& 	Retrieval (CHIIR)},
-	year = {2016},
-	organization={ACM}
-	}
-
-
-
-## Who We Are
-
-* Alexandra Papoutsaki
-* James Laskey
-* Jeff Huang
-
-## License
-
-Copyright (C) 2017 [Brown HCI Group](http://hci.cs.brown.edu)
-
-Licensed under GPLv3.
-
+```
+@inproceedings{papoutsaki2017searchgazer,
+  author = {Alexandra Papoutsaki and James Laskey and Jeff Huang},
+  title  = {SearchGazer: Webcam Eye Tracking for Remote Studies of Web Search},
+  booktitle = {Proc. ACM SIGIR Conf. Human Information Interaction \& Retrieval (CHIIR)},
+  year   = {2017}, organization = {ACM}
+}
+```

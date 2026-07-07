@@ -1,0 +1,4 @@
+# Core analysis
+numpy>=1.21
+# Optional: only needed for --plot (CMC figure)
+matplotlib>=3.4

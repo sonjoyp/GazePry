@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Search results task — GazePry</title>
+  <link rel="stylesheet" href="../tracker.css" />
+  <style>
+    .serp { max-width: 640px; margin: 0 auto; padding: 24px 24px 120px; }
+    .serp .q { width: 100%; padding: 12px 16px; border-radius: 24px;
+      border: 1px solid var(--gp-border); background: #0c0f1c; color: var(--gp-ink); font-size: 1.05rem; }
+    .serp .stats { color: var(--gp-muted); font-size: .82rem; margin: 10px 2px 18px; }
+    .result { margin: 0 0 22px; }
+    .result .url { color: var(--gp-good); font-size: .8rem; }
+    .result .title { color: var(--gp-accent); font-size: 1.15rem; margin: 2px 0 4px; }
+    .result .snip { color: var(--gp-ink); font-size: .95rem; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-startbar" id="gp-startbar">
+    <span class="gp-note">Task: <b>Search results</b> · <span id="gp-who"></span></span>
+    <button class="gp-btn" type="button" id="gp-start" data-task="serp" data-duration="60">Start recording</button>
+  </div>
+
+  <div class="serp">
+    <input class="q" value="best noise cancelling headphones for travel" readonly />
+    <div class="stats">About 4,270,000 results (0.41 seconds) — scan the results as you normally would.</div>
+
+    <div class="result"><div class="url">soundstage.example.com › reviews › travel-headphones</div>
+      <div class="title">The 7 Best Noise-Cancelling Headphones for Travel in 2026</div>
+      <div class="snip">We flew 40,000 miles testing 23 pairs. Our top pick balances cabin-noise rejection, 30-hour battery, and a folding case that survives an overhead bin.</div></div>
+
+    <div class="result"><div class="url">wirecutter.example.org › headphones › anc</div>
+      <div class="title">Noise-Cancelling Headphones — Buying Guide and Picks</div>
+      <div class="snip">Active noise cancellation works best on low, steady sounds like jet engines. Here is how the leading models compare on comfort, ANC depth, and price.</div></div>
+
+    <div class="result"><div class="url">reddit.example.net › r/headphones › comments</div>
+      <div class="title">What ANC headphones do frequent flyers actually recommend?</div>
+      <div class="snip">Threads from cabin crew and road-warriors. The consensus favorites are not always the most-advertised ones; over-ear beats in-ear for long-haul comfort.</div></div>
+
+    <div class="result"><div class="url">theverge.example.com › 2026 › 03 › anc-shootout</div>
+      <div class="title">We put five flagship ANC headphones in a wind tunnel</div>
+      <div class="snip">Marketing claims meet a microphone array. Two models cancelled 4 dB more low-frequency noise than the rest; one was surprisingly poor above 1 kHz.</div></div>
+
+    <div class="result"><div class="url">amazon.example.com › b › travel-audio</div>
+      <div class="title">Travel Headphones — Shop Best Sellers</div>
+      <div class="snip">Free returns. Compare ANC over-ear and in-ear models by battery life, weight, and price. Prime members get next-day delivery on most items.</div></div>
+
+    <div class="result"><div class="url">rtings.example.org › headphones › tools › compare</div>
+      <div class="title">Compare Headphones Side by Side — Measurements</div>
+      <div class="snip">Objective frequency-response and isolation graphs for 300+ models. Filter by "airplane" use case to rank purely on low-frequency attenuation.</div></div>
+
+    <div class="result"><div class="url">nomadgear.example.com › blog › pack-light</div>
+      <div class="title">One Bag Travel: the audio gear that earns its weight</div>
+      <div class="snip">If you are packing carry-on only, a foldable ANC headset and a short USB-C cable cover flights, cafes, and calls without the bulk of a hard case.</div></div>
+
+    <div class="result"><div class="url">consumerlab.example.net › reports › anc-2026</div>
+      <div class="title">Annual Headphone Reliability Report (2026)</div>
+      <div class="snip">Failure rates by brand over two years of ownership. Hinge cracks and failing ear-cup padding, not electronics, drive most travel-headphone returns.</div></div>
+  </div>
+
+  <script src="../lib/webgazer.js"></script>
+  <script src="../gazepry-tracker.js"></script>
+  <script src="../task-runner.js"></script>
+</body>
+</html>

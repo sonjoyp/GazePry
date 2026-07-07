@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Moving-stimulus task — GazePry</title>
+  <link rel="stylesheet" href="../tracker.css" />
+  <style>
+    .stage-wrap { max-width: 960px; margin: 0 auto; padding: 24px; }
+    #stage { width: 100%; height: 70vh; border-radius: 12px; border: 1px solid var(--gp-border);
+      background: #08101c; display: block; }
+    .hint { text-align: center; color: var(--gp-muted); margin-top: 10px; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-startbar" id="gp-startbar">
+    <span class="gp-note">Task: <b>Moving stimulus</b> · <span id="gp-who"></span></span>
+    <button class="gp-btn" type="button" id="gp-start" data-task="video" data-duration="60">Start recording</button>
+  </div>
+
+  <div class="stage-wrap">
+    <canvas id="stage"></canvas>
+    <div class="hint">Follow the moving dot with your eyes (smooth pursuit). Try not to move your head.</div>
+  </div>
+
+  <script src="../lib/webgazer.js"></script>
+  <script src="../gazepry-tracker.js"></script>
+  <script>
+    // A target tracing a Lissajous path — elicits smooth pursuit + catch-up saccades.
+    var cv = document.getElementById("stage");
+    var ctx = cv.getContext("2d");
+    function fit() { cv.width = cv.clientWidth; cv.height = cv.clientHeight; }
+    fit(); window.addEventListener("resize", fit);
+    var start = performance.now();
+    function frame(now) {
+      var t = (now - start) / 1000;
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      var mx = cv.width * 0.5, my = cv.height * 0.5;
+      var ax = cv.width * 0.4, ay = cv.height * 0.38;
+      var x = mx + ax * Math.sin(0.55 * t);
+      var y = my + ay * Math.sin(0.83 * t + 1.1);
+      var grd = ctx.createRadialGradient(x, y, 2, x, y, 22);
+      grd.addColorStop(0, "#8fd3ff");
+      grd.addColorStop(1, "rgba(110,168,254,0)");
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(x, y, 22, 0, 7); ctx.fill();
+      ctx.fillStyle = "#e7e9f3";
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill();
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+  <script src="../task-runner.js"></script>
+</body>
+</html>

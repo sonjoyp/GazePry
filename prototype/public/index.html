@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GazePry — Gaze Re-Identification Study (Direction 1)</title>
+  <link rel="stylesheet" href="tracker.css" />
+</head>
+<body class="gp-body">
+  <div class="gp-wrap">
+    <h1>GazePry &mdash; cross-site gaze re-identification</h1>
+    <p class="gp-sub">Direction 1 capture harness &middot; commodity webcam (WebGazer v3.5.3) + optional Gazepoint ground truth</p>
+
+    <!-- Step 1: identity + consent -->
+    <div class="gp-card" id="step-id">
+      <h2>1. Session details</h2>
+      <p class="gp-note">The same tracking script runs on every task page below. Nothing is uploaded until you finish a task, and no raw video leaves the browser &mdash; only the gaze coordinate stream.</p>
+      <label for="pid">Participant ID</label>
+      <input type="text" id="pid" placeholder="e.g. P01" autocomplete="off" />
+      <label for="sid">Session</label>
+      <select id="sid">
+        <option value="S1">S1 (first visit)</option>
+        <option value="S2">S2 (return visit, ≥1 week later)</option>
+        <option value="S3">S3</option>
+      </select>
+      <label class="gp-row" style="font-weight:400;margin-top:16px">
+        <input type="checkbox" id="consent" style="width:auto" />
+        <span>I consent to webcam-based gaze capture for this session.</span>
+      </label>
+      <div class="gp-row" style="margin-top:18px">
+        <button class="gp-btn" id="startBtn" disabled>Save &amp; calibrate</button>
+        <span class="gp-note" id="idNote"></span>
+      </div>
+    </div>
+
+    <!-- Step 2: calibration + task hub -->
+    <div class="gp-card" id="step-tasks" style="display:none">
+      <h2>2. Tasks (each ≈ 60&ndash;90 s)</h2>
+      <p class="gp-note">
+        Recording as <span class="gp-pill" id="whoPill"></span>.
+        Complete each task once. Different content on each page stands in for a different "site" &mdash;
+        cross-task matching is the real tracking test.
+      </p>
+      <div class="gp-row" style="margin:12px 0 18px">
+        <button class="gp-btn secondary" id="calBtn">Re-run calibration</button>
+        <a class="gp-btn secondary" href="reid.html">Open re-ID / "unclearable" demo &rarr;</a>
+      </div>
+      <div class="gp-tasklist" id="taskList">
+        <a href="tasks/reading.html" data-task="reading"><b>Reading</b><br /><small>read a passage &middot; 90 s</small></a>
+        <a href="tasks/serp.html" data-task="serp"><b>Search results</b><br /><small>scan a SERP &middot; 60 s</small></a>
+        <a href="tasks/images.html" data-task="images"><b>Image viewing</b><br /><small>free-view images &middot; 60 s</small></a>
+        <a href="tasks/video.html" data-task="video"><b>Moving stimulus</b><br /><small>smooth pursuit &middot; 60 s</small></a>
+        <a href="tasks/form.html" data-task="form"><b>Form / typing</b><br /><small>fill a form &middot; 75 s</small></a>
+      </div>
+      <p class="gp-note" style="margin-top:16px">Tasks you have finished this session are outlined in green.</p>
+    </div>
+
+    <p class="gp-note">
+      Ethics: this project is IRB-exempt. Data stays on your machine / your server. See
+      <a href="../README.md">prototype README</a> for the Gazepoint ground-truth rig and analysis pipeline.
+    </p>
+  </div>
+
+  <script src="lib/webgazer.js"></script>
+  <script src="gazepry-tracker.js"></script>
+  <script>
+    var pid = document.getElementById("pid");
+    var sid = document.getElementById("sid");
+    var consent = document.getElementById("consent");
+    var startBtn = document.getElementById("startBtn");
+
+    // pre-fill from any prior identity
+    var prior = GazePry.loadIdentity();
+    if (prior.participant) pid.value = prior.participant;
+    if (prior.session) sid.value = prior.session;
+
+    function refresh() {
+      startBtn.disabled = !(pid.value.trim() && consent.checked);
+    }
+    pid.addEventListener("input", refresh);
+    consent.addEventListener("change", refresh);
+    refresh();
+
+    startBtn.addEventListener("click", async function () {
+      GazePry.saveIdentity(pid.value.trim(), sid.value);
+      document.getElementById("whoPill").textContent =
+        GazePry.identity.participant + " · " + GazePry.identity.session;
+      document.getElementById("idNote").textContent = "Starting camera…";
+      await GazePry.calibrate({ clicksPerDot: 5, fresh: true });
+      document.getElementById("step-id").style.display = "none";
+      document.getElementById("step-tasks").style.display = "block";
+      markDone();
+    });
+
+    document.getElementById("calBtn").addEventListener("click", function () {
+      GazePry.calibrate({ clicksPerDot: 5 });
+    });
+
+    // mark tasks completed this session (server tells us; fallback to localStorage)
+    async function markDone() {
+      var id = GazePry.identity;
+      var done = {};
+      try {
+        var r = await fetch("/status?participant=" + encodeURIComponent(id.participant) +
+          "&session=" + encodeURIComponent(id.session));
+        if (r.ok) { (await r.json()).tasks.forEach(function (t) { done[t] = true; }); }
+      } catch (e) {
+        (JSON.parse(localStorage.getItem("gp_done_" + id.participant + "_" + id.session) || "[]"))
+          .forEach(function (t) { done[t] = true; });
+      }
+      document.querySelectorAll("#taskList a").forEach(function (a) {
+        if (done[a.dataset.task]) a.classList.add("done");
+      });
+    }
+  </script>
+</body>
+</html>

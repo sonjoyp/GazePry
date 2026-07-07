@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Image viewing task — GazePry</title>
+  <link rel="stylesheet" href="../tracker.css" />
+  <style>
+    .gallery { max-width: 900px; margin: 0 auto; padding: 24px 24px 120px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .tile { aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; border: 1px solid var(--gp-border); }
+    .tile svg { width: 100%; height: 100%; display: block; }
+    .caption { text-align: center; color: var(--gp-muted); grid-column: 1 / -1; margin-top: 4px; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-startbar" id="gp-startbar">
+    <span class="gp-note">Task: <b>Image viewing</b> · <span id="gp-who"></span></span>
+    <button class="gp-btn" type="button" id="gp-start" data-task="images" data-duration="60">Start recording</button>
+  </div>
+
+  <div class="caption" style="max-width:900px;margin:0 auto;padding:16px 24px 0">Look around the images freely, as you like.</div>
+  <div class="gallery" id="gallery"></div>
+
+  <script src="../lib/webgazer.js"></script>
+  <script src="../gazepry-tracker.js"></script>
+  <script>
+    // Procedurally drawn abstract images (no external assets, CSP-safe).
+    var g = document.getElementById("gallery");
+    function rnd(seed){ return function(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }; }
+    for (var i = 0; i < 9; i++) {
+      var r = rnd(97 + i * 131);
+      var hue = Math.floor(r() * 360);
+      var svg = '<svg viewBox="0 0 200 150" preserveAspectRatio="none">';
+      svg += '<rect width="200" height="150" fill="hsl(' + hue + ',35%,14%)"/>';
+      for (var k = 0; k < 9; k++) {
+        var cx = Math.floor(r() * 200), cy = Math.floor(r() * 150);
+        var rad = 8 + Math.floor(r() * 34);
+        var h2 = (hue + Math.floor(r() * 120)) % 360;
+        var op = (0.25 + r() * 0.6).toFixed(2);
+        if (r() > 0.5)
+          svg += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rad + '" fill="hsl(' + h2 + ',70%,60%)" opacity="' + op + '"/>';
+        else
+          svg += '<rect x="' + cx + '" y="' + cy + '" width="' + rad * 2 + '" height="' + rad + '" fill="hsl(' + h2 + ',70%,60%)" opacity="' + op + '"/>';
+      }
+      svg += "</svg>";
+      var tile = document.createElement("div");
+      tile.className = "tile";
+      tile.innerHTML = svg;
+      g.appendChild(tile);
+    }
+  </script>
+  <script src="../task-runner.js"></script>
+</body>
+</html>

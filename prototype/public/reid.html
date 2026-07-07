@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Live gaze re-ID / "unclearable" demo — GazePry</title>
+  <link rel="stylesheet" href="tracker.css" />
+  <style>
+    .rank { list-style: none; padding: 0; margin: 8px 0 0; }
+    .rank li { display: flex; justify-content: space-between; padding: 8px 12px; border: 1px solid var(--gp-border);
+      border-radius: 8px; margin-bottom: 6px; background: #0c0f1c; }
+    .rank li.top { border-color: var(--gp-good); }
+    .rank li b { color: var(--gp-ink); }
+    .rank li span { color: var(--gp-muted); font-variant-numeric: tabular-nums; }
+    .verdict { font-size: 1.15rem; margin: 6px 0 0; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-wrap">
+    <h1>Live gaze re-identification</h1>
+    <p class="gp-sub">Match a fresh 20-second gaze probe to an enrolled participant &mdash; by eye-movement dynamics, with no cookie.</p>
+
+    <div class="gp-card">
+      <h2>Enrolled gallery</h2>
+      <p class="gp-note" id="galleryNote">Loading…</p>
+      <p class="gp-note">The gallery is every session in <code>prototype/data/</code>. Enroll people by having them complete tasks on the <a href="index.html">hub</a> first.</p>
+    </div>
+
+    <div class="gp-card">
+      <h2>Identify the person at the screen</h2>
+      <p class="gp-note">Capture a short probe of whoever is looking now. The server ranks enrolled participants by gaze-feature distance.</p>
+      <div class="gp-row">
+        <button class="gp-btn" type="button" id="probeBtn">Capture 20 s probe &amp; identify</button>
+        <span class="gp-note" id="probeNote"></span>
+      </div>
+      <p class="verdict" id="verdict"></p>
+      <ul class="rank" id="rank"></ul>
+    </div>
+
+    <div class="gp-card">
+      <h2>The "unclearable" point</h2>
+      <p class="gp-note">
+        Conventional trackers die when the user clears state. Gaze does not: the identifier is re-derived from the
+        live eye stream. Wipe cookies, localStorage, sessionStorage and the WebGazer model, then re-identify &mdash;
+        the match still lands, because nothing about <em>who you are</em> was ever stored in the browser.
+      </p>
+      <div class="gp-row">
+        <button class="gp-btn danger" type="button" id="wipeBtn">Wipe all browser state</button>
+        <span class="gp-note" id="wipeNote"></span>
+      </div>
+    </div>
+
+    <p class="gp-note"><a href="index.html">&larr; Back to hub</a></p>
+  </div>
+
+  <script src="lib/webgazer.js"></script>
+  <script src="gazepry-tracker.js"></script>
+  <script>
+    GazePry.loadIdentity();
+
+    async function refreshGallery() {
+      var note = document.getElementById("galleryNote");
+      try {
+        var r = await fetch("/sessions");
+        var j = await r.json();
+        if (!j.count) { note.textContent = "Gallery is empty — no sessions enrolled yet."; return; }
+        note.innerHTML = "<b>" + j.participants.length + "</b> participant(s), <b>" + j.count +
+          "</b> session(s): " + j.participants.map(function (p) { return "<span class='gp-pill'>" + p + "</span>"; }).join(" ");
+      } catch (e) { note.textContent = "Server not reachable — start it with `node server.js`."; }
+    }
+    refreshGallery();
+
+    async function probeAndIdentify() {
+      document.getElementById("probeNote").textContent = "Starting camera…";
+      var probe = await GazePry.captureProbe(20);
+      document.getElementById("probeNote").textContent =
+        probe.samples.length + " samples captured; matching…";
+      var r = await fetch("/identify", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ samples: probe.samples, screen: probe.screen }),
+      });
+      var j = await r.json();
+      render(j);
+      document.getElementById("probeNote").textContent = "";
+    }
+
+    function render(j) {
+      var verdict = document.getElementById("verdict");
+      var rank = document.getElementById("rank");
+      rank.innerHTML = "";
+      if (!j.ranked || !j.ranked.length) {
+        verdict.textContent = "No gallery to match against — enroll participants first.";
+        return;
+      }
+      verdict.innerHTML = "Best match: <b>" + j.rank1 + "</b>";
+      j.ranked.forEach(function (m, i) {
+        var li = document.createElement("li");
+        if (i === 0) li.className = "top";
+        li.innerHTML = "<b>#" + (i + 1) + " " + m.participant + "</b>" +
+          "<span>dist " + m.score.toFixed(3) + " · via " + m.task + "/" + m.session + "</span>";
+        rank.appendChild(li);
+      });
+    }
+
+    document.getElementById("probeBtn").addEventListener("click", probeAndIdentify);
+
+    document.getElementById("wipeBtn").addEventListener("click", function () {
+      GazePry.wipeState();
+      document.getElementById("wipeNote").textContent =
+        "Wiped cookies + storage + WebGazer model. Now click ‘Capture 20 s probe’ again — the match still works.";
+    });
+  </script>
+</body>
+</html>

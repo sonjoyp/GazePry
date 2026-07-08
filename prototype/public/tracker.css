@@ -89,6 +89,18 @@ input[type="text"], input[type="email"], textarea, select {
 }
 .gp-cal-dot.done { background: var(--gp-good); opacity: .35; cursor: default; }
 
+/* Countdown before a hands-free task recording starts */
+#gp-countdown {
+  position: fixed; inset: 0; z-index: 2147483001;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(8,10,20,.78); text-align: center;
+}
+#gp-countdown .gp-cd-msg { color: var(--gp-muted); font-size: 1.1rem; margin-bottom: 14px; max-width: 420px; padding: 0 20px; }
+#gp-countdown .gp-cd-num {
+  color: var(--gp-accent); font-size: 5rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 /* task-page helpers */
 .gp-startbar {
   position: sticky; top: 0; z-index: 2147482000;

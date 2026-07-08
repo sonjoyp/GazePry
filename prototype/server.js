@@ -27,6 +27,9 @@ const MIME = {
   ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8",
   ".map": "application/json", ".svg": "image/svg+xml", ".png": "image/png",
   ".jpg": "image/jpeg", ".ico": "image/x-icon",
+  // MediaPipe FaceMesh runtime assets (public/mediapipe/face_mesh/)
+  ".wasm": "application/wasm", ".data": "application/octet-stream",
+  ".binarypb": "application/octet-stream",
 };
 
 function send(res, code, body, headers) {

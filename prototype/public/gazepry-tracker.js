@@ -18,6 +18,18 @@
 
   var TRACKER_ID = "webgazer-3.5.3";
 
+  // Base URL of this script. WebGazer's bundled FaceMesh fetches its WASM/model
+  // files at runtime from params.faceMeshSolutionPath, whose default
+  // ("./mediapipe/face_mesh") resolves against the *page* URL — it 404s on task
+  // pages one level deep, the first getPrediction() never settles, and the
+  // prediction loop dies before a single gaze callback (0 samples, 0 gaps).
+  // Resolve the vendored assets relative to this script instead, which is the
+  // same location on every page.
+  var SCRIPT_BASE = (function () {
+    var src = document.currentScript && document.currentScript.src;
+    return src ? src.slice(0, src.lastIndexOf("/") + 1) : "";
+  })();
+
   var GazePry = {
     config: {
       server: "", // same-origin by default; set to a full URL for cross-origin demo
@@ -65,6 +77,23 @@
     if (!window.webgazer) throw new Error("webgazer.js not loaded before gazepry-tracker.js");
     console.log("[GazePry] starting WebGazer engine…");
 
+    webgazer.params.faceMeshSolutionPath = SCRIPT_BASE + "mediapipe/face_mesh";
+
+    // Heartbeat: wrap setGazeListener once so every callback — including the
+    // idle no-op listener — stamps _lastBeat. The watchdog below uses it to
+    // tell a live prediction loop from a dead one.
+    if (!this._listenerWrapped) {
+      this._listenerWrapped = true;
+      var origSet = webgazer.setGazeListener.bind(webgazer);
+      webgazer.setGazeListener = function (fn) {
+        return origSet(function (data, clock) {
+          GazePry._lastBeat = performance.now();
+          if (fn) fn(data, clock);
+        });
+      };
+      webgazer.clearGazeListener = function () { return webgazer.setGazeListener(null); };
+    }
+
     var beginPromise = webgazer
       .setRegression("ridge")
       .saveDataAcrossSessions(this.config.saveAcrossSessions)
@@ -72,8 +101,8 @@
       .begin();
 
     // begin() only resolves after WebGazer's first prediction loop completes;
-    // in some environments that first getPrediction() stalls, leaving begin()
-    // pending forever. The webcam and the click-to-train mouse listeners are
+    // if that first getPrediction() stalls (e.g. FaceMesh assets fail to load),
+    // begin() stays pending forever. The webcam and click-to-train listeners are
     // already live by the time the video appears, so don't block the UI on it:
     // race begin() against a timeout and proceed either way. Attach a catch so a
     // late rejection never becomes a silent unhandled rejection.
@@ -92,7 +121,39 @@
     } catch (e) { console.warn("[GazePry] preview config warning:", e); }
 
     this._engineReady = true;
+    this._lastBeat = performance.now();
+    this._startWatchdog();
     console.log("[GazePry] engine ready (outcome: " + outcome + ").");
+  };
+
+  // WebGazer's prediction loop reschedules itself only after a successful
+  // getPrediction(), so a single hung/rejected prediction kills the loop for
+  // good and every counter freezes at 0. Watch the heartbeat and restart the
+  // loop (pause + resume) when it goes quiet; if restarts never help, tell the
+  // user what to check instead of failing silently.
+  GazePry._startWatchdog = function () {
+    if (this._watchdog) return;
+    var kicks = 0;
+    this._watchdog = setInterval(function () {
+      if (document.hidden) return; // rAF is throttled in background tabs — not a failure
+      var quiet = performance.now() - GazePry._lastBeat;
+      if (quiet < 4000) { kicks = 0; return; }
+      kicks++;
+      console.warn("[GazePry] no gaze callbacks for " + Math.round(quiet / 1000) +
+        "s — restarting the prediction loop (attempt " + kicks + ").");
+      try {
+        webgazer.pause();
+        // let any in-flight iteration die before starting a fresh loop
+        setTimeout(function () {
+          Promise.resolve(webgazer.resume()).catch(function () {});
+        }, 300);
+      } catch (e) {}
+      GazePry._lastBeat = performance.now(); // full quiet window before the next kick
+      if (kicks === 3)
+        GazePry._toast("Gaze engine is producing no data. Open the console (F12) — " +
+          "usually the FaceMesh files under " + webgazer.params.faceMeshSolutionPath +
+          " failed to load.");
+    }, 2000);
   };
 
   GazePry.hidePreview = function (hide) {

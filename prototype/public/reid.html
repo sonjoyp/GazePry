@@ -29,8 +29,9 @@
     <div class="gp-card">
       <h2>Identify the person at the screen</h2>
       <p class="gp-note">Capture a short probe of whoever is looking now. The server ranks enrolled participants by gaze-feature distance.</p>
+      <p class="gp-note">This page auto-captures a probe on load &mdash; an adversary's tag would never wait for a click. Use the button to re-run (e.g. after wiping state).</p>
       <div class="gp-row">
-        <button class="gp-btn" type="button" id="probeBtn">Capture 20 s probe &amp; identify</button>
+        <button class="gp-btn" type="button" id="probeBtn">Re-capture 20 s probe &amp; identify</button>
         <span class="gp-note" id="probeNote"></span>
       </div>
       <p class="verdict" id="verdict"></p>
@@ -63,25 +64,44 @@
       try {
         var r = await fetch("/sessions");
         var j = await r.json();
-        if (!j.count) { note.textContent = "Gallery is empty — no sessions enrolled yet."; return; }
+        if (!j.count) { note.textContent = "Gallery is empty — no sessions enrolled yet."; return false; }
         note.innerHTML = "<b>" + j.participants.length + "</b> participant(s), <b>" + j.count +
           "</b> session(s): " + j.participants.map(function (p) { return "<span class='gp-pill'>" + p + "</span>"; }).join(" ");
-      } catch (e) { note.textContent = "Server not reachable — start it with `node server.js`."; }
+        return true;
+      } catch (e) { note.textContent = "Server not reachable — start it with `node server.js`."; return false; }
     }
-    refreshGallery();
 
+    // Auto-capture on load: a real tracking tag never waits for a click. Only
+    // when the gallery is non-empty, since a probe is pointless with nothing to
+    // match against.
+    refreshGallery().then(function (hasGallery) {
+      if (hasGallery) probeAndIdentify();
+    });
+
+    var probing = false;
     async function probeAndIdentify() {
+      if (probing) return; // one probe at a time (auto-start + button could overlap)
+      probing = true;
+      var btn = document.getElementById("probeBtn");
+      btn.disabled = true;
       document.getElementById("probeNote").textContent = "Starting camera…";
-      var probe = await GazePry.captureProbe(20);
-      document.getElementById("probeNote").textContent =
-        probe.samples.length + " samples captured; matching…";
-      var r = await fetch("/identify", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ samples: probe.samples, screen: probe.screen }),
-      });
-      var j = await r.json();
-      render(j);
-      document.getElementById("probeNote").textContent = "";
+      try {
+        var probe = await GazePry.captureProbe(20);
+        document.getElementById("probeNote").textContent =
+          probe.samples.length + " samples captured; matching…";
+        var r = await fetch("/identify", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ samples: probe.samples, screen: probe.screen }),
+        });
+        var j = await r.json();
+        render(j);
+        document.getElementById("probeNote").textContent = "";
+      } catch (e) {
+        document.getElementById("probeNote").textContent = "Probe failed: " + e;
+      } finally {
+        probing = false;
+        btn.disabled = false;
+      }
     }
 
     function render(j) {
@@ -107,7 +127,7 @@
     document.getElementById("wipeBtn").addEventListener("click", function () {
       GazePry.wipeState();
       document.getElementById("wipeNote").textContent =
-        "Wiped cookies + storage + WebGazer model. Now click ‘Capture 20 s probe’ again — the match still works.";
+        "Wiped cookies + storage + WebGazer model. Now click ‘Re-capture 20 s probe’ again — the match still works.";
     });
   </script>
 </body>

@@ -16,6 +16,19 @@
     var task = btn.dataset.task;
     var dur = parseInt(btn.dataset.duration || "60", 10);
 
+    // Pre-boot the engine while the participant reads the page, so the click
+    // starts capturing immediately instead of spending the first seconds of
+    // the recording window on WebGazer boot (which would log only gaps).
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Starting camera…";
+    GazePry.startEngine()
+      .catch(function (e) { console.error("[GazePry] engine pre-boot failed:", e); })
+      .then(function () {
+        btn.disabled = false;
+        btn.textContent = label;
+      });
+
     btn.addEventListener("click", async function () {
       var bar = document.getElementById("gp-startbar");
       if (bar) bar.style.display = "none";

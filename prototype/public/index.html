@@ -43,6 +43,7 @@
       </p>
       <div class="gp-row" style="margin:12px 0 18px">
         <button class="gp-btn secondary" id="calBtn">Re-run calibration</button>
+        <button class="gp-btn secondary" id="changeIdBtn">Change participant / session</button>
         <a class="gp-btn secondary" href="reid.html">Open re-ID / "unclearable" demo &rarr;</a>
       </div>
       <div class="gp-tasklist" id="taskList">
@@ -74,6 +75,25 @@
     if (prior.participant) pid.value = prior.participant;
     if (prior.session) sid.value = prior.session;
 
+    // Returning to the hub after finishing a task should land on the task list,
+    // not the identity/consent step: the participant already has an identity and
+    // (via saveDataAcrossSessions) a persisted calibration for this visit.
+    // "Change participant / session" reveals step 1 again for a new session,
+    // where a fresh calibration is wanted.
+    if (prior.participant && prior.session) showTasks();
+
+    function showTasks() {
+      document.getElementById("whoPill").textContent =
+        GazePry.identity.participant + " · " + GazePry.identity.session;
+      document.getElementById("step-id").style.display = "none";
+      document.getElementById("step-tasks").style.display = "block";
+      markDone();
+    }
+    function showIdentity() {
+      document.getElementById("step-tasks").style.display = "none";
+      document.getElementById("step-id").style.display = "block";
+    }
+
     function refresh() {
       startBtn.disabled = !(pid.value.trim() && consent.checked);
     }
@@ -90,9 +110,7 @@
       startBtn.disabled = true;
       try {
         await GazePry.calibrate({ clicksPerDot: 5, fresh: true });
-        document.getElementById("step-id").style.display = "none";
-        document.getElementById("step-tasks").style.display = "block";
-        markDone();
+        showTasks();
       } catch (e) {
         console.error("calibration error:", e);
         note.textContent = "Camera/calibration failed: " + (e && e.message ? e.message : e) +
@@ -105,6 +123,14 @@
       GazePry.calibrate({ clicksPerDot: 5 }).catch(function (e) {
         console.error("recalibration error:", e);
       });
+    });
+
+    // Go back to step 1 to enter a different participant / start a new session
+    // (which re-calibrates fresh). Keeps the saved values pre-filled for edit.
+    document.getElementById("changeIdBtn").addEventListener("click", function () {
+      startBtn.disabled = false;
+      document.getElementById("idNote").textContent = "";
+      showIdentity();
     });
 
     // mark tasks completed this session (server tells us; fallback to localStorage)

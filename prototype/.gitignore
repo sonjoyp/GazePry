@@ -1,11 +1,11 @@
 *.map
 
 # Collected session data stays local (never commit participant gaze)
-data/*.json
-!data/.gitkeep
+#data/*.json
+#!data/.gitkeep
 
 # Synthetic verification output is regenerable (python analysis/simulate.py)
-data_sim/
+#data_sim/
 
 # Node
 node_modules/

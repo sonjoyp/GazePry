@@ -1,0 +1,38 @@
+[
+  {
+    "protocol": "all",
+    "n_probes_scored": 120,
+    "n_participants": 12,
+    "chance_rank1": 0.08333333333333333,
+    "rank1": 0.30833333333333335,
+    "rank5": 0.95,
+    "eer": 0.21515151515151515
+  },
+  {
+    "protocol": "same_task_cross_session",
+    "n_probes_scored": 120,
+    "n_participants": 12,
+    "chance_rank1": 0.08333333333333333,
+    "rank1": 0.55,
+    "rank5": 0.9666666666666667,
+    "eer": 0.16287878787878787
+  },
+  {
+    "protocol": "cross_task",
+    "n_probes_scored": 120,
+    "n_participants": 12,
+    "chance_rank1": 0.08333333333333333,
+    "rank1": 0.18333333333333332,
+    "rank5": 0.8416666666666667,
+    "eer": 0.26704545454545453
+  },
+  {
+    "protocol": "cross_task_cross_session",
+    "n_probes_scored": 120,
+    "n_participants": 12,
+    "chance_rank1": 0.08333333333333333,
+    "rank1": 0.2833333333333333,
+    "rank5": 0.8583333333333333,
+    "eer": 0.2511363636363636
+  }
+]

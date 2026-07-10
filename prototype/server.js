@@ -30,6 +30,8 @@ const MIME = {
   // MediaPipe FaceMesh runtime assets (public/mediapipe/face_mesh/)
   ".wasm": "application/wasm", ".data": "application/octet-stream",
   ".binarypb": "application/octet-stream",
+  // TF.js model weight shards (WebEyeTrack BlazeGaze, public/web/)
+  ".bin": "application/octet-stream", ".txt": "text/plain; charset=utf-8",
 };
 
 function send(res, code, body, headers) {

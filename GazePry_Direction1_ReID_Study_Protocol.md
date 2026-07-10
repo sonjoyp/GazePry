@@ -168,7 +168,7 @@ Perturb the client-side gaze stream (temporal/Gaussian noise, down-sampling, spa
 
 1. Draft and file the **TAMU IRB** protocol (consent + camera capture) — start today; it gates everything.
 2. Stand up the **simultaneous Gazepoint + webcam** capture rig; verify per-frame time alignment between IR labels and webcam frames.
-3. Use the prototype's **pluggable tracker** harness (`prototype/public/trackers/`): WebGazer and GazeCloud work out of the box; vendor **WebEyeTrack** and **EyeGestures** and flip their adapters on. All log the same per-frame gaze stream, so one feature extractor + analysis covers every arm.
+3. Use the prototype's **pluggable tracker** harness (`prototype/public/trackers/`): WebGazer, WebEyeTrack, and EyeGestures are vendored and on-device (WebEyeTrack/EyeGestures via `scripts/vendor-trackers.sh`); GazeCloud is the cloud contrast. All log the same per-frame gaze stream, so one feature extractor + analysis covers every arm.
 4. Run a **2–3 subject pilot** across all five tasks to sanity-check feature extraction and the same-session re-ID sanity cell before scaling.
 5. Pre-register the conditions matrix (§8) and metrics (§9) to keep the cross-task, cross-session claim honest.
 

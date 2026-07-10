@@ -15,8 +15,11 @@ recorded on multiple webcam trackers and compared (protocol RQ3). Shipped
 adapters: **WebGazer v3.5.3** (working, vendored — the deployed reality and the
 GazePry lineage, not the deprecated 2016 SearchGazer fork in the repo root),
 **GazeCloud/GazeRecorder** (working via its hosted script — high-accuracy but
-closed-source and **cloud**: frames leave the machine), and **WebEyeTrack** and
-**EyeGestures** (adapters written, flip on after vendoring their libraries). See
+closed-source and **cloud**: frames leave the machine), **WebEyeTrack**
+(head-pose-aware CNN + few-shot, MIT; vendored, on-device), and **EyeGestures**
+(open-source Rust/WASM, vendored, on-device). The two vendored libraries are
+fetched by [`scripts/vendor-trackers.sh`](scripts/vendor-trackers.sh) and are
+already present under `public/lib/`. See
 [`public/trackers/README-adapter.md`](public/trackers/README-adapter.md).
 
 ---
@@ -34,14 +37,20 @@ prototype/
     trackers/            one self-registering adapter per webcam tracker
       webgazer.js          WebGazer v3.5.3 (working, vendored)
       gazecloud.js         GazeCloud/GazeRecorder (working, hosted script; CLOUD)
-      webeyetrack.js       WebEyeTrack   (adapter ready; vendor the lib to enable)
-      eyegestures.js       EyeGestures   (adapter ready; vendor the lib to enable)
+      webeyetrack.js       WebEyeTrack (working, vendored; on-device)
+      eyegestures.js       EyeGestures (working, vendored; on-device)
       README-adapter.md    the adapter contract + how to add a tracker
-    lib/webgazer.js      WebGazer build; lazy-loaded only when that tracker is used
+    lib/                 vendored tracker libraries (lazy-loaded per selection)
+      webgazer.js          WebGazer build
+      webeyetrack/         WebEyeTrack UMD bundle (+ MIT LICENSE)
+      eyegestures/         EyeGestures WASM engine + shim + deps
+    web/                 WebEyeTrack BlazeGaze TF.js model (served at /web/)
     task-runner.js       shared boot code for the task pages
     index.html           consent + identity + TRACKER PICKER + calibration + hub
     tasks/*.html         reading · serp · images · video · form  (5 "sites")
     reid.html            live re-ID + the "unclearable" (wipe-state) demo
+  scripts/
+    vendor-trackers.sh   fetch WebEyeTrack + EyeGestures into public/ (idempotent)
   analysis/            the authoritative offline evaluation (Python)
     features.py          content-independent features (mirrors reid-core.js)
     reid.py              cross-task/cross-session re-ID: rank-1, rank-5, EER, CMC
@@ -139,9 +148,10 @@ uses stdlib `unittest`. What's covered:
   screen-scale invariance, gap counting, `standardize` (incl. zero-variance
   guard), and `identify` ranking + `exclude` + empty-gallery behaviour.
 - **Tracker registry / adapters** — all four adapters register; each meets the
-  contract; capability flags are correct (GazeCloud is `cloud` + self-calibrating,
-  WebEyeTrack/EyeGestures are gated with a setup note); identity + tracker
-  resolution (query → localStorage → default) and `wipeState`.
+  contract; capability flags are correct (GazeCloud is `cloud` + self-calibrating;
+  WebEyeTrack + EyeGestures are `local` and vendored); the vendored libraries are
+  present on disk; identity + tracker resolution (query → localStorage → default)
+  and `wipeState`.
 - **`server.js`** — ingest (incl. filename carries the tracker family, 400 on bad
   input, legacy-record family inference), status/sessions scoped by tracker,
   `identify` never mixing trackers, static serving + path-traversal guard.
@@ -165,18 +175,21 @@ demo for that session. Adapters live in `public/trackers/`.
 |---|---|---|---|---|
 | **WebGazer 3.5.3** (`webgazer`) | working, vendored | local (video stays in browser) | 9-point click grid | the deployed reality; GazePry lineage |
 | **GazeCloud / GazeRecorder** (`gazecloud`) | working (hosted script, needs internet) | **cloud** — frames sent to GazeRecorder | built-in (self) | high-accuracy commodity contrast |
-| **WebEyeTrack** (`webeyetrack`) | adapter ready; vendor lib to enable | local | few-shot (click grid) | head-pose-aware near-future ceiling (protocol arm 3) |
-| **EyeGestures** (`eyegestures`) | adapter ready; vendor lib to enable | local | moving-dot (click grid) | actively-maintained open-source arm |
+| **WebEyeTrack** (`webeyetrack`) | working, vendored | local (video on-device; model/wasm from CDN) | few-shot (click grid) | head-pose-aware near-future ceiling (protocol arm 3) |
+| **EyeGestures** (`eyegestures`) | working, vendored | local (video on-device; MediaPipe from CDN) | self (built-in) | actively-maintained open-source arm |
 
-- **Why GazeCloud is a finding, not just a tool.** It is the easiest to deploy
-  and the most accurate, but it is closed-source and processes webcam frames in
-  the cloud — for a paper about webcam gaze as a *tracking vector*, "the accurate
-  option also exfiltrates your face" is itself worth stating. WebGazer,
-  WebEyeTrack, and EyeGestures keep video on-device.
-- **To enable WebEyeTrack / EyeGestures:** vendor the library under
-  `public/lib/<name>/`, wire the `TODO(vendor)` hooks in the adapter to its API,
-  and set `available:true`. The adapter contract is in
-  [`public/trackers/README-adapter.md`](public/trackers/README-adapter.md).
+- **On-device vs. cloud.** WebGazer, WebEyeTrack, and EyeGestures run gaze
+  inference **in the browser** — no camera data leaves the machine. (WebEyeTrack
+  and EyeGestures *download* model/WASM assets from CDNs at load; that is
+  download-only.) GazeCloud is different: it uploads webcam frames to
+  GazeRecorder's servers. For a paper about webcam gaze as a *tracking vector*,
+  "the most accurate drop-in option also exfiltrates your face" is itself worth
+  stating — keep GazeCloud separate from the on-device arms.
+- **Vendored assets.** WebEyeTrack and EyeGestures are fetched by
+  [`scripts/vendor-trackers.sh`](scripts/vendor-trackers.sh) into `public/lib/`
+  (and the BlazeGaze model into `public/web/`) and are already present. Re-run the
+  script to refresh them. WebEyeTrack's model is served at the origin root
+  `/web/` because its loader hardcodes `${origin}/web/model.json`.
 - **To add a different tracker:** copy the closest adapter, implement the
   contract (`start` + `onGaze` emitting `{x,y}` viewport pixels is the minimum),
   add one `<script>` line to each page's tracker block, and it appears in the

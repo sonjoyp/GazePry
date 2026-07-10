@@ -1,13 +1,26 @@
 /*
  * WebEyeTrack adapter — the head-pose-aware, near-future commodity ceiling
- * (Davalos et al. 2025, arXiv:2508.19544). CNN gaze estimation + MediaPipe face
- * mesh + few-shot on-device personalisation, all in the browser (video stays
- * local). This is tracker arm 3 in the study protocol (§4).
+ * (Davalos et al. 2025, arXiv:2508.19544; RedForestAi/WebEyeTrack, MIT). A
+ * BlazeGaze CNN + MediaPipe face landmarks + few-shot personalisation, running
+ * in a Web Worker so inference stays off the UI thread. Gaze inference is
+ * on-device (video stays local). Study-protocol tracker arm 3.
  *
- * STATUS: available:false until you vendor the WebEyeTrack browser build. The
- * adapter is written against its documented shape; wire the two TODOs below to
- * the actual library API, drop the assets under lib/webeyetrack/, and flip
- * available:true. Implements the GazePry tracker-adapter contract.
+ * Vendored by scripts/vendor-trackers.sh:
+ *   ../lib/webeyetrack/webeyetrack.js   UMD bundle (exports on window)
+ *   ../../web/model.json + shard         BlazeGaze weights — MUST be served at the
+ *                                        origin root /web/ (BlazeGaze loads
+ *                                        `${location.origin}/web/model.json`).
+ * At runtime it also fetches MediaPipe assets from Google/jsDelivr CDNs
+ * (download-only; no camera data leaves the machine).
+ *
+ * Real API:
+ *   const cam = new WebcamClient(videoId);
+ *   const proxy = new WebEyeTrackProxy(cam);
+ *   proxy.onGazeResults = (g) => { ... g.normPog=[x,y] in [-0.5,0.5]; g.gazeState }
+ * The proxy also listens for window clicks and feeds them to its few-shot
+ * calibrator — so the orchestrator's 9-point click grid personalises the model.
+ *
+ * Implements the GazePry tracker-adapter contract (see README-adapter.md).
  */
 (function () {
   "use strict";
@@ -21,59 +34,78 @@
       document.head.appendChild(s);
     });
   }
+  function ensureVideo(id) {
+    var v = document.getElementById(id);
+    if (!v) {
+      v = document.createElement("video");
+      v.id = id; v.autoplay = true; v.playsInline = true; v.muted = true;
+      v.style.display = "none";
+      document.body.appendChild(v);
+    }
+    return v;
+  }
 
   var adapter = {
-    id: "webeyetrack-0.1",
+    id: "webeyetrack-0.0.2",
     family: "webeyetrack",
     label: "WebEyeTrack",
-    hint: "Head-pose-aware CNN + few-shot personalisation, in-browser (video stays local). The near-future commodity ceiling.",
+    hint: "Head-pose-aware CNN + few-shot personalisation, in a Web Worker, in-browser (video stays local). The near-future commodity ceiling.",
     privacy: "local",
-    needsCalibration: true, // few-shot: the click grid supplies the support points
-    available: false,
-    setup:
-      "Vendor the WebEyeTrack browser build under prototype/public/lib/webeyetrack/ " +
-      "(see https://arxiv.org/abs/2508.19544 and the project repo), wire the two TODOs " +
-      "in trackers/webeyetrack.js to its API, then set available:true.",
+    needsCalibration: true, // few-shot: the click grid feeds its recalibrator
+    available: true,
+    startTimeoutMs: 20000, // model + MediaPipe assets download on first run
 
     load: function (base) {
       this._base = base || "";
       if (!loaded) {
-        // TODO(vendor): point at the actual WebEyeTrack entry script(s).
-        loaded = window.WebEyeTrack
+        loaded = window.WebEyeTrackProxy
           ? Promise.resolve()
           : loadScript(this._base + "lib/webeyetrack/webeyetrack.js");
       }
       return loaded;
     },
 
-    start: async function () {
-      if (!window.WebEyeTrack) throw new Error("WebEyeTrack not loaded (vendor the library first)");
-      // TODO(vendor): initialise the engine and begin the camera loop. Expected shape:
-      //   this._engine = new WebEyeTrack({ faceMeshAssets: this._base + "mediapipe/face_mesh" });
-      //   await this._engine.start();
-      //   this._engine.onGaze(g => this._emit(g));   // g in viewport px, or null on lost face
-      this._started = true;
+    start: function () {
+      if (!window.WebEyeTrackProxy || !window.WebcamClient)
+        throw new Error("WebEyeTrack not loaded (run scripts/vendor-trackers.sh)");
+      var self = this;
+      this._cb = null;
+      ensureVideo("wet-webcam");
+
+      // Constructing the proxy kicks off: worker init -> 'ready' -> webcam start
+      // -> per-frame gaze inference. It attaches its own window-click calibrator.
+      this._cam = new window.WebcamClient("wet-webcam");
+      this._proxy = new window.WebEyeTrackProxy(this._cam);
+
+      return new Promise(function (resolve) {
+        var settled = false;
+        self._proxy.onGazeResults = function (g) {
+          window.GazePry._lastBeat = performance.now();
+          if (!settled) { settled = true; resolve(); } // first inference = live
+          if (!self._cb) return;
+          if (!g || g.gazeState === "closed" || !g.normPog) {
+            self._cb(null, performance.now()); // blink / no face this frame
+          } else {
+            self._cb({
+              x: (g.normPog[0] + 0.5) * window.innerWidth,
+              y: (g.normPog[1] + 0.5) * window.innerHeight,
+            }, performance.now());
+          }
+        };
+        setTimeout(function () { if (!settled) { settled = true; resolve(); } }, adapter.startTimeoutMs);
+      });
     },
 
-    // Bridge the engine's gaze events to the orchestrator's callback in the
-    // WebGazer-compatible {x,y} viewport-pixel contract.
-    _emit: function (g, clock) {
-      window.GazePry._lastBeat = performance.now();
-      if (this._cb) this._cb(g && g.x != null ? { x: g.x, y: g.y } : null, clock == null ? performance.now() : clock);
-    },
     onGaze: function (cb) { this._cb = cb; },
     offGaze: function () { this._cb = null; },
 
-    // Few-shot personalisation: feed each calibration click as a support sample.
-    recordCalibration: function (x, y) {
-      // TODO(vendor): this._engine.addCalibrationPoint(x, y);
-    },
-    clearModel: function () {
-      // TODO(vendor): this._engine && this._engine.resetPersonalization();
-    },
+    // The proxy captures window clicks itself, so each calibration-dot click is
+    // already fed to the few-shot recalibrator — nothing extra to do here.
+    recordCalibration: function () {},
+    // No client-side identity model to clear (few-shot state lives in the worker;
+    // re-running the click grid re-personalises it). Kept for the wipe demo.
+    clearModel: function () {},
     showPreview: function () {},
-    pause: function () { /* TODO(vendor): this._engine && this._engine.pause(); */ },
-    resume: function () { /* TODO(vendor): return this._engine && this._engine.resume(); */ },
   };
 
   if (window.GazePry) window.GazePry.registerTracker(adapter);

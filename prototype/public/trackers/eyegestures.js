@@ -1,79 +1,115 @@
 /*
  * EyeGestures adapter — an actively-maintained open-source webcam tracker
- * (NativeSensors/EyeGestures). V4+ ships a shared Rust/WASM engine with a
- * JavaScript web build, so it runs straight in the browser (video stays local).
- * A good open-source second commodity arm alongside WebGazer.
+ * (NativeSensors / EyeGestures Lite). A Rust/WASM engine + JS shim that runs in
+ * the browser; gaze inference is on-device (video stays local). A good
+ * open-source second commodity arm alongside WebGazer.
  *
- * STATUS: available:false until you vendor the EyeGestures web build. The adapter
- * is written against its documented shape; wire the TODOs to the actual API, drop
- * the assets under lib/eyegestures/, and flip available:true. Implements the
- * GazePry tracker-adapter contract.
+ * Vendored by scripts/vendor-trackers.sh into ../lib/eyegestures/. At runtime it
+ * additionally fetches MediaPipe face-mesh from jsDelivr (download-only; no
+ * camera data leaves the machine).
  *
- * Docs: https://eyegestures.com/  ·  https://github.com/NativeSensors/EyeGestures
+ * Real API (EyeGestures Lite v4): a global `EyeGestures` class —
+ *   const g = new EyeGestures(videoElementId, onPoint);
+ *   g.invisible(); g.start();
+ *   // onPoint([x, y], calibrated): x/y are VIEWPORT pixels; calibrated=false
+ *   //   while its built-in calibration is still converging, true once ready.
+ * It self-calibrates (no click grid), so needsCalibration:false.
+ *
+ * Implements the GazePry tracker-adapter contract (see README-adapter.md).
  */
 (function () {
   "use strict";
 
   var loaded = null;
-  function loadScript(src) {
+  function loadScript(src, module) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement("script");
-      s.src = src; s.onload = resolve;
+      s.src = src;
+      if (module) s.type = "module";
+      s.onload = resolve;
       s.onerror = function () { reject(new Error("failed to load " + src)); };
       document.head.appendChild(s);
     });
   }
+  function loadCss(href) {
+    if (document.querySelector('link[href="' + href + '"]')) return;
+    var l = document.createElement("link");
+    l.rel = "stylesheet"; l.href = href;
+    document.head.appendChild(l);
+  }
+  // EyeGestures uses getElementById("video"/"status"/"error"); create hidden ones.
+  function ensureEl(tag, id) {
+    var el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement(tag);
+      el.id = id;
+      el.style.display = "none";
+      document.body.appendChild(el);
+    }
+    return el;
+  }
 
   var adapter = {
-    id: "eyegestures-v4",
+    id: "eyegestures-lite-4",
     family: "eyegestures",
     label: "EyeGestures",
-    hint: "Open-source Rust/WASM webcam engine, in-browser (video stays local). Uses a moving-dot calibration.",
+    hint: "Open-source Rust/WASM webcam engine, in-browser (video stays local; MediaPipe assets load from CDN). Self-calibrating.",
     privacy: "local",
-    needsCalibration: true, // its calibration takes on-screen target points; the click grid supplies them
-    available: false,
-    setup:
-      "Vendor the EyeGestures web/WASM build under prototype/public/lib/eyegestures/ " +
-      "(see https://github.com/NativeSensors/EyeGestures), wire the TODOs in " +
-      "trackers/eyegestures.js to its API, then set available:true.",
+    needsCalibration: false, // runs its own calibration inside start()
+    available: true,
+    startTimeoutMs: 60000, // its calibration is user-paced
 
     load: function (base) {
       this._base = base || "";
+      var dir = this._base + "lib/eyegestures/";
       if (!loaded) {
-        // TODO(vendor): point at the actual EyeGestures web entry script(s).
-        loaded = window.EyeGestures
-          ? Promise.resolve()
-          : loadScript(this._base + "lib/eyegestures/eyegestures.js");
+        loadCss(dir + "eyegestures.css");
+        // Point the engine loader at the vendored WASM module (else it resolves
+        // EyegesturesEngine.js relative to the script and re-fetches from origin).
+        window.EyeGesturesEngineModuleUrl = dir + "EyegesturesEngine.js";
+        // Documented external deps, vendored locally; then the tracker itself.
+        loaded = loadScript(dir + "ml.min.js")
+          .then(function () { return loadScript(dir + "math.min.js"); })
+          .then(function () { return window.EyeGestures ? null : loadScript(dir + "eyegestures.js"); });
       }
       return loaded;
     },
 
-    start: async function () {
-      if (!window.EyeGestures) throw new Error("EyeGestures not loaded (vendor the library first)");
-      // TODO(vendor): construct + start the engine and route gaze events. Expected shape:
-      //   this._engine = new EyeGestures.WebEngine();
-      //   await this._engine.start();
-      //   this._engine.on("gaze", g => this._emit(g)); // g.point = [x,y] viewport px; g.blink -> null
-      this._started = true;
+    start: function () {
+      if (!window.EyeGestures) throw new Error("EyeGestures not loaded (run scripts/vendor-trackers.sh)");
+      var self = this;
+      this._cb = null;
+      this._video = ensureEl("video", "video");
+      this._video.setAttribute("autoplay", "");
+      this._video.setAttribute("playsinline", "");
+      ensureEl("div", "status");
+      ensureEl("div", "error");
+
+      return new Promise(function (resolve) {
+        var settled = false;
+        function onPoint(point, calibrated) {
+          window.GazePry._lastBeat = performance.now();
+          if (!settled && calibrated) { settled = true; resolve(); } // ready once calibrated
+          if (self._cb && point) self._cb({ x: point[0], y: point[1] }, performance.now());
+          else if (self._cb) self._cb(null, performance.now());
+        }
+        self._engine = new window.EyeGestures("video", onPoint);
+        self._engine.invisible();       // hide the blue gaze cursor during tasks
+        self._engine.start();           // shows its calibration, then streams gaze
+        // Safety net: proceed even if the "calibrated" flag never flips.
+        setTimeout(function () { if (!settled) { settled = true; resolve(); } }, adapter.startTimeoutMs);
+      });
     },
 
-    _emit: function (g, clock) {
-      window.GazePry._lastBeat = performance.now();
-      var pt = g && !g.blink && g.point ? { x: g.point[0], y: g.point[1] } : null;
-      if (this._cb) this._cb(pt, clock == null ? performance.now() : clock);
-    },
     onGaze: function (cb) { this._cb = cb; },
     offGaze: function () { this._cb = null; },
 
-    recordCalibration: function (x, y) {
-      // TODO(vendor): this._engine.calibratePoint(x, y);
-    },
-    clearModel: function () {
-      // TODO(vendor): this._engine && this._engine.resetCalibration();
-    },
-    showPreview: function () {},
-    pause: function () { /* TODO(vendor): this._engine && this._engine.pause(); */ },
-    resume: function () { /* TODO(vendor): return this._engine && this._engine.resume(); */ },
+    // Self-calibrating: the click grid is skipped (needsCalibration:false) and
+    // there is no client-side identity model to clear.
+    recordCalibration: function () {},
+    clearModel: function () { try { this._engine && this._engine.recalibrate(); } catch (e) {} },
+    showPreview: function (show) { try { show ? this._engine.visible() : this._engine.invisible(); } catch (e) {} },
+    stop: function () { try { this._engine && this._engine.stop(); } catch (e) {} },
   };
 
   if (window.GazePry) window.GazePry.registerTracker(adapter);

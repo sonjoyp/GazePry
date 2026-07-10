@@ -52,9 +52,14 @@ extractor (`../../reid-core.js` / `analysis/features.py`) serves every tracker.
 |---|---|---|---|---|
 | `webgazer` | working (vendored) | local | click grid | v3.5.3, the deployed reality |
 | `gazecloud` | working (remote script) | **cloud** | self (built-in) | high accuracy; frames leave the machine |
-| `webeyetrack` | needs vendoring | local | few-shot (click grid) | head-pose-aware; protocol arm 3 |
-| `eyegestures` | needs vendoring | local | moving-dot (click grid) | open-source Rust/WASM |
+| `webeyetrack` | working (vendored) | local | few-shot (click grid) | head-pose-aware; protocol arm 3 |
+| `eyegestures` | working (vendored) | local | self (built-in) | open-source Rust/WASM |
+
+`webeyetrack` and `eyegestures` libraries are vendored by
+`../../scripts/vendor-trackers.sh` into `../lib/` (and, for WebEyeTrack, the
+BlazeGaze model into `../../web/`). They do gaze inference on-device but download
+model/WASM assets from CDNs at load.
 
 To add a tracker: copy the closest adapter, implement the contract, drop its
-library under `../lib/<name>/`, add one `<script>` line to `_trackers.html`, and
-it appears in the picker automatically.
+library under `../lib/<name>/`, add one `<script>` line to each page's tracker
+block (see any file in `../tasks/`), and it appears in the picker automatically.

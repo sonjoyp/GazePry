@@ -89,8 +89,31 @@ test("shipped adapters carry the expected capability flags", () => {
   assert.equal(by("gazecloud").privacy, "cloud", "GazeCloud is flagged cloud (frames leave the machine)");
   assert.equal(by("gazecloud").needsCalibration, false, "GazeCloud self-calibrates");
 
-  assert.equal(by("webeyetrack").available, false);
-  assert.equal(by("eyegestures").available, false);
+  // WebEyeTrack + EyeGestures are vendored (scripts/vendor-trackers.sh) and on-device.
+  assert.equal(by("webeyetrack").available, true);
+  assert.equal(by("webeyetrack").privacy, "local");
+  assert.equal(by("webeyetrack").needsCalibration, true, "WebEyeTrack few-shot uses the click grid");
+
+  assert.equal(by("eyegestures").available, true);
+  assert.equal(by("eyegestures").privacy, "local");
+  assert.equal(by("eyegestures").needsCalibration, false, "EyeGestures self-calibrates");
+});
+
+test("vendored tracker libraries are present on disk", () => {
+  // The two adapters are only usable if scripts/vendor-trackers.sh has run.
+  const need = [
+    "lib/webeyetrack/webeyetrack.js",
+    "web/model.json",
+    "web/group1-shard1of1.bin",
+    "lib/eyegestures/eyegestures.js",
+    "lib/eyegestures/EyegesturesEngine.js",
+    "lib/eyegestures/EyegesturesEngine_bg.wasm",
+  ];
+  for (const rel of need) {
+    const p = path.join(PUBLIC, rel);
+    assert.ok(fs.existsSync(p) && fs.statSync(p).size > 0,
+      `${rel} missing or empty — run: bash scripts/vendor-trackers.sh`);
+  }
 });
 
 test("registerTracker applies sensible defaults", () => {

@@ -49,6 +49,23 @@
     return el;
   }
 
+  // The vendored eyegestures.js is a classic script that declares `class
+  // EyeGestures` at the top level — that is a GLOBAL LEXICAL binding, reachable as
+  // a bare identifier but NOT as a property of `window`. Resolve it from either
+  // place and cache it onto window so the rest of the flow can rely on it.
+  function resolveEyeGestures() {
+    if (window.EyeGestures) return window.EyeGestures;
+    try {
+      // typeof on an undeclared identifier is safe (returns "undefined"); once the
+      // script has run, this reference resolves to the global lexical class.
+      if (typeof EyeGestures !== "undefined" && EyeGestures) {
+        window.EyeGestures = EyeGestures;
+        return EyeGestures;
+      }
+    } catch (e) {}
+    return null;
+  }
+
   var adapter = {
     id: "eyegestures-lite-4",
     family: "eyegestures",
@@ -70,13 +87,15 @@
         // Documented external deps, vendored locally; then the tracker itself.
         loaded = loadScript(dir + "ml.min.js")
           .then(function () { return loadScript(dir + "math.min.js"); })
-          .then(function () { return window.EyeGestures ? null : loadScript(dir + "eyegestures.js"); });
+          .then(function () { return resolveEyeGestures() ? null : loadScript(dir + "eyegestures.js"); });
       }
       return loaded;
     },
 
     start: function () {
-      if (!window.EyeGestures) throw new Error("EyeGestures not loaded (run scripts/vendor-trackers.sh)");
+      var EG = resolveEyeGestures();
+      if (!EG) throw new Error("EyeGestures library loaded but its class is not reachable " +
+        "(check the console for a load error in lib/eyegestures/eyegestures.js).");
       var self = this;
       this._cb = null;
       this._video = ensureEl("video", "video");
@@ -93,7 +112,7 @@
           if (self._cb && point) self._cb({ x: point[0], y: point[1] }, performance.now());
           else if (self._cb) self._cb(null, performance.now());
         }
-        self._engine = new window.EyeGestures("video", onPoint);
+        self._engine = new EG("video", onPoint);
         self._engine.invisible();       // hide the blue gaze cursor during tasks
         self._engine.start();           // shows its calibration, then streams gaze
         // Safety net: proceed even if the "calibrated" flag never flips.

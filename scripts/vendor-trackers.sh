@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # vendor-trackers.sh — download the third-party webcam eye-tracker libraries the
-# prototype depends on into public/, so the WebEyeTrack and EyeGestures arms can
+# harness depends on into public/, so the WebEyeTrack and EyeGestures arms can
 # run without a build step. Idempotent: safe to re-run.
 #
 # Vendored (all open-source / freely distributed):
@@ -13,10 +13,10 @@
 # EyeGestures WASM engine is vendored locally here). That is download-only and
 # does not upload any camera data.
 #
-# Usage:  cd prototype && bash scripts/vendor-trackers.sh
+# Usage:  bash scripts/vendor-trackers.sh   (from the repo root)
 set -euo pipefail
 
-HERE="$(cd "$(dirname "$0")/.." && pwd)"      # prototype/
+HERE="$(cd "$(dirname "$0")/.." && pwd)"      # repo root
 PUB="$HERE/public"
 LIB="$PUB/lib"
 TMP="$(mktemp -d)"

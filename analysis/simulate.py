@@ -6,7 +6,7 @@ tasks; tasks modulate those traits. If the pipeline is correct, cross-task /
 cross-session re-ID on this data should score far above chance.
 
 This is a sanity harness for the code, NOT a claim about real eyes. Real data
-comes from the browser harness; see the prototype README.
+comes from the browser harness; see the repo README.
 
 Usage:
   python simulate.py --out ../data_sim --subjects 12 --sessions 2

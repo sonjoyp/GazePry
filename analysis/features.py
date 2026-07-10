@@ -1,7 +1,7 @@
 """
 Content-independent gaze features for re-identification.
 
-Mirrors prototype/reid-core.js so the offline analysis and the live demo agree.
+Mirrors ../reid-core.js (repo root) so the offline analysis and the live demo agree.
 Input: a session dict with `samples` = [{"t": ms, "x": px|None, "y": px|None}, ...]
 and `screen` = {"innerW":.., "innerH":..}. Spatial features are normalised by
 the screen diagonal, so they are resolution/device independent.

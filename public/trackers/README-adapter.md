@@ -57,7 +57,7 @@ extractor (`../../reid-core.js` / `analysis/features.py`) serves every tracker.
 
 `webeyetrack` and `eyegestures` libraries are vendored by
 `../../scripts/vendor-trackers.sh` into `../lib/` (and, for WebEyeTrack, the
-BlazeGaze model into `../../web/`). They do gaze inference on-device but download
+BlazeGaze model into `../web/`). They do gaze inference on-device but download
 model/WASM assets from CDNs at load.
 
 To add a tracker: copy the closest adapter, implement the contract, drop its

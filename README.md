@@ -1,19 +1,31 @@
-# GazePry — Direction 1 Prototype
+# GazePry
 
 **Cross-site gaze re-identification as an unclearable web tracking vector.**
 
-A working prototype for the thesis in
-[`../GazePry_Direction1_ReID_Study_Protocol.md`](../GazePry_Direction1_ReID_Study_Protocol.md):
+This repository is the research project and its experiment harness. The thesis:
 eye-movement dynamics captured by a commodity in-browser webcam tracker form a
 **stateless, person-bound** re-identification signal that clearing cookies /
 cache / incognito does not remove, and that survives stripping the face from the
 video (it is carried by *movement dynamics*, not appearance).
 
+**Research documents (use these for the paper):**
+- [`GazePry_Direction1_ReID_Study_Protocol.md`](GazePry_Direction1_ReID_Study_Protocol.md)
+  — the living study protocol: thesis, threat model, research questions,
+  apparatus, stimuli, features/models, conditions matrix, metrics, analysis plan,
+  related work, and full bibliography. **Kept current with the direction, plan,
+  and methodology** as the work evolves.
+- [`GazePry_Information_Leakage_Report.md`](GazePry_Information_Leakage_Report.md)
+  — the companion threat-model assessment and shared bibliography.
+
+Everything else at the root (below) is the runnable harness that implements the
+protocol.
+
 The webcam tracker is **pluggable**: the capture harness is tracker-agnostic and
 drives one of several adapters chosen per session, so the same participant can be
 recorded on multiple webcam trackers and compared (protocol RQ3). Shipped
 adapters: **WebGazer v3.5.3** (working, vendored — the deployed reality and the
-GazePry lineage, not the deprecated 2016 SearchGazer fork in the repo root),
+GazePry lineage, not the deprecated 2016 SearchGazer fork, which now lives in
+[`legacy-searchgazer/`](legacy-searchgazer/)),
 **GazeCloud/GazeRecorder** (working via its hosted script — high-accuracy but
 closed-source and **cloud**: frames leave the machine), **WebEyeTrack**
 (head-pose-aware CNN + few-shot, MIT; vendored, on-device), and **EyeGestures**
@@ -27,7 +39,10 @@ already present under `public/lib/`. See
 ## What's here
 
 ```
-prototype/
+GazePry/                          (repo root — the experiment lives here)
+  GazePry_Direction1_ReID_Study_Protocol.md   the living study protocol (paper)
+  GazePry_Information_Leakage_Report.md        companion threat-model report
+  legacy-searchgazer/  archived 2016/2017 SearchGazer demo (deprecated, unused)
   server.js            zero-dependency Node server: serves the harness, ingests
                        sessions, exposes a LIVE nearest-neighbour re-ID endpoint
   reid-core.js         gaze feature extraction + matching (JS, for the live demo)
@@ -62,11 +77,12 @@ prototype/
     registry.test.js     adapter registry, contract, identity/tracker resolution
     server.test.js       ingest/status/sessions/identify over a live server
     features-cli.js      helper: JS feature vector for the Python parity test
-  data/                collected sessions land here (git-ignored)
+  data/                collected session logs (real participant data is tracked here)
+  data_sim/            synthetic sessions for pipeline verification (regenerable)
 ```
 
 **Two regimes on purpose.** Same-origin policy blocks a script from reading gaze
-on *another* site, so this prototype does **not** attempt content peeking. It
+on *another* site, so this harness does **not** attempt content peeking. It
 targets re-identification, which is content-independent and therefore *not*
 blocked by SOP: two sites embedding the same tag link the same visitor by gaze.
 
@@ -77,8 +93,7 @@ blocked by SOP: two sites embedding the same tag link the same visitor by gaze.
 ### 1. Serve the harness and collect sessions
 
 ```bash
-cd prototype
-node server.js               # -> http://localhost:8080   (npm start also works)
+node server.js               # from the repo root -> http://localhost:8080 (npm start works too)
 ```
 
 Open **http://localhost:8080** (use `localhost` — `getUserMedia` needs a secure
@@ -135,8 +150,7 @@ There is a regression suite so a small change can't quietly break a working
 feature. **Run `npm test` after each change; keep it green before moving on.**
 
 ```bash
-cd prototype
-npm test          # JS suite (node:test) + Python suite (unittest)
+npm test          # from the repo root: JS suite (node:test) + Python suite (unittest)
 npm run test:js   # just the JavaScript tests
 npm run test:py   # just the Python tests
 ```
@@ -298,5 +312,18 @@ re-identifies across them — no cookie, no shared storage.
 - The hand-crafted feature set is route (a) from the protocol. A deep model
   (Eye Know You Too-style) is the ceiling and a natural extension.
 - `features.py` and `reid-core.js` must stay in sync if you change features.
-- IRB: this project is IRB-exempt; still, never commit raw participant gaze
-  (`data/` is git-ignored).
+- IRB: this project is IRB-exempt. Note that `data/` currently holds **real
+  participant session logs tracked in this repo** — these are gaze coordinate
+  streams only (no raw video), but treat them as sensitive and confirm consent
+  covers sharing before publishing the repo.
+
+---
+
+## Credit & license
+
+Gaze estimation engines are third-party: **WebGazer** (Brown HCI Group),
+**WebEyeTrack** (RedForestAI, MIT), **EyeGestures** (NativeSensors), and the
+optional cloud **GazeCloud/GazeRecorder**. Vendored library licenses live beside
+their code under `public/lib/`. The archived SearchGazer demo (Papoutsaki,
+Laskey, Huang, CHIIR 2017) is in `legacy-searchgazer/`. This project is licensed
+under GPLv3 (see [`LICENSE.md`](LICENSE.md) / [`gplv3.md`](gplv3.md)).

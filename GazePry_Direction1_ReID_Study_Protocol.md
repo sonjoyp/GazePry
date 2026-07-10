@@ -14,7 +14,7 @@
 
 **Three contributions:**
 1. **A new tracking channel.** Gaze as a cookieless, cache-proof, incognito-surviving, cross-device re-identifier — a *person-bound* fingerprint, unlike canvas/font/device fingerprints which are device-bound and defeated by anti-fingerprinting browsers.
-2. **Ceiling vs. commodity.** The gap between research-grade hardware (Gazepoint) and the deployed webcam channel (WebGazer / WebEyeTrack), measured on the *same* subjects. This is the direct payoff of having both devices.
+2. **Ceiling vs. commodity.** The gap between research-grade hardware (Gazepoint) and the deployed webcam channel (WebGazer / WebEyeTrack / EyeGestures, with GazeCloud as a cloud contrast), measured on the *same* subjects. This is the direct payoff of having both devices.
 3. **(Optional) A defense.** An in-browser perturbation layer that raises attacker EER at bounded utility cost, plotted as a privacy–utility curve.
 
 ---
@@ -51,7 +51,7 @@
 
 **Recommended rig — simultaneous capture.** Record the webcam video *while* Gazepoint tracks. The Gazepoint IR gives a per-frame ground-truth gaze label for every webcam frame, so you get (a) clean labels to train/validate the webcam estimate and (b) matched per-subject data across both channels in one session. This is the cleanest way to answer RQ3.
 
-**Tracker arms.** One IR ceiling plus a *pluggable* set of commodity in-browser webcam trackers (the prototype's capture harness is tracker-agnostic — one adapter per tracker, selected per session, all emitting the same gaze stream — so the same subject can be recorded on several and compared directly):
+**Tracker arms.** One IR ceiling plus a *pluggable* set of commodity in-browser webcam trackers (the capture harness is tracker-agnostic — one adapter per tracker, selected per session, all emitting the same gaze stream — so the same subject can be recorded on several and compared directly):
 
 1. **Gazepoint GP3 / GP3 HD** (60/150 Hz IR) — the ceiling / ground truth.
 2. **WebGazer** (current brownhci build) — ridge regression, no head pose; the deployed reality and the GazePry lineage. *Do not use the stale GazePry/SearchGazer fork — 2016 selectors are dead.* Video stays on-device.
@@ -62,6 +62,8 @@
 Other options considered and set aside: **RealEye.io** (commercial SaaS study platform, not a drop-in library, also cloud); classic **TurkerGaze**/**SearchGazer** (WebGazer predecessors, superseded); appearance-CNN research models (**iTracker/GazeCapture**, **L2CS-Net**) that would need porting to TF.js and give no calibration/UX out of the box. The four webcam arms above (2–5) cover the deployable open-source reality (WebGazer, EyeGestures), the near-future on-device ceiling (WebEyeTrack), and the cloud high-accuracy point (GazeCloud).
 
 **Sampling-rate caveat (methodological, state it):** webcam capture is ~30 Hz; Gazepoint is 60–150 Hz. Down-sample Gazepoint to the webcam rate for the *fair* comparison arm, and note that low webcam framerate limits saccade-velocity features — a real constraint on what the commodity channel can extract.
+
+**Harness status (implementation).** The capture harness is built and in this repo: a *tracker-agnostic* orchestrator drives one self-registering adapter per tracker (WebGazer, WebEyeTrack, EyeGestures on-device; GazeCloud cloud), selected per session from the hub, all emitting the same per-frame `{t, x, y}` stream — so one feature pipeline (`reid-core.js` / `analysis/features.py`) and one evaluation (`analysis/reid.py`, which reports **per tracker** and never matches across trackers) serve every arm. The tracker family is recorded in each session and threaded through storage and the live re-ID server. A zero-dependency regression suite (`npm test`) covers features, the matcher, the registry/adapters, the server endpoints, and JS↔Python feature parity. Gazepoint IR capture is external and time-aligned to the webcam stream per §4's simultaneous-capture rig. See the repo `README.md` and `public/trackers/README-adapter.md`.
 
 ---
 
@@ -101,7 +103,7 @@ Report **same-task** (upper bound) and **cross-task** (the tracking threat) sepa
 
 ## 8. Conditions matrix
 
-The experimental cells (each × 3 tracker arms):
+The experimental cells (each × the tracker arms in §4 — the Gazepoint IR ceiling plus four webcam trackers: WebGazer, WebEyeTrack, EyeGestures, and the cloud contrast GazeCloud):
 
 | Axis | Levels |
 |---|---|
@@ -129,7 +131,7 @@ Headline cell: **cross-task, cross-session, dynamics-only, webcam** — that is 
 
 ## 10. Analysis plan
 
-- Report degradation from ceiling (Gazepoint) → WebEyeTrack → WebGazer for each cell.
+- Report degradation from the IR ceiling (Gazepoint) down the on-device webcam arms (WebEyeTrack → EyeGestures → WebGazer) for each cell; report the cloud arm (GazeCloud) **separately**, since it is not on-device and its accuracy is not comparable in privacy terms.
 - Statistical treatment of cross-session stability (test–retest); report confidence intervals over subject splits, not a single split.
 - Honest headline: even a **degraded-but-non-random** webcam EER is a publishable tracking threat when the comparison is "a cookie the user *can* clear." Frame webcam numbers as a *lower bound* on the threat.
 
@@ -168,7 +170,7 @@ Perturb the client-side gaze stream (temporal/Gaussian noise, down-sampling, spa
 
 1. Draft and file the **TAMU IRB** protocol (consent + camera capture) — start today; it gates everything.
 2. Stand up the **simultaneous Gazepoint + webcam** capture rig; verify per-frame time alignment between IR labels and webcam frames.
-3. Use the prototype's **pluggable tracker** harness (`prototype/public/trackers/`): WebGazer, WebEyeTrack, and EyeGestures are vendored and on-device (WebEyeTrack/EyeGestures via `scripts/vendor-trackers.sh`); GazeCloud is the cloud contrast. All log the same per-frame gaze stream, so one feature extractor + analysis covers every arm.
+3. Use the **pluggable tracker** harness (`public/trackers/`): WebGazer, WebEyeTrack, and EyeGestures are vendored and on-device (WebEyeTrack/EyeGestures via `scripts/vendor-trackers.sh`); GazeCloud is the cloud contrast. All log the same per-frame gaze stream, so one feature extractor + analysis covers every arm.
 4. Run a **2–3 subject pilot** across all five tasks to sanity-check feature extraction and the same-session re-ID sanity cell before scaling.
 5. Pre-register the conditions matrix (§8) and metrics (§9) to keep the cross-task, cross-session claim honest.
 

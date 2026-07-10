@@ -7,7 +7,7 @@
  *
  * Vendored by scripts/vendor-trackers.sh:
  *   ../lib/webeyetrack/webeyetrack.js   UMD bundle (exports on window)
- *   ../../web/model.json + shard         BlazeGaze weights — MUST be served at the
+ *   ../web/model.json + shard            BlazeGaze weights — MUST be served at the
  *                                        origin root /web/ (BlazeGaze loads
  *                                        `${location.origin}/web/model.json`).
  * At runtime it also fetches MediaPipe assets from Google/jsDelivr CDNs

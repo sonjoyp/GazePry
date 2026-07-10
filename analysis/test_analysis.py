@@ -3,7 +3,7 @@ Tests for the offline analysis (features.py, reid.py, simulate.py) plus a
 cross-language parity check that the Python and JavaScript feature extractors
 agree bit-for-bit. Pure stdlib unittest — no third-party test deps.
 
-    python3 analysis/test_analysis.py            # from the prototype dir
+    python3 analysis/test_analysis.py            # from the repo root
     python3 -m unittest -v test_analysis         # from the analysis dir
 
 The parity test shells out to `node test/features-cli.js`; it is skipped (not

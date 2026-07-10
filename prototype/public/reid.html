@@ -42,7 +42,7 @@
       <h2>The "unclearable" point</h2>
       <p class="gp-note">
         Conventional trackers die when the user clears state. Gaze does not: the identifier is re-derived from the
-        live eye stream. Wipe cookies, localStorage, sessionStorage and the WebGazer model, then re-identify &mdash;
+        live eye stream. Wipe cookies, localStorage, sessionStorage and the tracker's local model, then re-identify &mdash;
         the match still lands, because nothing about <em>who you are</em> was ever stored in the browser.
       </p>
       <div class="gp-row">
@@ -54,19 +54,31 @@
     <p class="gp-note"><a href="index.html">&larr; Back to hub</a></p>
   </div>
 
-  <script src="lib/webgazer.js"></script>
   <script src="gazepry-tracker.js"></script>
+  <script src="trackers/webgazer.js"></script>
+  <script src="trackers/gazecloud.js"></script>
+  <script src="trackers/webeyetrack.js"></script>
+  <script src="trackers/eyegestures.js"></script>
   <script>
     GazePry.loadIdentity();
+    var activeFamily = GazePry.identity.tracker || GazePry.config.defaultTracker;
 
     async function refreshGallery() {
       var note = document.getElementById("galleryNote");
       try {
-        var r = await fetch("/sessions");
+        // Match like-with-like: only rank against gallery sessions from the same
+        // tracker (feature spaces differ across trackers).
+        var r = await fetch("/sessions?tracker=" + encodeURIComponent(activeFamily));
         var j = await r.json();
-        if (!j.count) { note.textContent = "Gallery is empty — no sessions enrolled yet."; return false; }
-        note.innerHTML = "<b>" + j.participants.length + "</b> participant(s), <b>" + j.count +
-          "</b> session(s): " + j.participants.map(function (p) { return "<span class='gp-pill'>" + p + "</span>"; }).join(" ");
+        var tl = GazePry.getTracker(activeFamily);
+        var trkName = tl ? tl.label : activeFamily;
+        if (!j.count) {
+          note.textContent = "Gallery is empty for " + trkName + " — enroll sessions with this tracker first.";
+          return false;
+        }
+        note.innerHTML = "Tracker <span class='gp-pill'>" + trkName + "</span> · <b>" +
+          j.participants.length + "</b> participant(s), <b>" + j.count + "</b> session(s): " +
+          j.participants.map(function (p) { return "<span class='gp-pill'>" + p + "</span>"; }).join(" ");
         return true;
       } catch (e) { note.textContent = "Server not reachable — start it with `node server.js`."; return false; }
     }
@@ -91,7 +103,8 @@
           probe.samples.length + " samples captured; matching…";
         var r = await fetch("/identify", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ samples: probe.samples, screen: probe.screen }),
+          body: JSON.stringify({ samples: probe.samples, screen: probe.screen,
+            tracker: probe.trackerFamily || activeFamily }),
         });
         var j = await r.json();
         render(j);
@@ -127,7 +140,7 @@
     document.getElementById("wipeBtn").addEventListener("click", function () {
       GazePry.wipeState();
       document.getElementById("wipeNote").textContent =
-        "Wiped cookies + storage + WebGazer model. Now click ‘Re-capture 20 s probe’ again — the match still works.";
+        "Wiped cookies + storage + the tracker's local model. Now click ‘Re-capture 20 s probe’ again — the match still works.";
     });
   </script>
 </body>

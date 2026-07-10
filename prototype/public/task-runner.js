@@ -14,7 +14,11 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     var who = document.getElementById("gp-who");
-    if (who) who.textContent = GazePry.identity.participant + " · " + GazePry.identity.session;
+    if (who) {
+      var t = GazePry.getTracker(GazePry.identity.tracker);
+      who.textContent = GazePry.identity.participant + " · " + GazePry.identity.session +
+        " · " + (t ? t.label : GazePry.identity.tracker);
+    }
 
     var cfg = document.getElementById("gp-start");
     if (!cfg) return;
@@ -54,7 +58,8 @@
 
     // local fallback record of completion (server /status is authoritative)
     try {
-      var key = "gp_done_" + GazePry.identity.participant + "_" + GazePry.identity.session;
+      var key = "gp_done_" + GazePry.identity.participant + "_" + GazePry.identity.session +
+        "_" + (GazePry.identity.tracker || "");
       var done = JSON.parse(localStorage.getItem(key) || "[]");
       if (done.indexOf(task) < 0) done.push(task);
       localStorage.setItem(key, JSON.stringify(done));

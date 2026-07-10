@@ -9,7 +9,7 @@
 <body class="gp-body">
   <div class="gp-wrap">
     <h1>GazePry &mdash; cross-site gaze re-identification</h1>
-    <p class="gp-sub">Direction 1 capture harness &middot; commodity webcam (WebGazer v3.5.3) + optional Gazepoint ground truth</p>
+    <p class="gp-sub">Direction 1 capture harness &middot; pluggable webcam trackers (WebGazer &middot; GazeCloud &middot; WebEyeTrack &middot; EyeGestures) + optional Gazepoint ground truth</p>
 
     <!-- Step 1: identity + consent -->
     <div class="gp-card" id="step-id">
@@ -23,6 +23,9 @@
         <option value="S2">S2 (return visit, ≥1 week later)</option>
         <option value="S3">S3</option>
       </select>
+      <label for="trk">Eye-tracker</label>
+      <select id="trk"></select>
+      <p class="gp-note" id="trkHint" style="margin-top:6px"></p>
       <label class="gp-row" style="font-weight:400;margin-top:16px">
         <input type="checkbox" id="consent" style="width:auto" />
         <span>I consent to webcam-based gaze capture for this session.</span>
@@ -62,18 +65,45 @@
     </p>
   </div>
 
-  <script src="lib/webgazer.js"></script>
   <script src="gazepry-tracker.js"></script>
+  <script src="trackers/webgazer.js"></script>
+  <script src="trackers/gazecloud.js"></script>
+  <script src="trackers/webeyetrack.js"></script>
+  <script src="trackers/eyegestures.js"></script>
   <script>
     var pid = document.getElementById("pid");
     var sid = document.getElementById("sid");
+    var trk = document.getElementById("trk");
+    var trkHint = document.getElementById("trkHint");
     var consent = document.getElementById("consent");
     var startBtn = document.getElementById("startBtn");
+
+    // Populate the eye-tracker picker from the registered adapters. Selecting a
+    // tracker here is what routes the whole session (calibration + capture) to it,
+    // so the same participant can be recorded on several trackers for RQ3.
+    GazePry.listTrackers().forEach(function (t) {
+      var o = document.createElement("option");
+      o.value = t.family;
+      o.textContent = t.label +
+        (t.privacy === "cloud" ? " — cloud" : "") +
+        (t.available === false ? " (needs setup)" : "");
+      trk.appendChild(o);
+    });
+    function showTrkHint() {
+      var t = GazePry.getTracker(trk.value);
+      if (!t) { trkHint.textContent = ""; return; }
+      var note = t.hint || "";
+      if (t.available === false) note += "  ⚠ " + (t.setup || "Not installed yet.");
+      trkHint.textContent = note;
+    }
+    trk.addEventListener("change", showTrkHint);
 
     // pre-fill from any prior identity
     var prior = GazePry.loadIdentity();
     if (prior.participant) pid.value = prior.participant;
     if (prior.session) sid.value = prior.session;
+    if (prior.tracker && GazePry.getTracker(prior.tracker)) trk.value = prior.tracker;
+    showTrkHint();
 
     // Returning to the hub after finishing a task should land on the task list,
     // not the identity/consent step: the participant already has an identity and
@@ -82,9 +112,13 @@
     // where a fresh calibration is wanted.
     if (prior.participant && prior.session) showTasks();
 
+    function whoLabel() {
+      var t = GazePry.getTracker(GazePry.identity.tracker);
+      return GazePry.identity.participant + " · " + GazePry.identity.session +
+        " · " + (t ? t.label : GazePry.identity.tracker);
+    }
     function showTasks() {
-      document.getElementById("whoPill").textContent =
-        GazePry.identity.participant + " · " + GazePry.identity.session;
+      document.getElementById("whoPill").textContent = whoLabel();
       document.getElementById("step-id").style.display = "none";
       document.getElementById("step-tasks").style.display = "block";
       markDone();
@@ -102,11 +136,17 @@
     refresh();
 
     startBtn.addEventListener("click", async function () {
-      GazePry.saveIdentity(pid.value.trim(), sid.value);
-      document.getElementById("whoPill").textContent =
-        GazePry.identity.participant + " · " + GazePry.identity.session;
+      GazePry.saveIdentity(pid.value.trim(), sid.value, trk.value);
+      document.getElementById("whoPill").textContent = whoLabel();
       var note = document.getElementById("idNote");
-      note.textContent = "Starting camera… (allow webcam access, then the calibration dots appear)";
+      var chosen = GazePry.getTracker(trk.value);
+      if (chosen && chosen.available === false) {
+        note.textContent = chosen.label + " is not installed yet. " + (chosen.setup || "");
+        return; // leave the button enabled so a different tracker can be picked
+      }
+      note.textContent = chosen && chosen.needsCalibration === false
+        ? "Starting " + chosen.label + "… (follow its on-screen calibration)"
+        : "Starting camera… (allow webcam access, then the calibration dots appear)";
       startBtn.disabled = true;
       try {
         await GazePry.calibrate({ clicksPerDot: 5, fresh: true });
@@ -139,10 +179,11 @@
       var done = {};
       try {
         var r = await fetch("/status?participant=" + encodeURIComponent(id.participant) +
-          "&session=" + encodeURIComponent(id.session));
+          "&session=" + encodeURIComponent(id.session) +
+          "&tracker=" + encodeURIComponent(id.tracker || ""));
         if (r.ok) { (await r.json()).tasks.forEach(function (t) { done[t] = true; }); }
       } catch (e) {
-        (JSON.parse(localStorage.getItem("gp_done_" + id.participant + "_" + id.session) || "[]"))
+        (JSON.parse(localStorage.getItem("gp_done_" + id.participant + "_" + id.session + "_" + (id.tracker || "")) || "[]"))
           .forEach(function (t) { done[t] = true; });
       }
       document.querySelectorAll("#taskList a").forEach(function (a) {

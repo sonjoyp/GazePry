@@ -41,7 +41,7 @@
 
 - **RQ1 (baseline):** How reliably can the webcam channel re-identify a returning user *same-task, cross-session*? (test–retest across days)
 - **RQ2 (the tracking threat):** How much does re-ID degrade *cross-task / cross-stimulus* — enroll on site A's content, identify on site B's? This is the headline result; biometrics papers usually skip it.
-- **RQ3 (ceiling vs. commodity):** What is the EER/rank-1 gap between Gazepoint, WebGazer, and WebEyeTrack on the *same* subjects and sessions?
+- **RQ3 (ceiling vs. commodity):** What is the EER/rank-1 gap between the IR ceiling (Gazepoint) and the commodity webcam trackers — WebGazer, WebEyeTrack, EyeGestures, and the cloud option GazeCloud — on the *same* subjects and sessions? (Report on-device webcam arms separately from the cloud arm.)
 - **RQ4 (unclearability):** Does re-ID survive cookie/cache clear, incognito, a fresh browser profile, a different day/lighting, a *different device webcam*, and *face de-identification*?
 - **RQ5 (defense, optional):** What perturbation of the gaze stream defeats re-ID at acceptable utility cost?
 
@@ -51,10 +51,15 @@
 
 **Recommended rig — simultaneous capture.** Record the webcam video *while* Gazepoint tracks. The Gazepoint IR gives a per-frame ground-truth gaze label for every webcam frame, so you get (a) clean labels to train/validate the webcam estimate and (b) matched per-subject data across both channels in one session. This is the cleanest way to answer RQ3.
 
-**Three tracker arms:**
-1. **Gazepoint GP3 / GP3 HD** (60/150 Hz IR) — the ceiling.
-2. **WebGazer** (current brownhci build, `www/search`) — ridge regression, no head pose; the deployed reality and the GazePry lineage. *Do not use the stale GazePry/SearchGazer fork — 2016 selectors are dead.*
-3. **WebEyeTrack** [25] — head-pose-aware (~2.32 cm); the near-future commodity ceiling.
+**Tracker arms.** One IR ceiling plus a *pluggable* set of commodity in-browser webcam trackers (the prototype's capture harness is tracker-agnostic — one adapter per tracker, selected per session, all emitting the same gaze stream — so the same subject can be recorded on several and compared directly):
+
+1. **Gazepoint GP3 / GP3 HD** (60/150 Hz IR) — the ceiling / ground truth.
+2. **WebGazer** (current brownhci build) — ridge regression, no head pose; the deployed reality and the GazePry lineage. *Do not use the stale GazePry/SearchGazer fork — 2016 selectors are dead.* Video stays on-device.
+3. **WebEyeTrack** [25] — CNN + few-shot personalisation, head-pose-aware (~2.32 cm); the near-future commodity ceiling. On-device.
+4. **EyeGestures** (NativeSensors, open-source; Rust/WASM web build) — an actively-maintained open-source second commodity arm; on-device.
+5. **GazeCloud / GazeRecorder** (hosted JS API) — the *high-accuracy, self-calibrating* commodity option, but **closed-source and cloud-based: webcam frames are uploaded to a third party.** Include it as an accuracy contrast *and* as a finding in its own right — for a webcam-gaze *tracking-vector* paper, the most accurate drop-in option is also the one that exfiltrates the face. Report it separately from the on-device arms.
+
+Other options considered and set aside: **RealEye.io** (commercial SaaS study platform, not a drop-in library, also cloud); classic **TurkerGaze**/**SearchGazer** (WebGazer predecessors, superseded); appearance-CNN research models (**iTracker/GazeCapture**, **L2CS-Net**) that would need porting to TF.js and give no calibration/UX out of the box. The four webcam arms above (2–5) cover the deployable open-source reality (WebGazer, EyeGestures), the near-future on-device ceiling (WebEyeTrack), and the cloud high-accuracy point (GazeCloud).
 
 **Sampling-rate caveat (methodological, state it):** webcam capture is ~30 Hz; Gazepoint is 60–150 Hz. Down-sample Gazepoint to the webcam rate for the *fair* comparison arm, and note that low webcam framerate limits saccade-velocity features — a real constraint on what the commodity channel can extract.
 
@@ -163,7 +168,7 @@ Perturb the client-side gaze stream (temporal/Gaussian noise, down-sampling, spa
 
 1. Draft and file the **TAMU IRB** protocol (consent + camera capture) — start today; it gates everything.
 2. Stand up the **simultaneous Gazepoint + webcam** capture rig; verify per-frame time alignment between IR labels and webcam frames.
-3. Pull **current brownhci/WebGazer** (`www/search`) and **WebEyeTrack**; wire both to log per-frame gaze + raw features.
+3. Use the prototype's **pluggable tracker** harness (`prototype/public/trackers/`): WebGazer and GazeCloud work out of the box; vendor **WebEyeTrack** and **EyeGestures** and flip their adapters on. All log the same per-frame gaze stream, so one feature extractor + analysis covers every arm.
 4. Run a **2–3 subject pilot** across all five tasks to sanity-check feature extraction and the same-session re-ID sanity cell before scaling.
 5. Pre-register the conditions matrix (§8) and metrics (§9) to keep the cross-task, cross-session claim honest.
 

@@ -31,6 +31,16 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from features import extract_features, FEATURE_NAMES  # noqa: E402
 
 
+def tracker_family(s):
+    """Tracker slug for a session, tolerant of older records that stored only the
+    full tracker id (e.g. "webgazer-3.5.3" -> "webgazer")."""
+    fam = s.get("trackerFamily")
+    if fam:
+        return fam
+    tid = s.get("tracker")
+    return tid.split("-")[0] if tid else "webgazer"
+
+
 def load_sessions(data_dir):
     sessions = []
     for fp in sorted(glob.glob(os.path.join(data_dir, "*.json"))):
@@ -46,6 +56,7 @@ def load_sessions(data_dir):
             "participant": s.get("participant"),
             "session": s.get("session"),
             "task": s.get("task"),
+            "tracker": tracker_family(s),
             "feat": np.array(extract_features(s["samples"], s.get("screen")), dtype=float),
         })
     return sessions
@@ -63,6 +74,10 @@ def standardize(sessions):
 
 def eligible(probe, cand, protocol):
     if cand["file"] == probe["file"]:
+        return False
+    # Never match across trackers: feature distributions differ, so a cross-tracker
+    # "match" is meaningless. Per-tracker EER is exactly the RQ3 comparison.
+    if cand.get("tracker") != probe.get("tracker"):
         return False
     same_task = cand["task"] == probe["task"]
     same_sess = cand["session"] == probe["session"]
@@ -154,41 +169,68 @@ def cmc_curve(sessions, protocol, max_rank=10):
     return xs, ys
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "..", "data"))
-    ap.add_argument("--plot", default=None, help="optional path to save a CMC plot (needs matplotlib)")
-    ap.add_argument("--out", default=None, help="optional path to write metrics json")
-    args = ap.parse_args()
+PROTOCOLS = ["all", "same_task_cross_session", "cross_task", "cross_task_cross_session"]
 
-    sessions = load_sessions(args.data)
+
+def report_tracker(sessions, label):
+    """Standardize WITHIN this tracker's sessions and print the 4-protocol table.
+    Returns the metric rows (for optional json dump)."""
     if len(sessions) < 2:
-        print(f"Need >=2 sessions in {args.data}; found {len(sessions)}.")
-        print("Collect real data with the harness, or generate synthetic data:")
-        print("  python simulate.py --out ../data_sim")
-        return
-
-    standardize(sessions)
+        print(f"[{label}] only {len(sessions)} session(s) — need >=2; skipping.\n")
+        return []
+    standardize(sessions)  # per-tracker stats: a fair, self-contained feature space
     participants = sorted(set(s["participant"] for s in sessions))
     tasks = sorted(set(s["task"] for s in sessions))
-    print(f"Loaded {len(sessions)} sessions | {len(participants)} participants "
-          f"{participants} | tasks {tasks}\n")
-
-    protocols = ["all", "same_task_cross_session", "cross_task", "cross_task_cross_session"]
-    rows = []
+    print(f"=== tracker: {label} ===")
+    print(f"{len(sessions)} sessions | {len(participants)} participants {participants} | tasks {tasks}")
     header = f"{'protocol':<26}{'probes':>7}{'IDs':>5}{'chance':>8}{'rank-1':>8}{'rank-5':>8}{'EER':>8}"
     print(header)
     print("-" * len(header))
-    for p in protocols:
+    rows = []
+    for p in PROTOCOLS:
         r = evaluate(sessions, p)
+        r["tracker"] = label
         rows.append(r)
         def fmt(v):
             return "  n/a " if v != v else f"{v:7.3f}"
         print(f"{r['protocol']:<26}{r['n_probes_scored']:>7}{r['n_participants']:>5}"
               f"{fmt(r['chance_rank1'])}{fmt(r['rank1'])}{fmt(r['rank5'])}{fmt(r['eer'])}")
+    print()
+    return rows
 
-    print("\nHeadline (real tracking threat) = cross_task_cross_session.")
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "..", "data"))
+    ap.add_argument("--tracker", default=None, help="evaluate only this tracker family (e.g. webgazer)")
+    ap.add_argument("--plot", default=None, help="optional path to save a CMC plot (needs matplotlib)")
+    ap.add_argument("--out", default=None, help="optional path to write metrics json")
+    args = ap.parse_args()
+
+    sessions = load_sessions(args.data)
+    if args.tracker:
+        sessions = [s for s in sessions if s["tracker"] == args.tracker]
+    if len(sessions) < 2:
+        print(f"Need >=2 sessions in {args.data}"
+              + (f" for tracker '{args.tracker}'" if args.tracker else "")
+              + f"; found {len(sessions)}.")
+        print("Collect real data with the harness, or generate synthetic data:")
+        print("  python simulate.py --out ../data_sim")
+        return
+
+    trackers = sorted(set(s["tracker"] for s in sessions))
+    print(f"Loaded {len(sessions)} sessions across {len(trackers)} tracker(s): {trackers}\n")
+
+    # RQ3: report each tracker separately (ceiling vs commodity is a per-tracker
+    # comparison), standardizing within each so the feature spaces stay fair.
+    rows = []
+    for tr in trackers:
+        rows += report_tracker([s for s in sessions if s["tracker"] == tr], tr)
+
+    print("Headline per tracker (real tracking threat) = cross_task_cross_session.")
     print("rank-1 >> chance and EER well below 0.5 => gaze links users across content and visits.")
+    if len(trackers) > 1:
+        print("Compare cross_task_cross_session EER across trackers for the RQ3 ceiling-vs-commodity gap.")
 
     if args.out:
         json.dump([{k: v for k, v in r.items() if k != "ranks"} for r in rows],
@@ -201,12 +243,17 @@ def main():
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
             plt.figure(figsize=(6, 4))
-            for p in protocols:
-                xs, ys = cmc_curve(sessions, p)
-                plt.plot(xs, ys, marker="o", label=p)
+            # Plot the headline protocol's CMC, one curve per tracker.
+            for tr in trackers:
+                sub = [s for s in sessions if s["tracker"] == tr]
+                if len(sub) < 2:
+                    continue
+                standardize(sub)
+                xs, ys = cmc_curve(sub, "cross_task_cross_session")
+                plt.plot(xs, ys, marker="o", label=tr)
             plt.xlabel("rank k"); plt.ylabel("identification rate (CMC)")
             plt.ylim(0, 1.02); plt.grid(alpha=.3); plt.legend(fontsize=8)
-            plt.title("Cross-site gaze re-identification — CMC")
+            plt.title("Cross-site gaze re-ID (cross-task, cross-session) — CMC by tracker")
             plt.tight_layout(); plt.savefig(args.plot, dpi=130)
             print(f"Wrote CMC plot -> {args.plot}")
         except ImportError:

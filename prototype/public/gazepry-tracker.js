@@ -1,30 +1,29 @@
 /*
- * GazePry tracker SDK — Direction 1 prototype
+ * GazePry tracker SDK — Direction 1 prototype (tracker-agnostic orchestrator)
  * ------------------------------------------------------------------
- * A single client-side script (the "third-party analytics tag") that:
- *   1. boots WebGazer v3.5.3 (commodity webcam gaze),
- *   2. runs a short click calibration,
+ * A single client-side script (the "third-party analytics tag") that, for a
+ * chosen webcam gaze tracker:
+ *   1. boots the tracker engine,
+ *   2. runs a short click calibration (only for trackers that train on clicks),
  *   3. logs the raw per-frame gaze stream {t, x, y} for a task, and
  *   4. POSTs the session to the collection server.
  *
- * The same script is embedded in every task "site". That is the point of
- * the study: one tracking provider observing a visitor across different
- * content pages, linking them by gaze dynamics rather than by any cookie.
+ * The same script is embedded in every task "site". That is the point of the
+ * study: one tracking provider observing a visitor across different content
+ * pages, linking them by gaze dynamics rather than by any cookie.
  *
- * Requires webgazer.js to be loaded first (window.webgazer).
+ * WHICH tracker runs is pluggable. Each tracker is a small adapter file under
+ * trackers/ that calls GazePry.registerTracker({...}). The active tracker is
+ * chosen per session (identity.tracker) so the same participant can be captured
+ * with WebGazer, WebEyeTrack, EyeGestures, GazeCloud, … and compared (RQ3).
+ * See trackers/README-adapter.md for the adapter contract.
  */
 (function () {
   "use strict";
 
-  var TRACKER_ID = "webgazer-3.5.3";
-
-  // Base URL of this script. WebGazer's bundled FaceMesh fetches its WASM/model
-  // files at runtime from params.faceMeshSolutionPath, whose default
-  // ("./mediapipe/face_mesh") resolves against the *page* URL — it 404s on task
-  // pages one level deep, the first getPrediction() never settles, and the
-  // prediction loop dies before a single gaze callback (0 samples, 0 gaps).
-  // Resolve the vendored assets relative to this script instead, which is the
-  // same location on every page.
+  // Base URL of this script (the public/ dir). Adapters resolve their vendored
+  // library + model assets against this so they load identically on the hub and
+  // on task pages one level deep (a page-relative path 404s on task pages).
   var SCRIPT_BASE = (function () {
     var src = document.currentScript && document.currentScript.src;
     return src ? src.slice(0, src.lastIndexOf("/") + 1) : "";
@@ -33,15 +32,41 @@
   var GazePry = {
     config: {
       server: "", // same-origin by default; set to a full URL for cross-origin demo
-      // Persist the regression model across page loads so one calibration on the
-      // hub carries to every task page in the same visit. A NEW session starts by
-      // re-calibrating with {fresh:true}, which clears the prior model first.
+      // Persist the model across page loads so one calibration on the hub carries
+      // to every task page in the same visit. A NEW session re-calibrates with
+      // {fresh:true}, clearing the prior model first.
       saveAcrossSessions: true,
+      defaultTracker: "webgazer",
     },
-    identity: { participant: null, session: null },
+    identity: { participant: null, session: null, tracker: null },
+    baseUrl: SCRIPT_BASE,
+
+    _trackers: {}, // family -> adapter
+    _active: null, // the adapter currently driving the webcam
     _engineReady: false,
     _samples: [],
     _capturing: false,
+  };
+
+  // ---- tracker registry -------------------------------------------------
+  // Adapters self-register (they are loaded after this file). See the adapter
+  // contract in trackers/README-adapter.md.
+  GazePry.registerTracker = function (adapter) {
+    if (!adapter || !adapter.family) throw new Error("tracker adapter needs a 'family'");
+    if (adapter.available === undefined) adapter.available = true;
+    if (adapter.needsCalibration === undefined) adapter.needsCalibration = true;
+    this._trackers[adapter.family] = adapter;
+    return adapter;
+  };
+  GazePry.listTrackers = function () {
+    var self = this;
+    return Object.keys(this._trackers).map(function (k) { return self._trackers[k]; });
+  };
+  GazePry.getTracker = function (family) { return this._trackers[family]; };
+  GazePry.activeTracker = function () { return this._active; };
+  GazePry.resolveTracker = function () {
+    var fam = this.identity.tracker || this.config.defaultTracker;
+    return this._trackers[fam] || this._trackers[this.config.defaultTracker] || this.listTrackers()[0];
   };
 
   // ---- identity ---------------------------------------------------------
@@ -52,14 +77,20 @@
   GazePry.loadIdentity = function () {
     var p = q("participant") || localStorage.getItem("gp_participant");
     var s = q("session") || localStorage.getItem("gp_session");
-    this.identity = { participant: p, session: s };
+    var tr = q("tracker") || localStorage.getItem("gp_tracker") || this.config.defaultTracker;
+    this.identity = { participant: p, session: s, tracker: tr };
     return this.identity;
   };
 
-  GazePry.saveIdentity = function (participant, session) {
+  GazePry.saveIdentity = function (participant, session, tracker) {
     localStorage.setItem("gp_participant", participant);
     localStorage.setItem("gp_session", session);
-    this.identity = { participant: participant, session: session };
+    if (tracker) localStorage.setItem("gp_tracker", tracker);
+    this.identity = {
+      participant: participant,
+      session: session,
+      tracker: tracker || this.identity.tracker || this.config.defaultTracker,
+    };
   };
 
   GazePry.requireIdentity = function () {
@@ -74,96 +105,79 @@
   // ---- engine -----------------------------------------------------------
   GazePry.startEngine = async function () {
     if (this._engineReady) return;
-    if (!window.webgazer) throw new Error("webgazer.js not loaded before gazepry-tracker.js");
-    console.log("[GazePry] starting WebGazer engine…");
+    var adapter = this.resolveTracker();
+    if (!adapter) throw new Error("no gaze tracker registered");
+    if (adapter.available === false)
+      throw new Error("Tracker '" + adapter.label + "' is not installed. " + (adapter.setup || ""));
+    this._active = adapter;
+    console.log("[GazePry] starting tracker: " + adapter.label + " (" + adapter.family + ")…");
 
-    webgazer.params.faceMeshSolutionPath = SCRIPT_BASE + "mediapipe/face_mesh";
+    if (adapter.load) await adapter.load(this.baseUrl);
 
-    // Heartbeat: wrap setGazeListener once so every callback — including the
-    // idle no-op listener — stamps _lastBeat. The watchdog below uses it to
-    // tell a live prediction loop from a dead one.
-    if (!this._listenerWrapped) {
-      this._listenerWrapped = true;
-      var origSet = webgazer.setGazeListener.bind(webgazer);
-      webgazer.setGazeListener = function (fn) {
-        return origSet(function (data, clock) {
-          GazePry._lastBeat = performance.now();
-          if (fn) fn(data, clock);
-        });
-      };
-      webgazer.clearGazeListener = function () { return webgazer.setGazeListener(null); };
-    }
-
-    var beginPromise = webgazer
-      .setRegression("ridge")
-      .saveDataAcrossSessions(this.config.saveAcrossSessions)
-      .setGazeListener(function () {}) // real listener attached per task
-      .begin();
-
-    // begin() only resolves after WebGazer's first prediction loop completes;
-    // if that first getPrediction() stalls (e.g. FaceMesh assets fail to load),
-    // begin() stays pending forever. The webcam and click-to-train listeners are
-    // already live by the time the video appears, so don't block the UI on it:
-    // race begin() against a timeout and proceed either way. Attach a catch so a
-    // late rejection never becomes a silent unhandled rejection.
-    var settled = Promise.resolve(beginPromise)
+    // start() should resolve once the webcam + listeners are live. Some engines
+    // (e.g. WebGazer's begin()) only fully settle after the first prediction and
+    // can stall if model assets fail to load; the adapter is expected to race its
+    // own boot, but keep an outer safety timeout so the UI never hangs forever.
+    var settled = Promise.resolve(adapter.start ? adapter.start() : null)
       .then(function () { return "ready"; })
-      .catch(function (e) { console.error("[GazePry] webgazer.begin() error:", e); return "error"; });
-    var timeout = new Promise(function (res) { setTimeout(function () { res("timeout"); }, 6000); });
+      .catch(function (e) { console.error("[GazePry] tracker.start() error:", e); return "error"; });
+    var timeout = new Promise(function (res) {
+      setTimeout(function () { res("timeout"); }, adapter.startTimeoutMs || 8000);
+    });
     var outcome = await Promise.race([settled, timeout]);
     if (outcome === "timeout")
-      console.warn("[GazePry] begin() slow to resolve after 6s; proceeding (webcam is live, click-training is active).");
-
-    try {
-      webgazer.showVideoPreview(true).showPredictionPoints(true).applyKalmanFilter(true);
-      webgazer.params.videoViewerWidth = 160; // shrink preview so it doesn't cover content
-      webgazer.params.videoViewerHeight = 120;
-    } catch (e) { console.warn("[GazePry] preview config warning:", e); }
+      console.warn("[GazePry] " + adapter.label + " slow to start after " +
+        Math.round((adapter.startTimeoutMs || 8000) / 1000) + "s; proceeding (webcam may already be live).");
 
     this._engineReady = true;
     this._lastBeat = performance.now();
+    this._attachIdle();
     this._startWatchdog();
-    console.log("[GazePry] engine ready (outcome: " + outcome + ").");
+    console.log("[GazePry] engine ready (" + adapter.label + ", outcome: " + outcome + ").");
   };
 
-  // WebGazer's prediction loop reschedules itself only after a successful
-  // getPrediction(), so a single hung/rejected prediction kills the loop for
-  // good and every counter freezes at 0. Watch the heartbeat and restart the
-  // loop (pause + resume) when it goes quiet; if restarts never help, tell the
-  // user what to check instead of failing silently.
+  // Keep a heartbeat alive when nothing is capturing, so the watchdog can tell a
+  // live prediction loop from a dead one. Capture/probe replace this listener and
+  // re-attach it when they finish.
+  GazePry._attachIdle = function () {
+    if (this._active && this._active.onGaze)
+      this._active.onGaze(function () { GazePry._lastBeat = performance.now(); });
+  };
+
+  // Some engines' prediction loops die on a single hung/rejected frame and every
+  // counter freezes. Watch the heartbeat and, for adapters that support it,
+  // restart the loop (pause + resume). If restarts never help, tell the user.
   GazePry._startWatchdog = function () {
     if (this._watchdog) return;
     var kicks = 0;
     this._watchdog = setInterval(function () {
       if (document.hidden) return; // rAF is throttled in background tabs — not a failure
+      var a = GazePry._active;
       var quiet = performance.now() - GazePry._lastBeat;
       if (quiet < 4000) { kicks = 0; return; }
+      if (!a || (!a.pause && !a.resume)) return; // this engine can't be kicked
       kicks++;
       console.warn("[GazePry] no gaze callbacks for " + Math.round(quiet / 1000) +
-        "s — restarting the prediction loop (attempt " + kicks + ").");
+        "s — restarting " + a.label + " (attempt " + kicks + ").");
       try {
-        webgazer.pause();
-        // let any in-flight iteration die before starting a fresh loop
-        setTimeout(function () {
-          Promise.resolve(webgazer.resume()).catch(function () {});
-        }, 300);
+        if (a.pause) a.pause();
+        setTimeout(function () { if (a.resume) Promise.resolve(a.resume()).catch(function () {}); }, 300);
       } catch (e) {}
       GazePry._lastBeat = performance.now(); // full quiet window before the next kick
       if (kicks === 3)
-        GazePry._toast("Gaze engine is producing no data. Open the console (F12) — " +
-          "usually the FaceMesh files under " + webgazer.params.faceMeshSolutionPath +
-          " failed to load.");
+        GazePry._toast("Gaze engine (" + a.label + ") is producing no data. Open the console (F12) — " +
+          (a.noDataHint || "check that the tracker's model/library assets loaded."));
     }, 2000);
   };
 
   GazePry.hidePreview = function (hide) {
-    if (!window.webgazer) return;
-    webgazer.showVideoPreview(!hide).showPredictionPoints(!hide).showFaceOverlay(!hide).showFaceFeedbackBox(!hide);
+    if (this._active && this._active.showPreview) this._active.showPreview(!hide);
   };
 
   // ---- calibration ------------------------------------------------------
-  // 9-point grid, N clicks each. Clicks feed WebGazer's regression (mouse
-  // listeners are on by default); we also record explicitly to be safe.
+  // 9-point grid, N clicks each — only for trackers that train on clicks. For
+  // self-calibrating trackers (needsCalibration:false) the adapter runs its own
+  // calibration inside start(), so this just boots the engine and resolves.
   GazePry.calibrate = function (opts) {
     opts = opts || {};
     var clicksPerDot = opts.clicksPerDot || 5;
@@ -172,24 +186,23 @@
     return new Promise(async function (resolve, reject) {
      try {
       await self.startEngine();
-      if (opts.fresh && window.webgazer) {
-        try { webgazer.clearData(); } catch (e) {} // reset model for a new session
-      }
-      self.hidePreview(false);
+      var a = self._active;
+      if (opts.fresh && a.clearModel) { try { a.clearModel(); } catch (e) {} } // reset for a new session
+
+      if (!a.needsCalibration) { resolve(); return; } // engine self-calibrated in start()
+      if (a.showPreview) a.showPreview(true);
 
       var overlay = document.createElement("div");
       overlay.id = "gp-cal";
       var msg = document.createElement("div");
       msg.className = "gp-cal-msg";
       msg.innerHTML =
-        "<b>Calibration.</b> Look at each yellow dot and click it " +
-        clicksPerDot +
-        " times until it turns green. Keep your head still and centered.";
+        "<b>Calibration (" + a.label + ").</b> Look at each yellow dot and click it " +
+        clicksPerDot + " times until it turns green. Keep your head still and centered.";
       overlay.appendChild(msg);
 
       var xs = [0.08, 0.5, 0.92];
       var ys = [0.12, 0.5, 0.88];
-      var dots = [];
       var remaining = xs.length * ys.length;
 
       ys.forEach(function (fy) {
@@ -202,23 +215,18 @@
           dot.textContent = left;
           dot.addEventListener("click", function (ev) {
             if (left <= 0) return;
-            // explicit training sample at the true target location
-            try { webgazer.recordScreenPosition(ev.clientX, ev.clientY, "click"); } catch (e) {}
+            if (a.recordCalibration) { try { a.recordCalibration(ev.clientX, ev.clientY); } catch (e) {} }
             left--;
             dot.textContent = left > 0 ? left : "";
             if (left <= 0) {
               dot.classList.add("done");
               remaining--;
               if (remaining === 0) {
-                setTimeout(function () {
-                  overlay.remove();
-                  resolve();
-                }, 250);
+                setTimeout(function () { overlay.remove(); resolve(); }, 250);
               }
             }
           });
           overlay.appendChild(dot);
-          dots.push(dot);
         });
       });
 
@@ -241,14 +249,16 @@
     return new Promise(async function (resolve, reject) {
      try {
       await self.startEngine();
-      self.hidePreview(true); // capture cleanly; preview off during the task
+      var a = self._active;
+      if (a.showPreview) a.showPreview(false); // capture cleanly; preview off during the task
       self._samples = [];
       self._capturing = true;
       var startedAt = Date.now();
       var t0 = performance.now();
       var gaps = 0;
 
-      webgazer.setGazeListener(function (data, clock) {
+      a.onGaze(function (data, clock) {
+        GazePry._lastBeat = performance.now();
         if (!self._capturing) return;
         if (data == null) {
           gaps++;
@@ -262,7 +272,7 @@
         }
       });
 
-      var hud = buildHud(task);
+      var hud = buildHud(task + " · " + a.label);
       document.body.appendChild(hud.el);
 
       var finished = false;
@@ -270,7 +280,8 @@
         if (finished) return;
         finished = true;
         self._capturing = false;
-        webgazer.clearGazeListener();
+        if (a.offGaze) a.offGaze();
+        self._attachIdle();
         clearInterval(timer);
         hud.el.remove();
         var session = {
@@ -278,7 +289,8 @@
           participant: self.identity.participant,
           session: self.identity.session,
           task: task,
-          tracker: TRACKER_ID,
+          tracker: a.id,            // full tracker id (e.g. "webgazer-3.5.3")
+          trackerFamily: a.family,  // stable slug for grouping/filtering
           startedAt: startedAt,
           durationMs: Math.round(performance.now() - t0),
           screen: {
@@ -323,27 +335,31 @@
     return new Promise(async function (resolve, reject) {
      try {
       await self.startEngine();
-      self.hidePreview(true);
+      var a = self._active;
+      if (a.showPreview) a.showPreview(false);
       var samples = [];
       var gaps = 0;
       self._capturing = true;
       var t0 = performance.now();
-      webgazer.setGazeListener(function (data, clock) {
+      a.onGaze(function (data, clock) {
+        GazePry._lastBeat = performance.now();
         if (!self._capturing) return;
         if (data == null) { gaps++; samples.push({ t: Math.round(clock), x: null, y: null }); }
         else samples.push({ t: Math.round(clock), x: Math.round(data.x * 10) / 10, y: Math.round(data.y * 10) / 10 });
       });
-      var hud = buildHud("re-ID probe");
+      var hud = buildHud("re-ID probe · " + a.label);
       document.body.appendChild(hud.el);
       var done = false;
       function finish() {
         if (done) return; done = true;
         self._capturing = false;
-        webgazer.clearGazeListener();
+        if (a.offGaze) a.offGaze();
+        self._attachIdle();
         clearInterval(timer);
         hud.el.remove();
         resolve({
           samples: samples, nGaps: gaps,
+          tracker: a.id, trackerFamily: a.family,
           screen: { innerW: window.innerWidth, innerH: window.innerHeight,
             w: screen.width, h: screen.height, dpr: window.devicePixelRatio || 1 },
         });
@@ -401,8 +417,8 @@
       throw new Error("HTTP " + r.status);
     } catch (e) {
       // fallback: download locally so no data is ever lost if the server is down
-      var name =
-        session.participant + "_" + session.session + "_" + session.task + "_" + session.startedAt + ".json";
+      var name = [session.participant, session.session, session.task,
+        session.trackerFamily || "tracker", session.startedAt].join("_") + ".json";
       var blob = new Blob([JSON.stringify(session)], { type: "application/json" });
       var a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
@@ -421,7 +437,7 @@
     document.cookie.split(";").forEach(function (c) {
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date(0).toUTCString() + ";path=/");
     });
-    if (window.webgazer) { try { webgazer.clearData(); } catch (e) {} }
+    if (this._active && this._active.clearModel) { try { this._active.clearModel(); } catch (e) {} }
   };
 
   // Small on-screen error banner so failures aren't silent for console-less users.

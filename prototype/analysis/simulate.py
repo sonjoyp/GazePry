@@ -45,7 +45,7 @@ def subject_traits(subject_seed):
     }
 
 
-def gen_session(pid, sid, task, traits, session_seed, dur_s=60, fps=30):
+def gen_session(pid, sid, task, traits, session_seed, dur_s=60, fps=30, tracker="synthetic"):
     r = random.Random(session_seed)
     innerW, innerH = 1440, 900
     diag = math.hypot(innerW, innerH)
@@ -111,7 +111,7 @@ def gen_session(pid, sid, task, traits, session_seed, dur_s=60, fps=30):
     return {
         "schema": "gazepry.session.v1",
         "participant": pid, "session": sid, "task": task,
-        "tracker": "synthetic",
+        "tracker": tracker, "trackerFamily": tracker,
         "startedAt": 1700000000000 + session_seed,
         "durationMs": int(samples[-1]["t"]) if samples else 0,
         "screen": {"innerW": innerW, "innerH": innerH, "w": innerW, "h": innerH, "dpr": 1},
@@ -127,6 +127,9 @@ def main():
     ap.add_argument("--subjects", type=int, default=12)
     ap.add_argument("--sessions", type=int, default=2)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--tracker", default="synthetic",
+                    help="tracker label to tag these sessions with; run twice with different "
+                         "labels into the same --out to exercise the per-tracker (RQ3) analysis")
     args = ap.parse_args()
     os.makedirs(args.out, exist_ok=True)
 
@@ -138,11 +141,11 @@ def main():
             sid = f"S{se + 1}"
             for ti, task in enumerate(TASKS):
                 session_seed = args.seed * 100000 + si * 1000 + se * 100 + ti
-                sess = gen_session(pid, sid, task, traits, session_seed)
-                fn = f"{pid}_{sid}_{task}_{sess['startedAt']}.json"
+                sess = gen_session(pid, sid, task, traits, session_seed, tracker=args.tracker)
+                fn = f"{pid}_{sid}_{task}_{args.tracker}_{sess['startedAt']}.json"
                 json.dump(sess, open(os.path.join(args.out, fn), "w"))
                 n += 1
-    print(f"Wrote {n} synthetic sessions for {args.subjects} subjects "
+    print(f"Wrote {n} synthetic '{args.tracker}' sessions for {args.subjects} subjects "
           f"x {args.sessions} sessions x {len(TASKS)} tasks -> {args.out}")
 
 

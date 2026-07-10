@@ -56,6 +56,11 @@ function readBody(req) {
   });
 }
 function safeName(s) { return String(s || "").replace(/[^a-zA-Z0-9._-]/g, "_"); }
+// Tracker family (slug) for a session, tolerant of older records that only had
+// the full tracker id (e.g. "webgazer-3.5.3" -> "webgazer").
+function familyOf(sess) {
+  return sess.trackerFamily || (sess.tracker ? String(sess.tracker).split("-")[0] : "webgazer");
+}
 
 // ---- gallery (features cached by filename+mtime) ------------------------
 const featCache = new Map();
@@ -75,6 +80,7 @@ function loadGallery() {
       entry = {
         key,
         participant: sess.participant, session: sess.session, task: sess.task,
+        tracker: sess.tracker, trackerFamily: familyOf(sess),
         features: reid.extractFeatures(sess.samples, sess.screen),
       };
       featCache.set(fn, entry);
@@ -111,7 +117,7 @@ const server = http.createServer(async (req, res) => {
       if (!sess.participant || !sess.session || !sess.task || !Array.isArray(sess.samples))
         return sendJson(res, 400, { error: "missing participant/session/task/samples" });
       const fn = [safeName(sess.participant), safeName(sess.session), safeName(sess.task),
-        Date.now()].join("_") + ".json";
+        safeName(familyOf(sess)), Date.now()].join("_") + ".json";
       fs.writeFileSync(path.join(DATA, fn), JSON.stringify(sess));
       console.log(`ingest: ${fn} (${sess.samples.length} samples, ${sess.nGaps || 0} gaps)`);
       return sendJson(res, 200, { stored: fn });
@@ -120,20 +126,27 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
-  // GET /status — which tasks this participant/session has completed
+  // GET /status — which tasks this participant/session/tracker has completed.
+  // tracker is optional; when given, completion is scoped to that tracker so the
+  // same session on a different tracker is tracked independently.
   if (req.method === "GET" && pathname === "/status") {
-    const p = query.get("participant"), s = query.get("session");
+    const p = query.get("participant"), s = query.get("session"), tr = query.get("tracker");
     const tasks = loadGallery()
-      .filter((g) => g.participant === p && g.session === s)
+      .filter((g) => g.participant === p && g.session === s && (!tr || g.trackerFamily === tr))
       .map((g) => g.task);
     return sendJson(res, 200, { tasks: Array.from(new Set(tasks)) });
   }
 
-  // GET /sessions — gallery metadata (for the re-ID demo UI)
+  // GET /sessions — gallery metadata (for the re-ID demo UI). Optional ?tracker=
+  // filters to one tracker family so the picker matches like-with-like.
   if (req.method === "GET" && pathname === "/sessions") {
-    const g = loadGallery().map((e) => ({ participant: e.participant, session: e.session, task: e.task }));
+    const tr = query.get("tracker");
+    const g = loadGallery()
+      .filter((e) => !tr || e.trackerFamily === tr)
+      .map((e) => ({ participant: e.participant, session: e.session, task: e.task, tracker: e.trackerFamily }));
     const participants = Array.from(new Set(g.map((x) => x.participant)));
-    return sendJson(res, 200, { count: g.length, participants, sessions: g });
+    const trackers = Array.from(new Set(loadGallery().map((e) => e.trackerFamily)));
+    return sendJson(res, 200, { count: g.length, participants, trackers, sessions: g });
   }
 
   // POST /identify — live re-ID: link a probe to an enrolled participant
@@ -142,12 +155,15 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse(await readBody(req));
       if (!Array.isArray(body.samples)) return sendJson(res, 400, { error: "missing samples" });
       const probe = reid.extractFeatures(body.samples, body.screen);
-      const gallery = loadGallery();
+      // Only rank against the same tracker: feature distributions differ across
+      // trackers, so mixing them would be an unfair (and meaningless) comparison.
+      const gallery = loadGallery().filter((g) => !body.tracker || g.trackerFamily === body.tracker);
       const result = reid.identify(probe, gallery, {
         excludeParticipant: body.excludeParticipant,
         excludeSession: body.excludeSession,
       });
       return sendJson(res, 200, {
+        tracker: body.tracker || null,
         galleryParticipants: Array.from(new Set(gallery.map((g) => g.participant))),
         rank1: result.rank1,
         ranked: result.ranked.slice(0, 5),

@@ -9,8 +9,15 @@ eye-movement dynamics captured by a commodity in-browser webcam tracker form a
 cache / incognito does not remove, and that survives stripping the face from the
 video (it is carried by *movement dynamics*, not appearance).
 
-Built on the **current** [brownhci/WebGazer](https://github.com/brownhci/WebGazer)
-(v3.5.3), not the deprecated 2016 SearchGazer fork in the repo root.
+The webcam tracker is **pluggable**: the capture harness is tracker-agnostic and
+drives one of several adapters chosen per session, so the same participant can be
+recorded on multiple webcam trackers and compared (protocol RQ3). Shipped
+adapters: **WebGazer v3.5.3** (working, vendored — the deployed reality and the
+GazePry lineage, not the deprecated 2016 SearchGazer fork in the repo root),
+**GazeCloud/GazeRecorder** (working via its hosted script — high-accuracy but
+closed-source and **cloud**: frames leave the machine), and **WebEyeTrack** and
+**EyeGestures** (adapters written, flip on after vendoring their libraries). See
+[`public/trackers/README-adapter.md`](public/trackers/README-adapter.md).
 
 ---
 
@@ -22,10 +29,17 @@ prototype/
                        sessions, exposes a LIVE nearest-neighbour re-ID endpoint
   reid-core.js         gaze feature extraction + matching (JS, for the live demo)
   public/              the capture harness (one shared "tracking tag", 5 tasks)
-    lib/webgazer.js      WebGazer v3.5.3 build (the commodity webcam tracker)
-    gazepry-tracker.js   the "third-party analytics SDK": calibrate + log + submit
+    gazepry-tracker.js   tracker-AGNOSTIC orchestrator: identity, calibration,
+                         capture, watchdog, submit — drives the active adapter
+    trackers/            one self-registering adapter per webcam tracker
+      webgazer.js          WebGazer v3.5.3 (working, vendored)
+      gazecloud.js         GazeCloud/GazeRecorder (working, hosted script; CLOUD)
+      webeyetrack.js       WebEyeTrack   (adapter ready; vendor the lib to enable)
+      eyegestures.js       EyeGestures   (adapter ready; vendor the lib to enable)
+      README-adapter.md    the adapter contract + how to add a tracker
+    lib/webgazer.js      WebGazer build; lazy-loaded only when that tracker is used
     task-runner.js       shared boot code for the task pages
-    index.html           consent + identity + calibration + task hub
+    index.html           consent + identity + TRACKER PICKER + calibration + hub
     tasks/*.html         reading · serp · images · video · form  (5 "sites")
     reid.html            live re-ID + the "unclearable" (wipe-state) demo
   analysis/            the authoritative offline evaluation (Python)
@@ -55,18 +69,22 @@ node server.js               # -> http://localhost:8080   (npm start also works)
 Open **http://localhost:8080** (use `localhost` — `getUserMedia` needs a secure
 context; `localhost` counts, a bare LAN IP would need HTTPS).
 
-1. Enter a participant ID (e.g. `P01`), pick a session (`S1`), consent, and run
-   the click **calibration**.
+1. Enter a participant ID (e.g. `P01`), pick a session (`S1`), pick an
+   **eye-tracker**, consent, and run **calibration** (a click grid for
+   click-trained trackers; self-calibrating trackers run their own).
 2. Complete each of the five tasks. Different content per page stands in for a
    different "site"; **cross-task** matching is the real tracking test.
 3. For a **return visit**, reload the hub, switch to `S2`, and re-calibrate
    (this clears the prior model — an honest cross-session test). Ideally do `S2`
    on a different day.
+4. To compare trackers on the **same** participant (RQ3), repeat the tasks with
+   the same participant/session but a different tracker selected.
 
 Each finished task POSTs a session to `data/` as
-`P01_S1_reading_<ts>.json` (raw gaze stream `{t, x, y}`, `x=null` for a
-blink/lost-face gap). If the server is down the tracker downloads the file
-instead — drop it into `data/`.
+`P01_S1_reading_webgazer_<ts>.json` — participant, session, task, **tracker
+family**, timestamp (raw gaze stream `{t, x, y}`, `x=null` for a blink/lost-face
+gap). If the server is down the tracker downloads the file instead — drop it into
+`data/`.
 
 ### 2. Live re-identification demo
 
@@ -75,8 +93,10 @@ With a few participants enrolled, open **`/reid.html`**:
 - **Capture 20 s probe & identify** — captures whoever is at the screen now and
   asks the server to rank enrolled participants by gaze-feature distance.
 - **Wipe all browser state** — clears cookies + localStorage + sessionStorage +
-  the WebGazer model, then identify again. The match still lands, because
-  *who you are* was never stored in the browser. That is the "unclearable" point.
+  the active tracker's local model, then identify again. The match still lands,
+  because *who you are* was never stored in the browser. That is the
+  "unclearable" point. (The live re-ID page matches only against gallery sessions
+  from the **same** tracker.)
 
 ### 3. Offline evaluation (the numbers for the paper)
 
@@ -86,8 +106,42 @@ pip install -r requirements.txt        # numpy (+ matplotlib for --plot)
 python reid.py --data ../data --plot cmc.png
 ```
 
-`reid.py` reports rank-1, rank-5, and EER under four protocols; the headline is
-`cross_task_cross_session` (different content **and** different visit).
+`reid.py` reports rank-1, rank-5, and EER under four protocols, **per tracker**
+(it never matches across trackers), so the `cross_task_cross_session` EER of one
+tracker vs. another is the RQ3 ceiling-vs-commodity gap. Restrict to one with
+`--tracker webgazer`. The headline protocol is `cross_task_cross_session`
+(different content **and** different visit).
+
+---
+
+## Webcam trackers (the pluggable arms)
+
+Pick the tracker on the hub; it drives calibration, capture, and the live re-ID
+demo for that session. Adapters live in `public/trackers/`.
+
+| Tracker | Status | Privacy | Calibration | Role |
+|---|---|---|---|---|
+| **WebGazer 3.5.3** (`webgazer`) | working, vendored | local (video stays in browser) | 9-point click grid | the deployed reality; GazePry lineage |
+| **GazeCloud / GazeRecorder** (`gazecloud`) | working (hosted script, needs internet) | **cloud** — frames sent to GazeRecorder | built-in (self) | high-accuracy commodity contrast |
+| **WebEyeTrack** (`webeyetrack`) | adapter ready; vendor lib to enable | local | few-shot (click grid) | head-pose-aware near-future ceiling (protocol arm 3) |
+| **EyeGestures** (`eyegestures`) | adapter ready; vendor lib to enable | local | moving-dot (click grid) | actively-maintained open-source arm |
+
+- **Why GazeCloud is a finding, not just a tool.** It is the easiest to deploy
+  and the most accurate, but it is closed-source and processes webcam frames in
+  the cloud — for a paper about webcam gaze as a *tracking vector*, "the accurate
+  option also exfiltrates your face" is itself worth stating. WebGazer,
+  WebEyeTrack, and EyeGestures keep video on-device.
+- **To enable WebEyeTrack / EyeGestures:** vendor the library under
+  `public/lib/<name>/`, wire the `TODO(vendor)` hooks in the adapter to its API,
+  and set `available:true`. The adapter contract is in
+  [`public/trackers/README-adapter.md`](public/trackers/README-adapter.md).
+- **To add a different tracker:** copy the closest adapter, implement the
+  contract (`start` + `onGaze` emitting `{x,y}` viewport pixels is the minimum),
+  add one `<script>` line to each page's tracker block, and it appears in the
+  picker automatically.
+
+All adapters emit the **same** `{t, x, y}` stream, so one feature extractor
+(`reid-core.js` / `analysis/features.py`) and one analysis serve every tracker.
 
 ---
 
@@ -100,6 +154,16 @@ stable oculomotor traits across tasks/sessions:
 cd analysis
 python simulate.py --out ../data_sim --subjects 12 --sessions 2
 python reid.py --data ../data_sim --plot ../data_sim/cmc.png
+```
+
+To exercise the **multi-tracker** (RQ3) analysis without a webcam, tag two
+synthetic runs with different tracker labels into one directory — `reid.py` then
+prints a separate table per tracker and never matches across them:
+
+```bash
+python simulate.py --out ../data_sim_mt --subjects 12 --sessions 2 --tracker webgazer --seed 7
+python simulate.py --out ../data_sim_mt --subjects 12 --sessions 2 --tracker gazecloud --seed 9
+python reid.py --data ../data_sim_mt
 ```
 
 Expected (12 synthetic subjects, chance rank-1 = 0.083):
@@ -162,16 +226,20 @@ re-identifies across them — no cookie, no shared storage.
 |---|---|
 | RQ1 same-task cross-session baseline | `reid.py` protocol `same_task_cross_session` |
 | RQ2 cross-task ("tracking") generalisation | `reid.py` protocols `cross_task*` |
-| RQ3 ceiling vs commodity | Gazepoint rig above + `tracker` field |
+| RQ3 ceiling vs commodity | Gazepoint rig above + the pluggable webcam trackers; `reid.py` reports per-tracker and never matches across them |
 | RQ4 unclearability | `reid.html` wipe-state demo; cross-origin collector |
-| RQ5 defense (future) | perturb the stream in `gazepry-tracker.js` before submit |
+| RQ5 defense (future) | perturb the stream in `gazepry-tracker.js` before submit (applies to every tracker) |
 
 ## Caveats
 
-- **Webcam accuracy is the honest risk.** WebGazer drifts over a session; the
-  I-VT velocity threshold (`VEL_THRESHOLD` in `reid-core.js` / `features.py`) is
-  coarse at ~30 Hz and will need tuning against real data. Treat webcam re-ID
-  numbers as a **lower bound** on the threat.
+- **Webcam accuracy is the honest risk.** The on-device webcam trackers drift
+  over a session (WebGazer most, WebEyeTrack least); the I-VT velocity threshold
+  (`VEL_THRESHOLD` in `reid-core.js` / `features.py`) is coarse at ~30 Hz and
+  will need tuning against real data. Treat webcam re-ID numbers as a **lower
+  bound** on the threat.
+- **GazeCloud sends video off-device.** It is closed-source and cloud-based;
+  only use it with participant consent covering third-party processing, and keep
+  it clearly separated from the on-device arms in any comparison.
 - The hand-crafted feature set is route (a) from the protocol. A deep model
   (Eye Know You Too-style) is the ceiling and a natural extension.
 - `features.py` and `reid-core.js` must stay in sync if you change features.

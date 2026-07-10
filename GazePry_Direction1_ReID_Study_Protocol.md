@@ -171,7 +171,7 @@ Perturb the client-side gaze stream (temporal/Gaussian noise, down-sampling, spa
 
 ## 15. Related work in this direction
 
-There **is** a large literature adjacent to this proposal — eye-movement biometrics is a mature field — but **no published work occupies the exact cell this protocol targets: commodity in-browser webcam gaze, on a desktop, used for *cross-site, cross-task* re-identification framed as an unclearable web-tracking vector.** Every close analogue differs on at least one of {hardware, setting, task-transfer, framing}. The papers below are grouped by the role they play in the argument; citation numbers **continue the companion report's shared bibliography** (which ends at [29]), so [30]+ are new here. Entries already in the report — Eye Know You Too [20], continuous gaze-offset fusion [29], WebEyeTrack [25], SearchGazer [4], Eye-of-the-Typer [7], the handheld-privacy work [10], and the streaming-DP defenses [13], [23], [24] — are load-bearing for this direction too and are not repeated.
+There **is** a large literature adjacent to this proposal — eye-movement biometrics is a mature field — but **no published work occupies the exact cell this protocol targets: commodity in-browser webcam gaze, on a desktop, used for *cross-site, cross-task* re-identification framed as an unclearable web-tracking vector.** Every close analogue differs on at least one of {hardware, setting, task-transfer, framing}. The papers below are grouped by the role they play in the argument; citation numbers **continue the companion report's shared bibliography** (which ends at [29]), so [30]+ are new here. The report's own [1]–[29] are load-bearing for this direction too: **§15.7 collects the [1]–[29] entries that carry over to Direction 1 (with why), and §16 reproduces them** so this protocol stands alone.
 
 ### 15.1 Eye-movement biometrics: the identification signal exists (foundations for RQ1, §7)
 
@@ -221,15 +221,76 @@ Beyond the streaming-DP work already cited ([13], [23], [24]), these complete th
 - **Li et al., Kalεido [48]** — USENIX Security real-time gaze-DP *system* with formal guarantees; the deployment-shaped defense to benchmark the in-browser perturbation layer against.
 - **David-John et al., "For Your Eyes Only" [49]** — adapts **k-anonymity / plausible deniability** specifically to defeat eye-movement *re-identification* on datasets; the defense whose threat model matches this protocol most exactly.
 
-### 15.7 The gap this protocol fills
+### 15.7 Carried over from the companion report — prior entries relevant to Direction 1
+
+The companion report's bibliography [1]–[29] was assembled for the broader information-leakage survey; the subset below bears directly on the re-identification/tracking direction and is reproduced in §16 so this protocol stands alone. (Report entries with no bearing here — affective-tutoring [1], [2]; gaze-conditioned LLM/VLM applications [11], [16], [18], [26]; bystander privacy indicators [17] — stay in the report and are intentionally omitted from §16.)
+
+- **Biometric ceiling (RQ1, RQ3):** Eye Know You Too [20] and continuous gaze-offset score fusion [29] — the research-grade EER floor the webcam channel is measured against.
+- **The webcam channel itself (apparatus, §4):** SearchGazer [4] (the WebGazer/GazePry lineage and the SERP stimulus), WebEyeTrack [25] (the head-pose-aware commodity arm), and webcam mind-wandering detection [22] (evidence that content-independent signal survives ~30 Hz webcam gaze).
+- **Reading/typing stimulus heritage (§6):** Eye-of-the-Typer [7].
+- **Web-tracking framing / the "clearable cookie" baseline (§1, §9):** "I Still Know What You Visited Last Summer" [5] — the classic stateless-adjacent history side channel; pairs with [44]–[46].
+- **Privacy framing & the SOUPS-companion consent angle (§5, §13):** the eye-gaze security/privacy survey [3], pervasive-eye-tracking privacy [6], "From Gaze to Data" [9], "What Does Your Gaze Reveal About You?" [21], and AR privacy-concern attitudes [28].
+- **Attribute-inference & handheld contrast (delta table, §2):** handheld gaze privacy [10] — *identity* here vs. *attributes* there, desktop vs. mobile.
+- **Content-dependent gaze attacks (the contrast class this direction is *not*):** EyeTell [27] and GAZEploit [14] (already in the delta table), plus GazeRevealer [8], gaze graphical passwords [12], AR/VR head-motion keylogging [15], and eyeglass-reflection screen peeking [19] — all content-*dependent* or side-channel, cited to delimit scope against the content-*independent* thesis.
+- **Defenses (RQ5, §11):** privacy-preserving gaze streaming in VR [13], PrivateGaze [23], and the streaming-DP approach [24].
+
+### 15.8 The gap this protocol fills
 
 Stack the four axes and the white space is unambiguous: eye-movement biometrics is proven on **IR hardware** ([20], [30]–[37]); behavioral-biometric tracking at **scale/cross-device** is proven in **VR** ([39], [40]); stateless web tracking is proven for **device-bound fingerprints** ([44]–[46]). No one has shown **commodity webcam gaze, on the open desktop web, re-identifying users cross-task and cross-site as an unclearable tracking channel**, and quantified its gap to the IR ceiling on the *same* subjects (RQ3). That intersection — not any single axis — is the contribution.
 
 ---
 
-## 16. Additional references (continuing the shared bibliography)
+## 16. Full reference list
 
-*Numbering continues from the companion report's [29]. Peer-reviewed venues are preferred; arXiv entries are flagged and their quantitative claims treated as indicative.*
+*Shared numbering with the companion report. Entries [1]–[29] are reproduced here (relevant subset only, per §15.7) so this protocol stands alone; [30]–[49] are new to this direction. Out-of-scope report entries [1], [2], [11], [16], [17], [18], [26] (affective tutoring, gaze-conditioned LLM/VLM applications, bystander privacy indicators) are intentionally omitted and remain in the report — the gaps in the numbering below are deliberate. Peer-reviewed venues are preferred; arXiv entries are flagged and their quantitative claims treated as indicative.*
+
+**Carried over from the companion report (relevant to Direction 1):**
+
+[3] C. Katsini, Y. Abdrabou, G. E. Raptis, M. Khamis, and F. Alt, "The Role of Eye Gaze in Security and Privacy Applications: Survey and Future HCI Research Directions," in *Proc. 2020 CHI Conf. Human Factors in Computing Systems*, CHI '20, ACM, Apr. 2020, pp. 1–21, doi: 10.1145/3313831.3376840.
+
+[4] A. Papoutsaki, J. Laskey, and J. Huang, "SearchGazer: Webcam Eye Tracking for Remote Studies of Web Search," in *Proc. 2017 Conf. Human Information Interaction and Retrieval*, CHIIR '17, ACM, Mar. 2017, pp. 17–26, doi: 10.1145/3020165.3020170.
+
+[5] Z. Weinberg, E. Y. Chen, P. R. Jayaraman, and C. Jackson, "I Still Know What You Visited Last Summer: Leaking Browsing History via User Interaction and Side Channel Attacks," in *2011 IEEE Symp. Security and Privacy*, IEEE, May 2011, pp. 147–161, doi: 10.1109/SP.2011.23.
+
+[6] D. J. Liebling and S. Preibusch, "Privacy considerations for a pervasive eye tracking world," in *Proc. 2014 ACM Int. Joint Conf. Pervasive and Ubiquitous Computing: Adjunct Publication*, ACM, Sep. 2014, pp. 1169–1177, doi: 10.1145/2638728.2641688.
+
+[7] A. Papoutsaki, A. Gokaslan, J. Tompkin, Y. He, and J. Huang, "The eye of the typer: a benchmark and analysis of gaze behavior during typing," in *Proc. 2018 ACM Symp. Eye Tracking Research & Applications*, ETRA '18, ACM, Jun. 2018, pp. 1–9, doi: 10.1145/3204493.3204552.
+
+[8] Y. Wang, W. Cai, T. Gu, and W. Shao, "Your Eyes Reveal Your Secrets: An Eye Movement Based Password Inference on Smartphone," *IEEE Trans. Mobile Computing*, vol. 19, no. 11, pp. 2714–2730, Nov. 2020, doi: 10.1109/TMC.2019.2934690.
+
+[9] Y. Abdrabou, S. Özdel, V. Maquiling, E. Bozkir, and E. Kasneci, "From Gaze to Data: Privacy and Societal Challenges of Using Eye-tracking Data to Inform GenAI Models," in *Proc. 2025 Symp. Eye Tracking Research and Applications*, ETRA '25, ACM, May 2025, pp. 1–9, doi: 10.1145/3715669.3726788.
+
+[10] N. Alsakar, N. Alotaibi, M. Khamis, and S. Stumpf, "Assessing and Mitigating the Privacy Implications of Eye Tracking on Handheld Mobile Devices," *ACM Trans. Priv. Secur.*, vol. 28, no. 3, p. 38:1–38:36, Aug. 2025, doi: 10.1145/3746452.
+
+[12] A. Tiwari and R. Pal, "Gaze-Based Graphical Password Using Webcam," in *Information Systems Security*, Springer, 2018, pp. 448–461, doi: 10.1007/978-3-030-05171-6_23.
+
+[13] E. Wilson, A. Ibragimov, M. J. Proulx, S. D. Tetali, K. Butler, and E. Jain, "Privacy-Preserving Gaze Data Streaming in Immersive Interactive Virtual Reality: Robustness and User Experience," *IEEE Trans. Visualization and Computer Graphics*, vol. 30, no. 5, pp. 2257–2268, May 2024, doi: 10.1109/TVCG.2024.3372032.
+
+[14] H. Wang, Z. Zhan, H. Shan, S. Dai, M. Panoff, and S. Wang, "GAZEploit: Remote Keystroke Inference Attack by Gaze Estimation from Avatar Views in VR/MR Devices," in *Proc. 2024 ACM SIGSAC Conf. Computer and Communications Security*, CCS '24, ACM, Dec. 2024, pp. 1731–1745, doi: 10.1145/3658644.3690285.
+
+[15] C. Slocum, Y. Zhang, N. Abu-Ghazaleh, and J. Chen, "Going through the motions: AR/VR keylogging from user head motions," in *USENIX Security 23*, 2023, pp. 159–174.
+
+[19] Y. Long, C. Yan, S. Xiao, S. Prasad, W. Xu, and K. Fu, "Private Eye: On the Limits of Textual Screen Peeking via Eyeglass Reflections in Video Conferencing," in *2023 IEEE Symp. Security and Privacy (SP)*, IEEE, May 2023, pp. 3432–3449, doi: 10.1109/SP46215.2023.10179423.
+
+[20] D. Lohr and O. V. Komogortsev, "Eye Know You Too: A DenseNet Architecture for End-to-end Eye Movement Biometrics," arXiv:2201.02110, Mar. 2022, doi: 10.48550/arXiv.2201.02110. (Published version: *IEEE Trans. Inf. Forensics Secur.*, vol. 17, pp. 3151–3164, 2022.)
+
+[21] J. L. Kröger, O. H.-M. Lutz, and F. Müller, "What Does Your Gaze Reveal About You? On the Privacy Implications of Eye Tracking," in *Privacy and Identity Management. Data for Better Living: AI and Privacy*, Springer, 2020, pp. 226–241, doi: 10.1007/978-3-030-42504-3_15.
+
+[22] S. Hutt, A. Wong, A. Papoutsaki, R. S. Baker, J. I. Gold, and C. Mills, "Webcam-based eye tracking to detect mind wandering and comprehension errors," *Behav. Res.*, vol. 56, no. 1, pp. 1–17, Jan. 2024, doi: 10.3758/s13428-022-02040-x.
+
+[23] L. Du, J. Jia, X. Zhang, and G. Lan, "PrivateGaze: Preserving User Privacy in Black-box Mobile Gaze Tracking Services," arXiv:2408.00950, Aug. 2024, doi: 10.48550/arXiv.2408.00950.
+
+[24] B. David-John, D. Hosfelt, K. Butler, and E. Jain, "A privacy-preserving approach to streaming eye-tracking data," *IEEE Trans. Visual. Comput. Graphics*, vol. 27, no. 5, pp. 2555–2565, May 2021, doi: 10.1109/TVCG.2021.3067787.
+
+[25] E. Davalos et al., "WebEyeTrack: Scalable Eye-Tracking for the Browser via On-Device Few-Shot Personalization," arXiv:2508.19544, Aug. 2025, doi: 10.48550/arXiv.2508.19544.
+
+[27] Y. Chen, T. Li, R. Zhang, Y. Zhang, and T. Hedgpeth, "EyeTell: Video-Assisted Touchscreen Keystroke Inference from Eye Movements," in *2018 IEEE Symp. Security and Privacy (SP)*, IEEE, May 2018, pp. 144–160, doi: 10.1109/SP.2018.00010.
+
+[28] E. Bozkir, B. Bühler, X. Wu, E. Kasneci, L. Bauer, and L. F. Cranor, "The impact of device type, data practices, and use case scenarios on privacy concerns about eye-tracked augmented reality in the United States and Germany," *J. Cyber Secur.*, vol. 11, no. 1, p. tyaf036, Jan. 2025, doi: 10.1093/cybsec/tyaf036.
+
+[29] H. Aziz, M. H. Raju, and O. V. Komogortsev, "Enhancing Eye Movement Biometrics for User Authentication via Continuous Gaze Offset Score Fusion," arXiv:2605.06810, May 2026, doi: 10.48550/arXiv.2605.06810.
+
+**New in this protocol (Direction 1):**
 
 [30] C. Holland and O. V. Komogortsev, "Biometric identification via eye movement scanpaths in reading," in *2011 Int. Joint Conf. Biometrics (IJCB)*, IEEE, Oct. 2011, pp. 1–8, doi: 10.1109/IJCB.2011.6117536.
 

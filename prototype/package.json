@@ -5,7 +5,10 @@
   "description": "Cross-site gaze re-identification prototype (Direction 1): WebGazer v3.5.3 capture harness + zero-dependency Node ingestion/re-ID server.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "npm run test:js && npm run test:py",
+    "test:js": "node --test test/*.test.js",
+    "test:py": "python3 analysis/test_analysis.py"
   },
   "engines": { "node": ">=18" },
   "license": "GPL-3.0-or-later"

@@ -46,7 +46,13 @@ prototype/
     features.py          content-independent features (mirrors reid-core.js)
     reid.py              cross-task/cross-session re-ID: rank-1, rank-5, EER, CMC
     simulate.py          synthetic gaze generator (pipeline verification)
+    test_analysis.py     stdlib unittest: features, tracker split, JS/Py parity
     requirements.txt
+  test/                the regression suite (node:test, zero deps)
+    reid-core.test.js    feature contract + nearest-neighbour matcher
+    registry.test.js     adapter registry, contract, identity/tracker resolution
+    server.test.js       ingest/status/sessions/identify over a live server
+    features-cli.js      helper: JS feature vector for the Python parity test
   data/                collected sessions land here (git-ignored)
 ```
 
@@ -111,6 +117,42 @@ python reid.py --data ../data --plot cmc.png
 tracker vs. another is the RQ3 ceiling-vs-commodity gap. Restrict to one with
 `--tracker webgazer`. The headline protocol is `cross_task_cross_session`
 (different content **and** different visit).
+
+---
+
+## Tests — run them after every change
+
+There is a regression suite so a small change can't quietly break a working
+feature. **Run `npm test` after each change; keep it green before moving on.**
+
+```bash
+cd prototype
+npm test          # JS suite (node:test) + Python suite (unittest)
+npm run test:js   # just the JavaScript tests
+npm run test:py   # just the Python tests
+```
+
+Zero test dependencies: JavaScript uses the built-in `node:test` runner, Python
+uses stdlib `unittest`. What's covered:
+
+- **`reid-core.js`** — the 16-feature contract, fixation/saccade segmentation,
+  screen-scale invariance, gap counting, `standardize` (incl. zero-variance
+  guard), and `identify` ranking + `exclude` + empty-gallery behaviour.
+- **Tracker registry / adapters** — all four adapters register; each meets the
+  contract; capability flags are correct (GazeCloud is `cloud` + self-calibrating,
+  WebEyeTrack/EyeGestures are gated with a setup note); identity + tracker
+  resolution (query → localStorage → default) and `wipeState`.
+- **`server.js`** — ingest (incl. filename carries the tracker family, 400 on bad
+  input, legacy-record family inference), status/sessions scoped by tracker,
+  `identify` never mixing trackers, static serving + path-traversal guard.
+- **Analysis** — features, `tracker_family`, protocol eligibility (never matches
+  across trackers), `evaluate`, `simulate`, per-tracker reporting, and a
+  **JS↔Python parity** test proving `reid-core.js` and `features.py` agree.
+
+When you change a feature, add or update a test in the same commit so the
+guarantee keeps up with the code. If you change the feature set, the parity test
+(`test/features-cli.js` + `analysis/test_analysis.py::TestParity`) forces
+`reid-core.js` and `features.py` to stay in sync.
 
 ---
 

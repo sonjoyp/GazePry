@@ -172,6 +172,72 @@ class TestSimulate(unittest.TestCase):
         self.assertEqual(len(features.extract_features(sess["samples"], sess["screen"])), 16)
 
 
+class TestConditionAndControls(unittest.TestCase):
+    def _write_sim(self, tmp, subjects=6, sessions=2, tracker="webgazer", seed=7):
+        for si in range(subjects):
+            pid = f"P{si + 1:02d}"
+            traits = simulate.subject_traits(seed * 1000 + si)
+            for se in range(sessions):
+                for ti, task in enumerate(simulate.TASKS):
+                    s = simulate.gen_session(pid, f"S{se+1}", task, traits,
+                                             seed * 100000 + si * 1000 + se * 100 + ti, tracker=tracker)
+                    fn = f"{pid}_S{se+1}_{task}_{tracker}_{s['startedAt']}.json"
+                    json.dump(s, open(os.path.join(tmp, fn), "w"))
+
+    def test_load_carries_condition_and_samples(self):
+        tmp = tempfile.mkdtemp(prefix="gp-cond-")
+        try:
+            self._write_sim(tmp, subjects=3, sessions=2)
+            sessions = reid.load_sessions(tmp)
+            self.assertTrue(sessions)
+            s = sessions[0]
+            self.assertEqual(s["intervention"], "baseline")          # v2 condition carried
+            self.assertIn("condition", s)
+            self.assertTrue(s["samples"])                            # raw samples retained
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_window_sweep_runs_and_full_matches_default(self):
+        tmp = tempfile.mkdtemp(prefix="gp-win-")
+        try:
+            self._write_sim(tmp, subjects=6, sessions=2)
+            sessions = reid.load_sessions(tmp)
+            with contextlib.redirect_stdout(io.StringIO()):
+                rows = reid.window_sweep(sessions, "webgazer", windows=(5, None))
+            self.assertEqual(len(rows), 2)
+            # the "full" window should score at least as many probes as a 5s cut
+            full = [r for r in rows if r["window_s"] == "full"][0]
+            self.assertGreaterEqual(full["n_probes_scored"], 1)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_shuffle_null_collapses_to_chance(self):
+        tmp = tempfile.mkdtemp(prefix="gp-null-")
+        try:
+            self._write_sim(tmp, subjects=8, sessions=2)
+            sessions = reid.load_sessions(tmp)
+            with contextlib.redirect_stdout(io.StringIO()):
+                res = reid.shuffle_null(sessions, "webgazer", n_perm=10)
+            # real signal beats chance; shuffled labels sit near chance
+            self.assertGreater(res["real"]["rank1"], res["real"]["chance_rank1"])
+            self.assertLessEqual(res["shuffled_rank1_mean"], res["real"]["chance_rank1"] * 2 + 1e-9)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_gallery_sweep_and_within_session_run(self):
+        tmp = tempfile.mkdtemp(prefix="gp-gal-")
+        try:
+            self._write_sim(tmp, subjects=6, sessions=2)
+            sessions = reid.load_sessions(tmp)
+            with contextlib.redirect_stdout(io.StringIO()):
+                grows = reid.gallery_sweep(sessions, "webgazer", sizes=(3, None))
+                wr = reid.within_session_bound(sessions, "webgazer")
+            self.assertEqual(len(grows), 2)
+            self.assertIsNotNone(wr)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 class TestLoadAndReportPerTracker(unittest.TestCase):
     def test_load_and_multitracker_split(self):
         tmp = tempfile.mkdtemp(prefix="gp-analysis-")

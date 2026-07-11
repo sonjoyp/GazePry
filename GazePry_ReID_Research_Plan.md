@@ -347,9 +347,10 @@ the repo `README.md` and `public/trackers/README-adapter.md`.
 - **Realistic-variation conditions:** at least one session under different lighting / seating;
   if a second laptop is available, one session on a *different webcam* to support the
   cross-device claim.
-- **IRB:** camera capture of identifiable subjects = human-subjects research. **File the TAMU
-  IRB protocol now** — it is the critical-path gate. Plan consent language carefully (it is
-  also material for a possible SOUPS companion study).
+- **IRB:** the study operates under a **TAMU IRB-exempt determination** (on file) — IRB is
+  **not** a gating item. Still plan consent language carefully: it remains good practice, is
+  needed for the artifact/data-handling statement, and is material for a possible SOUPS
+  companion study.
 - **Public datasets for the ceiling / large-N feasibility:** GazeBase [36] (322 subjects, 9
   rounds over 37 months), GazeBaseVR [37], JuDo1000 [38] (150 subjects, 4 sessions ≥1 week
   apart). Use these for the deep-model biometric ceiling; reserve *fresh* simultaneous capture
@@ -453,7 +454,7 @@ better.
 | Cross-task generalization weak | Report honestly; if only same-content sites link, the threat narrows to (e.g.) reading sites — still meaningful. Anchor the discussion in the known failure modes of task-independent authentication [32]. |
 | N too small for deep models | Public datasets [36]–[38] for the deep/ceiling claim; fresh data for the webcam claim. |
 | Low webcam framerate kills saccade features | Down-sample Gazepoint for fair comparison; report which features survive 30 Hz. |
-| IRB delay | File now — it is the critical path. |
+| IRB delay | Not applicable — the study is IRB-exempt (determination on file). |
 
 ---
 
@@ -592,15 +593,16 @@ single axis — is the contribution.
 - **Workshop hedge / early feedback:** WPES (co-located with CCS).
 - **Companion:** SOUPS, if the consent user study is added.
 
-**Rough critical path (calendar-bound by IRB + session separation):** IRB 4–8 wk → pilot 2–4
-wk → collection 6–10 wk (multi-session forces calendar time) → analysis 4–6 wk → writing 4 wk.
-≈ 6–8 months end-to-end; aim at a **PoPETs cycle in H1 2027** or a **USENIX Security 2027**
-deadline. Verify exact dates against live CFPs before committing.
+**Rough critical path (calendar-bound by session separation):** pilot 2–4 wk → collection 6–10
+wk (multi-session forces calendar time) → analysis 4–6 wk → writing 4 wk. ≈ 4–6 months
+end-to-end (IRB is exempt, so it adds no calendar time); aim at a **PoPETs cycle in H1 2027** or
+a **USENIX Security 2027** deadline. Verify exact dates against live CFPs before committing.
 
 ## 20. Immediate next steps
 
-1. Draft and file the **TAMU IRB** protocol (consent + camera capture) — start today; it
-   gates everything.
+1. Finalize **consent + data-handling language** for the sessions (the study is IRB-exempt —
+   determination on file — so no protocol filing gates the work; consent copy is still needed
+   for the artifact statement and the SOUPS companion).
 2. Stand up the **simultaneous Gazepoint + webcam** capture rig; verify per-frame time
    alignment between IR labels and webcam frames.
 3. Use the **pluggable tracker** harness (`public/trackers/`): WebGazer, WebEyeTrack, and
@@ -616,11 +618,10 @@ deadline. Verify exact dates against live CFPs before committing.
 7. **Run the confound-control pilot first (Appendix A.3), before any headline collection.**
    The calibration-swap and shuffled-label null tests decide whether the signal is the *person*
    or the *session/calibration* — if you can't separate them, nothing downstream matters.
-8. **Resolve the two blocking hygiene issues (Appendix A.6):** (a) reconcile the IRB status —
-   §10/§20 treat the TAMU IRB as the critical-path gate while the repo `README.md` says
-   "IRB-exempt"; these cannot both be true. (b) The repo currently tracks **29 real participant
-   gaze sessions** (`data/*.json`) in git with the `.gitignore` rule commented out — untrack
-   them and scrub history *before* any public artifact release.
+8. **Resolve the blocking data-hygiene issue (Appendix A.6):** the repo currently tracks
+   **29 real participant gaze sessions** (`data/*.json`) in git with the `.gitignore` rule
+   commented out — untrack them and scrub history *before* any public artifact release. (IRB is
+   settled: the study is IRB-exempt, determination on file — no longer an open item.)
 
 ## 21. References and citation status
 
@@ -867,9 +868,10 @@ shows a visible indicator — this is nothing like a silent cookie." Answers to 
 
 ## A.6 Ethics, IRB, disclosure, and artifact hygiene (table-stakes at top-tier security venues)
 
-- **IRB is blocking and currently contradicted.** §10/§20 call the TAMU IRB the critical path;
-  the repo README says "IRB-exempt." Resolve this now — camera capture of identifiable subjects
-  is human-subjects research; file the protocol.
+- **IRB: exempt (determination on file).** The study runs under a TAMU IRB-exempt
+  determination, consistent with the repo README — not a gating or open item. Retain the
+  determination reference for the paper's ethics statement, and keep consent + data-handling
+  language documented regardless.
 - **Do not ship participant gaze in git.** The repo tracks **29 real `data/*.json` session
   logs**; the `.gitignore` rule for them is commented out. Untrack and scrub history before any
   artifact release, and state the data-handling regime in the paper.

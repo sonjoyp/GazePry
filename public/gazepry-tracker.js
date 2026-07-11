@@ -102,6 +102,58 @@
     return true;
   };
 
+  // ---- session condition / environment metadata ------------------------
+  // Per-VISIT metadata that CANNOT be reconstructed after collection and that
+  // the analysis needs but the raw {t,x,y} stream cannot supply:
+  //   intervention  — which RQ4 arm this visit is (baseline / clear-state /
+  //                   incognito / new-profile / new-device / diff-lighting /
+  //                   face-blur). The headline unclearability axis (§13).
+  //   lighting      — free note on lighting / seating (A.3 negative control).
+  //   device        — machine + webcam label, e.g. "laptopB-builtin" (RQ4
+  //                   cross-device; userAgent alone can't name the camera).
+  //   glasses       — corrective lenses (a per-person capture confound).
+  //   calibQuality  — operator's post-calibration judgement good/fair/poor
+  //                   (the calibration-artifact confound, A.3). A measured
+  //                   pixel-error validation can later overwrite this.
+  //   notes         — anything else worth recording for this visit.
+  // Persisted per visit and merged into every stored session so the offline
+  // analysis can filter and report by condition. Absent fields default; an old
+  // record simply has no `condition` and is treated as baseline downstream.
+  GazePry.CONDITION_FIELDS = ["intervention", "lighting", "device", "glasses", "calibQuality", "notes"];
+  GazePry.DEFAULT_CONDITION = {
+    intervention: "baseline", lighting: "", device: "", glasses: false, calibQuality: "", notes: "",
+  };
+
+  GazePry.loadCondition = function () {
+    var c = {};
+    this.CONDITION_FIELDS.forEach(function (k) {
+      var v = localStorage.getItem("gp_cond_" + k);
+      if (k === "glasses") c[k] = v === "true";
+      else c[k] = v != null ? v : GazePry.DEFAULT_CONDITION[k];
+    });
+    // Query overrides let a scripted incognito / new-profile run (which starts
+    // with empty localStorage) still tag its arm, e.g. ?intervention=incognito.
+    var qi = q("intervention");
+    if (qi) c.intervention = qi;
+    var qd = q("device");
+    if (qd) c.device = qd;
+    return c;
+  };
+
+  GazePry.saveCondition = function (patch) {
+    patch = patch || {};
+    this.CONDITION_FIELDS.forEach(function (k) {
+      if (k in patch) {
+        var v = patch[k];
+        localStorage.setItem(
+          "gp_cond_" + k,
+          k === "glasses" ? (v ? "true" : "false") : String(v == null ? "" : v)
+        );
+      }
+    });
+    return this.loadCondition();
+  };
+
   // ---- engine -----------------------------------------------------------
   GazePry.startEngine = async function () {
     if (this._engineReady) return;
@@ -182,6 +234,7 @@
     opts = opts || {};
     var clicksPerDot = opts.clicksPerDot || 5;
     var self = this;
+    self._calibClicksPerDot = clicksPerDot; // recorded into each session (calibration effort)
 
     return new Promise(async function (resolve, reject) {
      try {
@@ -285,7 +338,7 @@
         clearInterval(timer);
         hud.el.remove();
         var session = {
-          schema: "gazepry.session.v1",
+          schema: "gazepry.session.v2",
           participant: self.identity.participant,
           session: self.identity.session,
           task: task,
@@ -293,6 +346,10 @@
           trackerFamily: a.family,  // stable slug for grouping/filtering
           startedAt: startedAt,
           durationMs: Math.round(performance.now() - t0),
+          // Per-visit condition/environment metadata (RQ4 + confound controls,
+          // §13/A.3). Cannot be reconstructed post-hoc, so it is captured here.
+          condition: self.loadCondition(),
+          calibClicksPerDot: self._calibClicksPerDot || null,
           screen: {
             w: screen.width, h: screen.height, dpr: window.devicePixelRatio || 1,
             innerW: window.innerWidth, innerH: window.innerHeight,

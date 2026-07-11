@@ -167,6 +167,33 @@ test("resolveTracker follows the selected tracker and falls back safely", () => 
   assert.equal(GazePry.resolveTracker().family, "webgazer", "unknown -> default");
 });
 
+test("loadCondition defaults to a baseline visit", () => {
+  const { GazePry } = loadGazePry();
+  const c = GazePry.loadCondition();
+  assert.equal(c.intervention, "baseline");
+  assert.equal(c.glasses, false);
+  assert.equal(c.device, "");
+});
+
+test("saveCondition persists per-visit metadata and round-trips", () => {
+  const { GazePry, store } = loadGazePry();
+  GazePry.saveCondition({ intervention: "incognito", device: "laptopB-builtin", glasses: true });
+  assert.equal(store.gp_cond_intervention, "incognito");
+  assert.equal(store.gp_cond_device, "laptopB-builtin");
+  assert.equal(store.gp_cond_glasses, "true");
+  const c = GazePry.loadCondition();
+  assert.equal(c.intervention, "incognito");
+  assert.equal(c.device, "laptopB-builtin");
+  assert.equal(c.glasses, true);
+});
+
+test("loadCondition honours a query-string intervention override", () => {
+  const { GazePry } = loadGazePry({ search: "?intervention=new-device&device=phoneA" });
+  const c = GazePry.loadCondition();
+  assert.equal(c.intervention, "new-device");
+  assert.equal(c.device, "phoneA");
+});
+
 test("wipeState clears storage and the active tracker's model", () => {
   const { GazePry, store } = loadGazePry({ store: { gp_participant: "P01", keep: "x" } });
   let cleared = false;

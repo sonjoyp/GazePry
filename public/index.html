@@ -26,6 +26,33 @@
       <label for="trk">Eye-tracker</label>
       <select id="trk"></select>
       <p class="gp-note" id="trkHint" style="margin-top:6px"></p>
+
+      <!-- Condition & environment: per-visit metadata that cannot be recovered
+           after collection (RQ4 intervention arm + A.3 confound controls). -->
+      <fieldset style="margin-top:16px;border:1px solid var(--gp-border);border-radius:8px;padding:12px 14px">
+        <legend class="gp-note" style="padding:0 6px">Condition &amp; environment <span style="opacity:.7">(needed for RQ4 / confound controls)</span></legend>
+        <label for="intv">Intervention arm</label>
+        <select id="intv">
+          <option value="baseline">baseline (no intervention)</option>
+          <option value="clear-state">cookies/cache cleared</option>
+          <option value="incognito">incognito / private window</option>
+          <option value="new-profile">fresh browser profile</option>
+          <option value="new-device">different device / webcam</option>
+          <option value="diff-lighting">different lighting / seating</option>
+          <option value="face-blur">face blurred / de-identified</option>
+        </select>
+        <label for="device" style="margin-top:10px">Device &amp; webcam label</label>
+        <input type="text" id="device" placeholder="e.g. laptopA-builtin" autocomplete="off" />
+        <label for="lighting" style="margin-top:10px">Lighting / seating note</label>
+        <input type="text" id="lighting" placeholder="e.g. overhead only, seated ~60cm" autocomplete="off" />
+        <label for="notes" style="margin-top:10px">Notes (optional)</label>
+        <input type="text" id="notes" placeholder="anything else about this visit" autocomplete="off" />
+        <label class="gp-row" style="font-weight:400;margin-top:10px">
+          <input type="checkbox" id="glasses" style="width:auto" />
+          <span>Participant wears glasses / contacts.</span>
+        </label>
+      </fieldset>
+
       <label class="gp-row" style="font-weight:400;margin-top:16px">
         <input type="checkbox" id="consent" style="width:auto" />
         <span>I consent to webcam-based gaze capture for this session.</span>
@@ -44,11 +71,20 @@
         Complete each task once. Different content on each page stands in for a different "site" &mdash;
         cross-task matching is the real tracking test.
       </p>
-      <div class="gp-row" style="margin:12px 0 18px">
+      <div class="gp-row" style="margin:12px 0 10px">
         <button class="gp-btn secondary" id="calBtn">Re-run calibration</button>
         <button class="gp-btn secondary" id="changeIdBtn">Change participant / session</button>
         <a class="gp-btn secondary" href="reid.html">Open re-ID / "unclearable" demo &rarr;</a>
       </div>
+      <label class="gp-row" style="font-weight:400;margin:0 0 18px;gap:8px">
+        <span class="gp-note">Calibration quality (rate after calibrating):</span>
+        <select id="calQuality" style="width:auto">
+          <option value="">— not rated —</option>
+          <option value="good">good</option>
+          <option value="fair">fair</option>
+          <option value="poor">poor</option>
+        </select>
+      </label>
       <div class="gp-tasklist" id="taskList">
         <a href="tasks/reading.html" data-task="reading"><b>Reading</b><br /><small>read a passage &middot; 90 s</small></a>
         <a href="tasks/serp.html" data-task="serp"><b>Search results</b><br /><small>scan a SERP &middot; 60 s</small></a>
@@ -98,12 +134,44 @@
     }
     trk.addEventListener("change", showTrkHint);
 
+    // condition / environment inputs (per-visit metadata for RQ4 + confounds)
+    var intv = document.getElementById("intv");
+    var device = document.getElementById("device");
+    var lighting = document.getElementById("lighting");
+    var notes = document.getElementById("notes");
+    var glasses = document.getElementById("glasses");
+    var calQuality = document.getElementById("calQuality");
+
     // pre-fill from any prior identity
     var prior = GazePry.loadIdentity();
     if (prior.participant) pid.value = prior.participant;
     if (prior.session) sid.value = prior.session;
     if (prior.tracker && GazePry.getTracker(prior.tracker)) trk.value = prior.tracker;
     showTrkHint();
+
+    // pre-fill condition from the last saved visit (device/lighting usually carry over)
+    var priorCond = GazePry.loadCondition();
+    if (priorCond.intervention) intv.value = priorCond.intervention;
+    device.value = priorCond.device || "";
+    lighting.value = priorCond.lighting || "";
+    notes.value = priorCond.notes || "";
+    glasses.checked = !!priorCond.glasses;
+    if (priorCond.calibQuality) calQuality.value = priorCond.calibQuality;
+
+    function saveConditionFromForm() {
+      GazePry.saveCondition({
+        intervention: intv.value,
+        device: device.value.trim(),
+        lighting: lighting.value.trim(),
+        notes: notes.value.trim(),
+        glasses: glasses.checked,
+      });
+    }
+    // Rating calibration quality on step 2 updates the persisted condition so it
+    // lands in every session captured this visit (A.3 calibration-artifact control).
+    calQuality.addEventListener("change", function () {
+      GazePry.saveCondition({ calibQuality: calQuality.value });
+    });
 
     // Returning to the hub after finishing a task should land on the task list,
     // not the identity/consent step: the participant already has an identity and
@@ -137,6 +205,7 @@
 
     startBtn.addEventListener("click", async function () {
       GazePry.saveIdentity(pid.value.trim(), sid.value, trk.value);
+      saveConditionFromForm();
       document.getElementById("whoPill").textContent = whoLabel();
       var note = document.getElementById("idNote");
       var chosen = GazePry.getTracker(trk.value);

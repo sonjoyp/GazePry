@@ -109,9 +109,13 @@ def gen_session(pid, sid, task, traits, session_seed, dur_s=60, fps=30, tracker=
                 t += step_time()
 
     return {
-        "schema": "gazepry.session.v1",
+        "schema": "gazepry.session.v2",
         "participant": pid, "session": sid, "task": task,
         "tracker": tracker, "trackerFamily": tracker,
+        # baseline condition so synthetic records share the v2 shape captured by
+        # the browser harness (real visits vary the intervention arm; §13/A.3)
+        "condition": {"intervention": "baseline", "lighting": "", "device": "synthetic",
+                      "glasses": False, "calibQuality": "", "notes": ""},
         "startedAt": 1700000000000 + session_seed,
         "durationMs": int(samples[-1]["t"]) if samples else 0,
         "screen": {"innerW": innerW, "innerH": innerH, "w": innerW, "h": innerH, "dpr": 1},

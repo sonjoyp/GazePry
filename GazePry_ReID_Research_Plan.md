@@ -39,6 +39,7 @@ corrections made during verification.*
 19. [Target venues and timeline](#19-target-venues-and-timeline)
 20. [Immediate next steps](#20-immediate-next-steps)
 21. [References and citation status](#21-references-and-citation-status)
+- [Appendix A — Novelty positioning, threat-model realism, and threats to validity](#appendix-a--novelty-positioning-threat-model-realism-and-threats-to-validity)
 
 ---
 
@@ -228,9 +229,17 @@ gaze. This turns Part I's limitation into the paper's thesis.
 
 ## 7. Threat model
 
-- **Adversary:** a tracking/analytics provider whose JS SDK is embedded across multiple
-  first-party sites (the same structural position as an ad or analytics tag). Each embedding
-  inherits the host page's camera permission or prompts once.
+- **Adversary:** a tracking/analytics provider whose JavaScript runs **first-party** on many
+  independent sites — the same structural position as an analytics or ad tag included via
+  `<script src>`. Because the script executes in each host site's *own* origin, it uses *that
+  site's* camera permission; the provider then links visitors **server-side** across every site
+  it is embedded on. **State the web-platform mechanism precisely (reviewers will check):**
+  camera permission is granted per top-level origin and is **not** silently shared across
+  origins. A cross-origin tracker *iframe* would need explicit `Permissions-Policy` camera
+  delegation from each top frame *and* its own per-origin grant — so the realistic, and still
+  alarming, model is the **first-party-included script**, not a third-party iframe silently
+  inheriting the camera. Each site prompts for the camera once (see Appendix A.4 for the
+  consent-realism argument).
 - **Goal:** link a visitor's sessions across sites and over time to a persistent pseudonymous
   identity **without cookies or client-side state**.
 - **Capability:** client-side JS only; gaze estimation in-browser; covert calibration from
@@ -270,8 +279,17 @@ gaze. This turns Part I's limitation into the paper's thesis.
 
 **Recommended rig — simultaneous capture.** Record the webcam video *while* Gazepoint tracks.
 The Gazepoint IR gives a per-frame ground-truth gaze label for every webcam frame, so you get
-(a) clean labels to train/validate the webcam estimate and (b) matched per-subject data
-across both channels in one session. This is the cleanest way to answer RQ3.
+(a) an **independent** accuracy reference for the webcam estimate and (b) matched per-subject
+data across both channels in one session. This is the cleanest way to answer RQ3.
+
+**Critical control (do not contaminate the commodity arm).** The webcam trackers must be
+evaluated *exactly as an attacker would deploy them* — running their own native
+self-calibration — and their gaze output must **never be retrained, corrected, or
+label-supervised using the Gazepoint signal**. Using IR labels to improve the webcam estimate
+would leak the ceiling into the commodity arm and make both the RQ3 gap *and* the headline
+re-ID result unrealistically strong. In this rig Gazepoint is a **measurement instrument, not
+part of the attack pipeline**: it supplies ground truth for the accuracy comparison only,
+never a training signal for re-identification.
 
 **Tracker arms.** One IR ceiling plus a *pluggable* set of commodity in-browser webcam
 trackers (the capture harness is tracker-agnostic — one adapter per tracker, selected per
@@ -361,7 +379,13 @@ Report **same-task** (upper bound) and **cross-task** (the tracking threat) sepa
     here. The interpretable score-fusion lineage ([31]) is the model here.
   - **(b) End-to-end deep model** (DenseNet-style, à la Eye Know You Too [20]; see also the
     micro-movement models [33], [34]) — the ceiling; train/validate on public data, fine-tune
-    on yours.
+    on yours. **Domain-gap caveat (state it):** the public biometric datasets are IR at
+    250–1000 Hz ([36]–[38]); the webcam channel is ~30 Hz with categorically different noise,
+    so a model pretrained on IR will **not** transfer to webcam without explicit **domain
+    adaptation** (down-sample IR to the webcam rate, inject webcam-like noise, and fine-tune on
+    the simultaneous-capture data). Treat route (b) on the *webcam* channel as a research risk,
+    not a drop-in; route (a) hand-crafted features is the safer primary for the webcam claim,
+    with route (b) reserved for the IR ceiling and the large-N feasibility argument.
 - **Critical control:** the primary condition **excludes the raw face image / appearance
   features**, so the "survives de-identification" claim is clean. Run an appearance-*including*
   arm only as an upper bound, to quantify how much signal is dynamics vs. appearance.
@@ -589,6 +613,14 @@ deadline. Verify exact dates against live CFPs before committing.
    cross-session claim honest.
 6. Before submission, re-pull every citation flagged in §21 against its published version and
    replace preprint numbers with the peer-reviewed figures.
+7. **Run the confound-control pilot first (Appendix A.3), before any headline collection.**
+   The calibration-swap and shuffled-label null tests decide whether the signal is the *person*
+   or the *session/calibration* — if you can't separate them, nothing downstream matters.
+8. **Resolve the two blocking hygiene issues (Appendix A.6):** (a) reconcile the IRB status —
+   §10/§20 treat the TAMU IRB as the critical-path gate while the repo `README.md` says
+   "IRB-exempt"; these cannot both be true. (b) The repo currently tracks **29 real participant
+   gaze sessions** (`data/*.json`) in git with the `.gitignore` rule commented out — untrack
+   them and scrub history *before* any public artifact release.
 
 ## 21. References and citation status
 
@@ -712,3 +744,181 @@ TVCG, IEEE TIFS, Pattern Recognition Letters).*
 [48] J. Li, A. Roy Chowdhury, K. Fawaz, and Y. Kim, "Kalεido: Real-Time Privacy Control for Eye-Tracking Systems," in *Proc. 30th USENIX Security Symp. (USENIX Security 21)*, USENIX Association, Aug. 2021, pp. 1793–1810.
 
 [49] B. David-John, D. Hosfelt, K. Butler, and E. Jain, "For Your Eyes Only: Privacy-preserving eye-tracking datasets," in *Proc. 2022 Symp. Eye Tracking Research and Applications*, ETRA '22, ACM, Jun. 2022, pp. 1–6, doi: 10.1145/3517031.3529618.
+
+---
+
+# Appendix A — Novelty positioning, threat-model realism, and threats to validity
+
+*Added 2026-07-11 after a full read of the ingested literature (see the wiki `sources/`). This
+appendix is written to pre-empt the objections a PoPETs / USENIX Security / CCS reviewer will
+raise. It does not change the thesis — it hardens it. Read it as the "what a skeptical reviewer
+will say, and what in the design answers them" companion to §18.*
+
+## A.1 Is the contribution novel? Yes — the novelty is the *intersection*, not any single axis
+
+The empty cell is real. Stacking the four axes:
+
+- Eye-movement biometrics is proven, but only on **research-grade IR hardware**, cooperative
+  enrollment, and framed as *authentication* — Holland [30], George & Routray [31] (EER ≈2.59%,
+  153 subjects), Kinnunen [32], Deep Eyedentification [33], [34], Eye Know You Too [20]
+  (0.58% EER at 60 s → 3.66% at 5 s), Al Zaidawi [35].
+- Behavioral re-ID at population **scale / cross-device** is proven, but only in **VR** — Nair
+  55,541 users at 94.3% from 100 s [39], Miller 95% of 511 from <5 min [40], Patergianakis
+  96.6% on GazeBaseVR video-watching [42].
+- Stateless web tracking is proven, but only for **device-bound** fingerprints that anti-FP
+  browsers defeat and a fresh device resets — Acar [44], FP-STALKER [45], Zimmeck [46].
+- Commodity webcam gaze on the desktop is proven **usable** (Kaduk et al. 2024 report ≈1.4°,
+  within ≈0.5° of an EyeLink 1000; WebEyeTrack ≈2.32 cm [25]) but has **never** been used for
+  cross-task, cross-site re-identification as a tracking vector.
+
+No published work occupies {commodity webcam × open desktop web × cross-task/cross-site × re-ID
+framed as an unclearable tracking channel} and quantifies its gap to the IR ceiling on the
+*same* subjects.
+
+**Rebut the "this is just eye-movement biometrics on a worse sensor" objection head-on.** The
+contribution is *not* a new biometric model. It is: (i) the first characterization of the
+**commodity webcam** channel for re-ID (a sensor nobody in the EMB literature uses); (ii) the
+first **cross-task / cross-site transfer** measured as a *tracking* threat rather than
+same-task authentication; (iii) the first **ceiling-vs-commodity** gap on the same subjects and
+sessions (RQ3); and (iv) the reframing of gaze as a **stateless, person-bound, unclearable web
+identifier** contrasted against the clearable-cookie baseline. Any *one* axis alone is not
+publishable; the *stack* is. Say this explicitly in the introduction.
+
+## A.2 The three risks that actually decide acceptance (none of them is "novelty")
+
+1. **Empirical** — does webcam *cross-task* re-ID beat chance by a margin worth a paper? (A.7)
+2. **Threat-model realism** — camera-consent friction and the cross-origin mechanism. (A.4)
+3. **Confounds** — is a match the *person*, or the *session / calibration / tracker*? (A.3)
+
+If A.3 is not addressed convincingly, the paper is rejected regardless of the numbers. Treat it
+as the primary methodological contribution, not an afterthought.
+
+## A.3 Confound controls the paper *must* run (the #1 reviewer trap)
+
+The danger: a commodity webcam tracker self-calibrates per session (WebGazer fits a ridge
+regression from clicks). Two sessions of the same person may match because they share a
+*calibration geometry, screen, or lighting* — not because their **eyes** are individual. If so,
+the "biometric" is an apparatus artifact and the whole result is spurious. Controls to
+pre-register:
+
+- **Calibration-swap / never-share-calibration.** Gallery and probe sessions of the same person
+  must use **independent** calibrations (different day, re-calibrated from scratch — the harness
+  already clears the model on a fresh session). Additionally run a *deliberate* control where
+  the same person is enrolled and probed under **different calibration procedures** and confirm
+  re-ID survives.
+- **Cross-tracker generalization.** Enroll on one webcam tracker, identify on another
+  (WebGazer → EyeGestures). If re-ID *only* works within a single tracker's idiosyncratic
+  output, the signal is tracker-specific, not person-specific. (This is separate from RQ3,
+  which reports each tracker *in isolation* for fairness.)
+- **Shuffled-label null.** Recompute the entire pipeline with subject labels permuted; rank-1
+  and EER must collapse to chance. Report it — it is the cheapest credibility win.
+- **Appearance ablation** (already planned, §12): dynamics-only vs dynamics+appearance, so the
+  "survives face removal" claim is clean and the reader sees how much signal is *movement* vs
+  *looks*.
+- **Session/lighting/time negative controls.** Include at least one session under changed
+  lighting/seating and, where possible, a different webcam, and show the confusion is not
+  driven by capture conditions (e.g., that impostors sharing a session's lighting are not
+  systematically closer).
+- **Within-session leakage bound.** Split a single session into enroll/probe halves as an
+  *upper bound*, and always report the cross-session, cross-task cell separately so the easy
+  case never masquerades as the threat.
+
+## A.4 Threat-model realism — confront the camera-consent objection directly
+
+A reviewer's first instinct: "camera permission is high-friction, per-origin, revocable, and
+shows a visible indicator — this is nothing like a silent cookie." Answers to bake into §2 and
+§7:
+
+- **The correct mechanism** (now fixed in §7): a provider's script running **first-party** on
+  many sites, each with its own one-time camera grant, linked **server-side**. Not a
+  third-party iframe silently inheriting the camera (the platform forbids that). This is weaker
+  than "silent everywhere" but still realistic — it is exactly how analytics/ad tags already
+  operate, minus the camera.
+- **Why the camera grant is increasingly *available*.** Do not assume it; argue it. Legitimate,
+  growing contexts that already ask for the webcam and would host such a tag: **accessibility**
+  gaze navigation (Razuman et al. 2025), **online proctoring**, attention/UX analytics
+  (WebGazer's own pitch), "look-to-scroll"/gaze UI, **WebXR**, and the surge of
+  **gaze-conditioned AI** (From Gaze to Data [9]; GazeLLM [11]; GazeQwen [16]; GazeVLM [18];
+  gaze-aware assistants [26]). Gaze capture is being normalized for benign reasons — that
+  normalization *is* the enabling condition. Cite Liebling & Preibusch [6]: webcam privacy loss
+  is obvious to users, but **gaze extraction is opaque** — a consented camera feed does not
+  signal that oculomotor *identity* is being harvested.
+- **Covert calibration is the drive-by nugget — foreground it.** WebGazer/SearchGazer
+  self-calibrate from ordinary clicks ([4], [7]); the attacker needs **no explicit calibration
+  step**, so capture is genuinely drive-by. This is a stronger novelty point than the plan
+  currently makes.
+- **Scope honestly.** This is a *conditional* threat (needs a camera grant). Say so plainly and
+  then argue the condition is increasingly met. Reviewers punish overclaiming far more than a
+  well-scoped conditional threat.
+
+## A.5 Defusing the "webcam gaze is too noisy for biometrics" objection
+
+- **The trajectory is on your side:** Kaduk et al. 2024 (≈1.4°, near EyeLink), WebEyeTrack
+  ≈2.32 cm [25], GazeFollower ≈0.92 cm — the accuracy objection is weakening year over year.
+- **The load-bearing argument:** re-ID is **content-independent and distributional** — it needs
+  *stable per-person dynamics* (fixation/saccade distributions, main-sequence slope), **not**
+  pointing precision. Thilderkvist & Dobslaw 2024 show webcam gaze fails at *fine AOI-level*
+  reading; that bounds the content-*dependent* vectors (D2), **not** the distributional re-ID
+  signal. Make this distinction explicitly — otherwise a reviewer will cite Thilderkvist
+  against you and you will have no answer on the page.
+- Report *which* features survive 30 Hz (fixation-duration statistics likely robust;
+  saccade-velocity features likely degraded) — turning the sampling-rate limitation into a
+  finding.
+
+## A.6 Ethics, IRB, disclosure, and artifact hygiene (table-stakes at top-tier security venues)
+
+- **IRB is blocking and currently contradicted.** §10/§20 call the TAMU IRB the critical path;
+  the repo README says "IRB-exempt." Resolve this now — camera capture of identifiable subjects
+  is human-subjects research; file the protocol.
+- **Do not ship participant gaze in git.** The repo tracks **29 real `data/*.json` session
+  logs**; the `.gitignore` rule for them is commented out. Untrack and scrub history before any
+  artifact release, and state the data-handling regime in the paper.
+- **Responsible disclosure.** Security PCs increasingly expect it: disclose to browser vendors
+  and the W3C (the camera-permission / Permissions-Policy model is the relevant surface) and
+  document the timeline. Pair the attack with the RQ5 defense so the paper is not "attack only."
+- **Artifact evaluation.** The harness already exists and is tracker-pluggable with a test
+  suite — a strong artifact-evaluation submission, and a differentiator. Plan for it.
+
+## A.7 Sharpened headline results and a fallback ladder
+
+Lead with the crispest, most defensible results; do not stake the paper on the riskiest cell.
+
+1. **Accuracy-vs-observation-window curve on the webcam channel** — "how many seconds of
+   viewing links you." Quotable, and the IR ceiling already shows a steep curve (EKYT
+   0.58%→3.66% [20]).
+2. **Ceiling-vs-commodity gap (RQ3)** — novel and uniquely yours (both devices, same subjects).
+3. **Unclearability demonstration (RQ4)** — survives cookie/cache clear, incognito, new
+   profile, new device, face de-identification; the live wipe-state + cross-origin demo.
+4. **Cross-task transfer (RQ2)** — the most differentiating but riskiest.
+
+**Fallback ladder if the webcam numbers are weak:** if cross-task is weak, narrow the claim to
+*same-genre* sites (e.g., reading→reading) — still a meaningful tracking threat. If webcam EER
+is high in absolute terms, the contribution becomes the **gap curve** plus the framing "a
+degraded-but-non-random identifier that, unlike a cookie, the user *cannot clear*" — quantified
+against the canvas/UA baseline [44]–[46]. A well-scoped lower bound is publishable; an
+overclaimed headline is not.
+
+## A.8 Venue tuning
+
+- **PoPETs / PETS (recommended first target).** Best topical fit; rolling quarterly deadlines
+  suit iteration; values measurement + a defense. Submit here first, defense **included** (not
+  optional), with the confound controls (A.3) front and center.
+- **USENIX Security / CCS / S&P (reach).** Need the end-to-end **cross-origin linkage demo**
+  working, a **crisp cross-task attack number**, and a **responsible-disclosure** section. The
+  bar is a clean, quantified attack — not a feasibility study.
+- **SOUPS (companion).** The camera-consent opacity (A.4) and a user study on what people
+  believe they are granting is a natural companion paper — and directly reuses the IRB and
+  consent materials.
+- **WPES (hedge).** Early feedback co-located with CCS.
+
+## A.9 One-paragraph "novelty statement" to reuse in the intro and rebuttals
+
+> Eye-movement biometrics is mature on infrared hardware; behavioral re-identification at scale
+> is established in virtual reality; stateless web tracking is established for device-bound
+> fingerprints. We are the first to show that **commodity, in-browser webcam gaze on the open
+> desktop web re-identifies users across tasks and across sites as a stateless, person-bound
+> identifier that survives clearing all client-side state and removing the face from the video**,
+> and to measure that channel's gap to a research-grade infrared ceiling on the same subjects.
+> The novelty is the intersection of sensor (commodity webcam), setting (drive-by desktop web),
+> transfer (cross-task/cross-site), and framing (unclearable tracking vector) — no prior work
+> occupies it.

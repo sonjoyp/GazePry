@@ -4,8 +4,13 @@ tags: [threat-model, survey, leakage]
 aliases: [Information Leakage Report, Leakage Assessment, Threat-Model Report, GazePry_Information_Leakage_Report]
 sources: [information-leakage-report]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
+
+> **Frozen (2026-07-11).** Moved to `raw/GazePry_Information_Leakage_Report.md`
+> and merged into the living [[reid-research-plan]] (where it became Part I,
+> lightly compressed). This page remains the detailed summary of the report as
+> written; the plan's §21 carries the corrected, canonical bibliography.
 
 The project's threat-model assessment: *Information Leakage in Webcam-Based Eye
 Tracking on Laptops, Smartphones, and Tablets*. It argues that a
@@ -42,6 +47,7 @@ entries **[1]–[29]**.
 
 ## Related
 
+- [[reid-research-plan]] — the living successor; this report is its Part I.
 - [[direction-1-study-protocol]] — turns this report's §8 limitation (SOP
   blocks content peeking) into a thesis about re-identification.
 - [[two-regimes-of-leakage]], [[leakage-vectors-d1-d6]], [[form-factor-analysis]],
@@ -49,6 +55,6 @@ entries **[1]–[29]**.
 
 ## Mentions in sources
 
-- `GazePry_Information_Leakage_Report.md` §1 Executive Summary; §3 Two Regimes;
+- `raw/GazePry_Information_Leakage_Report.md` §1 Executive Summary; §3 Two Regimes;
   §4 Vectors D1–D6; §5 Form-Factor Analysis; §6 Evidence; §7 Enabling
   Conditions; §8 What Tightens/Loosens; §9 Conclusion; References [1]–[29].

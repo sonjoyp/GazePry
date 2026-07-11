@@ -3,13 +3,13 @@ type: entity
 subtype: venue
 tags: [publishing, venues, timeline]
 aliases: [Target Venues, PETS, PoPETs, USENIX Security, SOUPS, Publication Plan]
-sources: [direction-1-study-protocol]
+sources: [reid-research-plan]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
-The publication targets and rough timeline for [[direction-1-study-protocol|
-Direction 1]].
+The publication targets and rough timeline for the [[reid-research-plan]]
+(§19; unchanged from the frozen protocol §13).
 
 ## Key facts
 
@@ -25,9 +25,9 @@ Direction 1]].
 
 ## Related
 
-- [[direction-1-study-protocol]] — the plan being submitted.
+- [[reid-research-plan]] — the plan being submitted.
 - [[research-questions-rq1-rq5]] — the results the venues expect.
 
 ## Mentions in sources
 
-- Protocol §13 (Target venues and timeline).
+- Plan §19 (Target venues and timeline); Protocol §13 (frozen original).

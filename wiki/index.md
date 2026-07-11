@@ -5,30 +5,90 @@ pattern. Raw sources are immutable; these pages are the compiled, cross-linked
 layer over them. Conventions and workflows live in [[SCHEMA]].
 
 **Start here:** [[gazepry]] · [[gaze-re-identification]] ·
-[[direction-1-study-protocol]] · [[information-leakage-report]]
+[[reid-research-plan]] · [[readme]]
 
 ---
 
 ## Sources (`sources/`)
 
-- [[readme]] — repo front door: project framing, quick start, license.
-- [[information-leakage-report]] — threat-model survey; the two regimes, D1–D6,
-  form factors, evidence, bibliography [1]–[29].
-- [[direction-1-study-protocol]] — the lead research plan: cross-site gaze
-  re-ID as an unclearable tracking vector; adds [30]–[49].
-- [[prototype-readme]] — how to run the Direction 1 prototype.
-- [[prototype-code]] — the prototype's actual source (server, tracker,
-  features, analysis).
+**Project documents & code**
+- [[reid-research-plan]] — the living blueprint (motivation + study plan +
+  positioning); canonical bibliography [1]–[49] in §21.
+- [[readme]] — repo front door **and** harness manual: quick start, pluggable
+  trackers, tests, rig/cross-origin recipes.
+- [[information-leakage-report]] — threat-model survey (frozen in `raw/`; now
+  Part I of the plan); two regimes, D1–D6, form factors, evidence, [1]–[29].
+- [[direction-1-study-protocol]] — the Direction-1 protocol (frozen in `raw/`;
+  now Parts II–III of the plan); [30]–[49].
+- [[prototype-readme]] — superseded pointer (the prototype README was merged
+  into the root README).
+- [[prototype-code]] — the harness source (server, orchestrator + adapters,
+  features, analysis, tests).
+
+### Ingested papers (`sources/`, by role)
+
+*Cite by the plan §21 bracket number where given; author-year otherwise
+(see [[SCHEMA]]). Full digests on each page.*
+
+**Webcam-tracker lineage & validation** — [[papoutsaki-2016-webgazer]],
+[[papoutsaki-2017-searchgazer]] [4], [[papoutsaki-2018-eye-of-typer]] [7],
+[[davalos-2025-webeyetrack]] [25], [[hutt-2024-mind-wandering]] [22],
+[[semmelmann-2018-online-webcam-et]], [[yang-2021-webcam-behavioral]],
+[[van-der-cruyssen-2024-validation]], [[kaduk-2024-webcam-vs-eyelink]],
+[[thilderkvist-2024-limitations]], [[falch-2024-webcam-gaze-estimation]],
+[[molina-cantero-2024-review]], [[zhu-2025-gazefollower]], [[park-2021-gazel]],
+[[razuman-2025-browser-extension]], [[pygaze-site]].
+
+**Eye-movement biometrics & datasets** —
+[[holland-2011-scanpath-biometrics]] [30], [[kinnunen-2010-task-independent]]
+[32], [[george-2016-score-fusion]] [31], [[jager-2019-deep-eyedentification]]
+[33], [[makowski-2021-deepeyedentification-live]] [34],
+[[lohr-2022-eye-know-you-too]] [20], [[al-zaidawi-2022-multi-dataset]] [35],
+[[aziz-2026-gaze-offset-fusion]] [29], [[griffith-2021-gazebase]] [36],
+[[lohr-2023-gazebasevr]] [37].
+
+**Content-dependent gaze attacks** — [[chen-2018-eyetell]] [27],
+[[wang-2020-gazerevealer]] [8], [[wang-2024-gazeploit]] [14],
+[[slocum-2023-arvr-keylogging]] [15], [[long-2023-private-eye]] [19],
+[[weinberg-2011-history-sniffing]] [5].
+
+**VR/XR identification & anonymity** — [[nair-2023-vr-50k]] [39],
+[[miller-2020-vr-identifiability]] [40],
+[[aziz-2025-uncoordinated-protections]] [41],
+[[patergianakis-2026-xr-anonymity]] [42].
+
+**Gaze privacy defenses** — [[steil-2019-gaze-dp]] [47], [[li-2021-kaleido]]
+[48], [[david-john-2022-for-your-eyes-only]] [49],
+[[david-john-2021-streaming-privacy]] [24], [[du-2024-privategaze]] [23],
+[[wilson-2024-vr-gaze-streaming]] [13].
+
+**Stateless web tracking & keystroke biometrics** —
+[[acar-2014-web-never-forgets]] [44], [[vastel-2018-fp-stalker]] [45],
+[[zimmeck-2017-cross-device]] [46], [[acien-2022-typenet]] [43].
+
+**Privacy attitudes, HCI surveys & gaze-AI** —
+[[katsini-2020-gaze-security-survey]] [3], [[kroger-2020-gaze-privacy]] [21],
+[[liebling-2014-pervasive-privacy]] [6], [[alsakar-2025-handheld-privacy]] [10],
+[[bozkir-2025-privacy-concerns]] [28], [[abdrabou-2025-gaze-to-data]] [9],
+[[bukhari-2025-privacy-indicators]] [17], [[yang-2025-gazellm]] [11],
+[[pham-2026-gazeqwen]] [16], [[mathew-2026-gazevlm]] [18],
+[[danry-2026-gaze-to-guidance]] [26], [[dmello-2012-gaze-tutor]] [1],
+[[dmello-2012-autotutor]] [2].
 
 ## Entities (`entities/`)
 
-**Trackers**
+**Trackers** *(five arms — see [[ceiling-vs-commodity]])*
 - [[webgazer]] — commodity in-browser webcam tracker (v3.5.3); the deployed
   reality arm.
 - [[webeyetrack]] — head-pose-aware in-browser tracker (~2.32 cm); near-future
   commodity ceiling.
+- [[eyegestures]] — open-source on-device commodity arm (NativeSensors,
+  Rust/WASM web build).
+- [[gazecloud]] — hosted high-accuracy cloud contrast (GazeRecorder; frames
+  leave the machine).
 - [[gazepoint]] — research-grade IR tracker (GP3); the ground-truth ceiling.
-- [[searchgazer]] — the deprecated 2016/2017 ancestor (dead SERP selectors).
+- [[searchgazer]] — the deprecated 2016/2017 ancestor (dead SERP selectors;
+  archived in `legacy-searchgazer/`).
 
 **Prototype components**
 - [[reid-server]] — zero-dependency Node collection + live re-ID server.
@@ -72,6 +132,10 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 - [[gaze-estimation]] — webcam-only "where are you looking" software.
 
 **Method, evaluation & defense**
+- [[webcam-tracking-validation]] — the "accuracy objection is weakening"
+  argument (webcam gaze approaching lab standards).
+- [[gaze-conditioned-ai]] — gaze fed to LLMs/VLMs; why gaze collection is
+  proliferating.
 - [[research-questions-rq1-rq5]] — the five RQs and where each is exercised.
 - [[ceiling-vs-commodity]] — the IR-vs-webcam gap on the same subjects (RQ3).
 - [[simultaneous-capture-rig]] — webcam + Gazepoint recorded together.

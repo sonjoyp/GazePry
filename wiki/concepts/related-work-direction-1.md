@@ -2,15 +2,16 @@
 type: concept
 tags: [related-work, literature, positioning]
 aliases: [Related Work, Related Work Direction 1, The Gap, Prior Work]
-sources: [direction-1-study-protocol]
+sources: [reid-research-plan]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
-How Direction 1 is positioned against prior work. There *is* a large adjacent
-literature, but **no published work occupies the exact cell this protocol
-targets**: commodity in-browser webcam gaze, on a desktop, used for cross-task /
-cross-site [[gaze-re-identification|re-identification]] framed as an unclearable
+How the [[reid-research-plan]] is positioned against prior work (plan §18,
+eight groups 18.1–18.8). There *is* a large adjacent literature, but **no
+published work occupies the exact cell this plan targets**: commodity
+in-browser webcam gaze, on a desktop, used for cross-task / cross-site
+[[gaze-re-identification|re-identification]] framed as an unclearable
 web-tracking vector. Every close analogue differs on at least one of {hardware,
 setting, task-transfer, framing}.
 
@@ -33,9 +34,16 @@ setting, task-transfer, framing}.
 - **Stateless web tracking — the "clearable cookie" baseline**: canvas
   fingerprinting [44], FP-STALKER evolving-fingerprint linkage [45],
   cross-device tracking [46]. Device-bound and resettable — the bar gaze clears.
-- **Defenses** ([[gaze-perturbation-defense]], RQ5): Steil et al. gaze-DP [47],
-  Kalεido real-time gaze-DP system [48], "For Your Eyes Only" k-anonymity [49],
-  plus carried-over [13], [23], [24].
+- **Defenses** ([[gaze-perturbation-defense]], RQ5, §18.6): Steil et al.
+  gaze-DP [47], Kalεido real-time gaze-DP system [48], "For Your Eyes Only"
+  k-anonymity [49], plus streaming-DP and VR-gaze protections [13], [23], [24].
+- **The content-dependent contrast class** (§18.7 — what the plan is *not*):
+  [[eyetell|EyeTell]] [27] and GAZEploit [14] in the delta table, plus
+  [[gazerevealer|GazeRevealer]] [8], gaze graphical passwords [12], AR/VR
+  head-motion keylogging [15], eyeglass-reflection screen peeking [19]; the
+  history side channel "I Still Know What You Visited Last Summer" [5] pairs
+  with the fingerprinting baseline [44]–[46]. Privacy-framing / consent-angle
+  sources: [3], [6], [9], [21], [28].
 
 ## The gap
 
@@ -52,9 +60,10 @@ quantified its gap to the IR ceiling on the same subjects
 - [[person-bound-fingerprint]], [[cross-task-generalization]],
   [[eye-movement-biometrics]], [[ceiling-vs-commodity]] — the axes the gap
   stacks.
-- [[direction-1-study-protocol]] — §15 is the full related-work discussion.
+- [[reid-research-plan]] — §18 is the full related-work discussion (the frozen
+  protocol's §15 is its predecessor).
 
 ## Mentions in sources
 
-- Protocol §15 (Related work), §15.1–§15.8, §16 (full reference list
-  [30]–[49]).
+- Plan §18 (Related work, groups 18.1–18.8), §21 (references + citation
+  status); Protocol §15–§16 (frozen original).

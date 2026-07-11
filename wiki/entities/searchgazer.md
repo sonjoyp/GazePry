@@ -17,8 +17,9 @@ reading/search vector]] and the SERP stimulus in the [[task-suite]]. It is now
 
 ## Key facts
 
-- The repo root retains the original SearchGazer demo (`searchgazer.js`,
-  `index.html`, `examples/`) for historical reference only.
+- The original SearchGazer demo is archived under **`legacy-searchgazer/`**
+  (moved off the repo root in the 2026-07-10 merge) for historical reference
+  only — deprecated and unused.
 - **Stale:** its bundled Google/Bing DOM selectors date from 2016 and no longer
   match live SERPs — so an attacker-controlled page, not live-SERP
   instrumentation, is the realistic demonstrator substrate.
@@ -31,5 +32,5 @@ reading/search vector]] and the SERP stimulus in the [[task-suite]]. It is now
 
 ## Mentions in sources
 
-- `README.md` (historical note); Report §2, §4 (dead selectors); Protocol §4
-  ("do not use the stale fork"), §15.7 [4].
+- `README.md` (Credit — archived demo); Report §2, §4 (dead selectors); plan
+  §2, §9 ("do not use the stale fork"; set aside with TurkerGaze), §18.7 [4].

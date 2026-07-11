@@ -2,13 +2,13 @@
 type: concept
 tags: [study-design, research-questions]
 aliases: [Research Questions, RQ1, RQ2, RQ3, RQ4, RQ5, RQs]
-sources: [direction-1-study-protocol, prototype-readme]
+sources: [reid-research-plan, readme]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
-The five research questions of [[direction-1-study-protocol|Direction 1]], and
-where each is exercised in the [[prototype-readme|prototype]].
+The five research questions of the [[reid-research-plan]] (§8), and where each
+is exercised in the harness ([[readme]], RQ→code mapping table).
 
 ## Key facts
 
@@ -18,8 +18,11 @@ where each is exercised in the [[prototype-readme|prototype]].
   [[cross-task-generalization|cross-task]] — enroll on site A, identify on site
   B. → `reid.py` protocols `cross_task*`.
 - **RQ3 ([[ceiling-vs-commodity|ceiling vs commodity]]):** EER/rank-1 gap
-  between [[gazepoint]], [[webgazer]], [[webeyetrack]] on the same subjects. →
-  [[simultaneous-capture-rig]] + `tracker` field.
+  between the [[gazepoint]] IR ceiling and the commodity trackers —
+  [[webgazer]], [[webeyetrack]], [[eyegestures]], plus the cloud option
+  [[gazecloud]] (reported separately) — on the same subjects. →
+  [[simultaneous-capture-rig]] + the pluggable adapters; `reid.py` reports per
+  tracker and never matches across trackers.
 - **RQ4 ([[unclearability]]):** does re-ID survive cookie/cache clear,
   incognito, new profile, new day/lighting, new device webcam, and face
   de-identification? → `reid.html` wipe-state demo + [[cross-origin-collector]].
@@ -35,5 +38,4 @@ where each is exercised in the [[prototype-readme|prototype]].
 
 ## Mentions in sources
 
-- Protocol §3 (Research questions); `prototype/README.md` (Mapping to the study
-  protocol).
+- Plan §8 (Research questions); `README.md` (Mapping to the study protocol).

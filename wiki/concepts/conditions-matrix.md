@@ -2,13 +2,15 @@
 type: concept
 tags: [study-design, methodology, experiment]
 aliases: [Conditions Matrix, Experimental Cells, Conditions]
-sources: [direction-1-study-protocol]
+sources: [reid-research-plan]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
-The **conditions matrix** is the experimental grid for Direction 1 — each cell
-run across all three [[ceiling-vs-commodity|tracker arms]].
+The **conditions matrix** is the experimental grid — each cell run across the
+five [[ceiling-vs-commodity|tracker arms]] (the [[gazepoint]] IR ceiling plus
+[[webgazer]], [[webeyetrack]], [[eyegestures]], and the cloud contrast
+[[gazecloud]]).
 
 ## Key facts
 
@@ -39,4 +41,4 @@ run across all three [[ceiling-vs-commodity|tracker arms]].
 
 ## Mentions in sources
 
-- Protocol §8 (Conditions matrix), §14 (pre-register).
+- Plan §13 (Conditions matrix), §20 (pre-register, step 5).

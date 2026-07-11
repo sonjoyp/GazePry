@@ -11,30 +11,44 @@ updated: 2026-07-10
 **GazePry** is a security/privacy research project studying what a
 [[drive-by-web-adversary]] can infer about a user from commodity, in-browser
 webcam [[gaze-estimation]] — no special hardware. It reframes the
-[[webgazer]]/[[searchgazer]] eye-tracking lineage as a *threat model*. The
-project has three deliverables: the [[information-leakage-report]] (survey), the
-[[direction-1-study-protocol]] (lead research plan), and a working
-[[prototype-readme|prototype]].
+[[webgazer]]/[[searchgazer]] eye-tracking lineage as a *threat model*. Since
+2026-07-11 the project has two living deliverables: the consolidated
+[[reid-research-plan]] (which merged the [[information-leakage-report]] and the
+[[direction-1-study-protocol]], both now frozen in `raw/`) and the runnable
+multi-tracker harness documented in [[readme]].
 
 ## Key facts
 
 - Repository: `github.com/sonjoyp/GazePry`, licensed **GPLv3**.
-- Lead direction (Direction 1): [[gaze-re-identification|cross-site gaze
-  re-identification]] as an unclearable web-tracking vector.
-- Root still contains the deprecated **SearchGazer (2016/2017)** demo for
-  historical reference; active work lives under `prototype/` on [[webgazer]]
-  v3.5.3.
-- IRB status per protocol: human-subjects; TAMU IRB filing is the critical
-  path. Prototype README notes the analysis pipeline is IRB-exempt and `data/`
-  is git-ignored (never commit raw participant gaze).
+- Lead direction: [[gaze-re-identification|cross-site gaze re-identification]]
+  as an unclearable web-tracking vector (vector D4).
+- Active code lives at the **repo root** (post 2026-07-10 merge): a
+  tracker-agnostic [[capture-harness]] with four webcam arms ([[webgazer]]
+  v3.5.3, [[webeyetrack]], [[eyegestures]], [[gazecloud]]) plus the
+  [[gazepoint]] IR ceiling. The deprecated SearchGazer demo is archived in
+  `legacy-searchgazer/`.
+- Institution context: TAMU (the plan's IRB gate is a TAMU protocol).
 
 ## Related
 
-- [[information-leakage-report]], [[direction-1-study-protocol]],
-  [[prototype-readme]] — the three deliverables.
+- [[reid-research-plan]] — the living blueprint (thesis, apparatus, metrics,
+  bibliography §21).
+- [[information-leakage-report]], [[direction-1-study-protocol]] — the frozen
+  predecessor documents.
 - [[drive-by-web-adversary]] — the threat model that distinguishes GazePry from
   prior gaze-privacy work.
 
 ## Mentions in sources
 
-- `README.md`; both report/protocol titles; `prototype/README.md`.
+- `README.md`; `GazePry_ReID_Research_Plan.md`; the frozen docs in `raw/`.
+
+## Open questions
+
+- **IRB status is contradicted across sources:** plan §10/§20 say filing the
+  TAMU IRB is the critical-path gate; `README.md` Caveats say "this project is
+  IRB-exempt". A human should reconcile.
+- **Participant-data policy vs repo state:** `CLAUDE.md` says never commit raw
+  participant gaze data, but `.gitignore`'s `data/*.json` rule is commented
+  out and real `P01` session logs are tracked in git (README Caveats admit
+  this). Needs a human decision; the wiki must not reproduce that data either
+  way.

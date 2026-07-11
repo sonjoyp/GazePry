@@ -4,8 +4,14 @@ tags: [study-protocol, re-identification, tracking]
 aliases: [Direction 1 Study Protocol, ReID Study Protocol, Study Protocol, GazePry_Direction1_ReID_Study_Protocol]
 sources: [direction-1-study-protocol]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
+
+> **Frozen (2026-07-11).** Moved to `raw/GazePry_Direction1_ReID_Study_Protocol.md`
+> and merged — with the [[information-leakage-report]] — into the living
+> [[reid-research-plan]] (where it became Parts II–III). This page remains the
+> detailed summary of the protocol as written; new planning changes land in the
+> plan, not here.
 
 The study protocol for the project's lead research direction:
 **[[gaze-re-identification|cross-site gaze re-identification]] as an unclearable
@@ -49,15 +55,17 @@ and is written to stand alone as a publication plan. Adds bibliography entries
 
 ## Related
 
+- [[reid-research-plan]] — the living successor that absorbed this protocol
+  (updated tracker arms: adds [[eyegestures]] and [[gazecloud]]).
 - [[information-leakage-report]] — the companion survey; shares the
   bibliography and the [[drive-by-web-adversary]] model.
-- [[prototype-readme]] — implements this protocol's Direction 1.
+- [[readme]] — the harness that implements this protocol.
 - [[conditions-matrix]], [[research-questions-rq1-rq5]], [[reid-metrics]],
   [[related-work-direction-1]] — concept pages from this protocol.
 
 ## Mentions in sources
 
-- `GazePry_Direction1_ReID_Study_Protocol.md` §1 Thesis; §2 Threat model +
+- `raw/GazePry_Direction1_ReID_Study_Protocol.md` §1 Thesis; §2 Threat model +
   delta table; §3 RQs; §4 Apparatus; §5 Participants; §6 Stimuli; §7
   Features/models; §8 Conditions matrix; §9 Metrics; §10 Analysis; §11 Defense;
   §12 Risks; §13 Venues; §14 Next steps; §15 Related work; §16 References.

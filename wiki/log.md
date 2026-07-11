@@ -46,3 +46,148 @@ that did not match the wiki's slugs.
   flag on load-bearing pages.
 - Bibliography entry [38] (JuDo1000) is a reserved placeholder in the source;
   [[gazebase]] notes it as such.
+
+---
+
+## 2026-07-11 — INGEST (repo layer: research plan, prototype merge, corrections)
+
+Triggered by "ingest". Repo-document changes since the initial build, processed
+before the `raw/` paper backlog:
+
+**New source:** `GazePry_ReID_Research_Plan.md` (c0329bc) → [[reid-research-plan]].
+Merges the report (Part I) + protocol (Parts II–III) into the living blueprint.
+Canonical bibliography is now plan §21, [1]–[49], with per-citation
+verification/preprint status. Same numbering as the frozen docs — no
+renumbering.
+
+**Moves (content identical up to line endings):** the report and protocol left
+the repo root for `raw/` (c0329bc); their source pages got frozen banners and
+raw/ paths. The earlier `prototype/` → repo-root merge (888735c/9abca6d) had
+not been reflected in the bootstrap pages: [[readme]] re-ingested (now front
+door + harness manual), [[prototype-readme]] converted to a superseded pointer,
+[[prototype-code]] updated to the root layout (adapters, tests, vendoring).
+
+**Corrections applied from plan §21:** George & Routray [31] = EER ≈2.59%
+(BioEye 2015 random-stimulus), replacing the withdrawn "≈5.8%, 320 subjects"
+([[eye-movement-biometrics]]); EyeTell [27] ≈70% = Android lock-pattern top-5,
+not 6-digit PIN ([[eyetell]], [[evidence-summary]]); EKYT [20] EER now always
+quoted with its window (≈0.58% @ 60 s → ≈3.66% @ 5 s); JuDo1000 [38] is a real
+citation (Makowski 2020, OSF; 150 subjects, 4 sessions ≥1 wk, 1000 Hz) —
+[[gazebase]] updated.
+
+**New entities (2):** [[eyegestures]], [[gazecloud]] — tracker arms 4 and 5.
+Five-arm facts threaded through [[capture-harness]], [[gazepry-tracker]],
+[[reid-server]], [[analysis-pipeline]], [[task-suite]], [[webgazer]],
+[[webeyetrack]], [[searchgazer]], [[ceiling-vs-commodity]],
+[[conditions-matrix]], [[research-questions-rq1-rq5]],
+[[related-work-direction-1]], [[target-venues]], [[gazepry]].
+
+**SCHEMA updates (registry, logged):** current-sources list now reflects the
+root layout + raw/; citation convention points at plan §21 as canonical, with
+an explicit warning that `raw/related-papers.txt` ([1]–[62], a collection
+export) uses numbering that does NOT match project citations.
+
+**Non-paper raw/ files, disposition:** `raw/README.md` = inbox infrastructure
+(no page); `raw/related-papers.txt` = bibliography export (no page; SCHEMA
+warning instead); `raw/GazePry_*.md` = the frozen moved docs (already
+ingested). The ScienceDirect HTML files are web mirrors of two PDFs and will be
+logged with their papers.
+
+**Flagged for humans** (Open questions on [[gazepry]], [[readme]],
+[[reid-research-plan]], [[gazebase]]): IRB contradiction (plan §10/§20: file
+TAMU IRB now, critical path — vs README Caveats: "IRB-exempt"); participant
+data policy breach (29 real `data/*.json` session logs are git-tracked, the
+`.gitignore` rules are commented out, contradicting CLAUDE.md); README still
+links the moved research docs at dead root paths; GazeBaseVR and Al Zaidawi
+DOI discrepancies to verify at PDF ingest.
+
+---
+
+## 2026-07-11 — INGEST (raw/ paper backlog: 58 PDFs + 1 web clip)
+
+Swept the entire `raw/` inbox — all 58 PDFs and `www.pygaze.org.html`, none
+previously in the log. Extracted text with a scratchpad PyMuPDF venv (the Read
+tool's PDF path needs poppler, absent here) and read each. One `sources/` page
+per paper (slug = author-year-shortname), grounded in the actual PDF, not the
+plan's summary. Grouped by role for the reader — see [[index]].
+
+**Source pages created (59):** 58 paper pages + [[pygaze-site]].
+- *Webcam-tracker lineage & validation (15):* [[papoutsaki-2016-webgazer]],
+  [[papoutsaki-2017-searchgazer]], [[papoutsaki-2018-eye-of-typer]],
+  [[davalos-2025-webeyetrack]], [[hutt-2024-mind-wandering]],
+  [[semmelmann-2018-online-webcam-et]], [[yang-2021-webcam-behavioral]],
+  [[van-der-cruyssen-2024-validation]], [[kaduk-2024-webcam-vs-eyelink]],
+  [[thilderkvist-2024-limitations]], [[falch-2024-webcam-gaze-estimation]],
+  [[molina-cantero-2024-review]], [[zhu-2025-gazefollower]], [[park-2021-gazel]],
+  [[razuman-2025-browser-extension]].
+- *Eye-movement biometrics & datasets (10):* [[holland-2011-scanpath-biometrics]],
+  [[kinnunen-2010-task-independent]], [[george-2016-score-fusion]],
+  [[jager-2019-deep-eyedentification]], [[makowski-2021-deepeyedentification-live]],
+  [[lohr-2022-eye-know-you-too]], [[al-zaidawi-2022-multi-dataset]],
+  [[aziz-2026-gaze-offset-fusion]], [[griffith-2021-gazebase]],
+  [[lohr-2023-gazebasevr]].
+- *Content-dependent attacks (6):* [[chen-2018-eyetell]],
+  [[wang-2020-gazerevealer]], [[wang-2024-gazeploit]],
+  [[slocum-2023-arvr-keylogging]], [[long-2023-private-eye]],
+  [[weinberg-2011-history-sniffing]].
+- *VR/XR identification & anonymity (4):* [[nair-2023-vr-50k]],
+  [[miller-2020-vr-identifiability]], [[aziz-2025-uncoordinated-protections]],
+  [[patergianakis-2026-xr-anonymity]].
+- *Gaze privacy defenses (6):* [[steil-2019-gaze-dp]], [[li-2021-kaleido]],
+  [[david-john-2022-for-your-eyes-only]], [[david-john-2021-streaming-privacy]],
+  [[du-2024-privategaze]], [[wilson-2024-vr-gaze-streaming]].
+- *Web tracking & keystroke biometrics (4):* [[acar-2014-web-never-forgets]],
+  [[vastel-2018-fp-stalker]], [[zimmeck-2017-cross-device]],
+  [[acien-2022-typenet]].
+- *Privacy attitudes, HCI & gaze-AI (13):* [[katsini-2020-gaze-security-survey]],
+  [[kroger-2020-gaze-privacy]], [[liebling-2014-pervasive-privacy]],
+  [[alsakar-2025-handheld-privacy]], [[bozkir-2025-privacy-concerns]],
+  [[abdrabou-2025-gaze-to-data]], [[bukhari-2025-privacy-indicators]],
+  [[yang-2025-gazellm]], [[pham-2026-gazeqwen]], [[mathew-2026-gazevlm]],
+  [[danry-2026-gaze-to-guidance]], [[dmello-2012-gaze-tutor]],
+  [[dmello-2012-autotutor]].
+
+**Concepts created (2):** [[webcam-tracking-validation]] (the "accuracy
+objection is weakening" argument, tying the four cognitive-science validation
+studies), [[gaze-conditioned-ai]] (gaze fed to LLMs/VLMs — why collection is
+proliferating).
+
+**Corrections verified against the papers themselves (not just plan §21):**
+- **EyeTell [27]** ([[chen-2018-eyetell]]): from the paper's abstract — 4-digit
+  PIN top-5 65% / top-50 90%; Android lock-pattern top-5 70.3%; words top-5
+  38.43%. Confirms the ≈70% figure is *lock-pattern*, and reveals the old "PIN
+  top-1 ≈39%" was a misread of the *word* top-5 (38.43%). [[eyetell]] and
+  [[evidence-summary]] now state the resolved numbers.
+- **George & Routray [31]** ([[george-2016-score-fusion]]): EER ≈2.59% on
+  **153 subjects** (BioEye 2015), template-aging EER ≈10.96% — the old
+  "≈5.8%, 320 subjects" fails on both figures.
+- **EKYT [20]** ([[lohr-2022-eye-know-you-too]]): 0.58% EER at 60 s → 3.66% at
+  5 s on GazeBase (322 subjects) — exact, from the paper's Table I comparison.
+- **GazeBaseVR DOI** ([[lohr-2023-gazebasevr]]): the PDF's own DOI is
+  **10.1038/s41597-023-02075-5**; plan §21 [37]'s "…02073-7" is a **typo**
+  (flagged for a human to fix in the source; wiki cannot edit sources).
+
+**Citation hygiene:** papers in the plan's §21 canonical list are cited by
+bracket number; ~11 webcam-validation / lineage papers **not** in §21
+([[papoutsaki-2016-webgazer]], [[semmelmann-2018-online-webcam-et]],
+[[kaduk-2024-webcam-vs-eyelink]], [[yang-2021-webcam-behavioral]],
+[[van-der-cruyssen-2024-validation]], [[thilderkvist-2024-limitations]],
+[[falch-2024-webcam-gaze-estimation]], [[molina-cantero-2024-review]],
+[[zhu-2025-gazefollower]], [[park-2021-gazel]], [[razuman-2025-browser-extension]],
+[[pygaze-site]]) are cited **author-year**, each page saying so, per the SCHEMA
+trap note.
+
+**Non-PDF raw handling:** `www.pygaze.org.html` → [[pygaze-site]]. The two
+ScienceDirect HTML mirrors once in `raw/` (Gaze-tutor [1], Thilderkvist) were
+deleted in commit 9185c26 and are noted as such on the affected pages, not
+treated as live sources.
+
+**Lint (post-ingest):** Python sweep over 114 pages — **1041 resolved
+`[[links]]`, 0 dead links, 0 orphans** (the only raw matches were SCHEMA's
+literal `[[wiki-links]]` examples and `\|`-escaped pipes inside Markdown
+tables, both valid).
+
+**Still open for a human** (unchanged from the Phase-1 entry): IRB
+exempt-vs-critical-path contradiction; 29 real `data/*.json` participant logs
+tracked in git against `CLAUDE.md` policy; README's dead links to the moved
+research docs; the GazeBaseVR and Al Zaidawi DOI fixes in the plan source.

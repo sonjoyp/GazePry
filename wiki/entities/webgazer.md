@@ -3,16 +3,18 @@ type: entity
 subtype: tool
 tags: [eye-tracking, webcam, browser]
 aliases: [WebGazer, brownhci/WebGazer, WebGazer v3.5.3]
-sources: [information-leakage-report, direction-1-study-protocol, prototype-readme, prototype-code]
+sources: [information-leakage-report, reid-research-plan, readme, prototype-code]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
 **WebGazer** is the commodity, in-browser webcam [[gaze-estimation]] library the
 project builds on — ridge-regression gaze estimation with no head-pose
 awareness, self-calibrating from ordinary cursor interaction. It is the
-"deployed reality" tracker arm and the [[searchgazer|SearchGazer]] lineage. The
-[[prototype-readme|prototype]] bundles the current **brownhci build v3.5.3**.
+"deployed reality" tracker arm (plan §9 arm 2) and the
+[[searchgazer|SearchGazer]] lineage. The harness vendors the current **brownhci
+build v3.5.3** (adapter `public/trackers/webgazer.js`, family `webgazer`,
+9-point click grid, video stays in-browser).
 
 ## Key facts
 
@@ -24,20 +26,20 @@ awareness, self-calibrating from ordinary cursor interaction. It is the
   the prototype flags — treat webcam re-ID numbers as a *lower bound*.
 - [[webeyetrack|WebEyeTrack]] closes much of this gap (≈2.32 cm, head-pose
   aware) and is the near-future commodity ceiling.
-- In the prototype it is loaded by [[gazepry-tracker]] and streams `{t, x, y}`;
-  its bundled MediaPipe FaceMesh assets are vendored under
-  `public/mediapipe/face_mesh/`.
+- In the harness its adapter is driven by the [[gazepry-tracker]] orchestrator
+  and streams `{t, x, y}`; its bundled MediaPipe FaceMesh assets are vendored
+  under `public/mediapipe/` (resolved relative to the script URL).
 - **Do not** use the stale 2016 [[searchgazer]] fork — its SERP DOM selectors
-  are dead.
+  are dead; the archived demo lives in `legacy-searchgazer/`.
 
 ## Related
 
-- [[gazepoint]], [[webeyetrack]] — the other two tracker arms in
-  [[ceiling-vs-commodity]].
+- [[gazepoint]], [[webeyetrack]], [[eyegestures]], [[gazecloud]] — the other
+  tracker arms in [[ceiling-vs-commodity]].
 - [[covert-calibration]] — the self-calibration mechanism it enables.
 - [[searchgazer]] — the 2016 ancestor.
 
 ## Mentions in sources
 
-- Report §5.1, §6 (accuracy drift [7], [25]); Protocol §4 (tracker arms);
-  `prototype/README.md`; `prototype/public/gazepry-tracker.js`.
+- Report §5.1, §6 (accuracy drift [7], [25]); plan §5, §9 (arm 2), §15;
+  `README.md` (Webcam trackers); `public/trackers/webgazer.js`.

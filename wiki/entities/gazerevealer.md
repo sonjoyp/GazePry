@@ -3,9 +3,9 @@ type: entity
 subtype: attack
 tags: [attack, mobile, content-dependent, password-inference]
 aliases: [GazeRevealer, GazeRevealer [8]]
-sources: [information-leakage-report]
+sources: [information-leakage-report, reid-research-plan, wang-2020-gazerevealer]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
 **GazeRevealer** [8] infers smartphone PINs/passwords from the **front camera
@@ -15,8 +15,10 @@ GazePry's content-independent [[gaze-re-identification|re-identification]] thesi
 
 ## Key facts
 
-- Reported accuracy: single digit ≈77.9%; full 6-digit password ≈84.4% under
-  ideal conditions [8].
+- Reported accuracy: single digit ≈77.5–77.9%; full 6-digit password ≈84.4%
+  under ideal conditions [8] ([[wang-2020-gazerevealer]]).
+- Uses only the phone's **front camera** — a weaker capability than
+  [[eyetell]]'s external filming.
 - Wang et al., *Your Eyes Reveal Your Secrets: An Eye Movement Based Password
   Inference on Smartphone*, IEEE TMC 2020 [8].
 - Evidence for form-factor analysis: the smartphone is the best-evidenced
@@ -30,4 +32,5 @@ GazePry's content-independent [[gaze-re-identification|re-identification]] thesi
 
 ## Mentions in sources
 
-- Report §3.1, §5.2, §6 [8]; Protocol §16 [8].
+- Report §3.1, §5.2, §6 [8]; plan §3.1, §18.7 [8]; [[wang-2020-gazerevealer]]
+  (paper).

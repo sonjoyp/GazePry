@@ -11,10 +11,12 @@ maintainer disciplined rather than improvisational.
 1. **Raw sources** — the repo's documents and code, plus anything dropped into
    the `raw/` inbox (papers, web clips, meeting notes, reviews). Immutable from
    the wiki's point of view: the wiki never edits them, only reads them.
-   Current sources: `README.md`, `GazePry_Information_Leakage_Report.md`,
-   `GazePry_Direction1_ReID_Study_Protocol.md`, `prototype/README.md`, and the
-   prototype code itself (`prototype/*.js`, `prototype/public/`,
-   `prototype/analysis/`).
+   Current sources: `README.md`, `GazePry_ReID_Research_Plan.md` (the living
+   plan), the harness code at the repo root (`server.js`, `reid-core.js`,
+   `public/` incl. `public/trackers/`, `analysis/`, `test/`, `scripts/`), and
+   everything in `raw/` — including the frozen predecessor docs
+   (`raw/GazePry_Information_Leakage_Report.md`,
+   `raw/GazePry_Direction1_ReID_Study_Protocol.md`) and the ingested papers.
 2. **The wiki** (`wiki/`) — generated markdown pages, organized by type
    (below). The LLM owns this layer entirely and updates it as sources change.
 3. **The schema** — this file.
@@ -74,12 +76,19 @@ Body structure (sections optional except the lead):
 
 ## Citation convention
 
-The project keeps a shared numbered bibliography: entries [1]–[29] live in
-`GazePry_Information_Leakage_Report.md`; [30]–[49] are added by
-`GazePry_Direction1_ReID_Study_Protocol.md` §16 (which also reproduces the
-carried-over subset). Wiki pages cite with the same bracket numbers, e.g.
-"EER ≈ 0.6% [20]". Do not renumber; do not invent new numbers — a genuinely
-new reference is added to the source documents first, not the wiki.
+The project keeps a shared numbered bibliography. Its canonical home is
+**`GazePry_ReID_Research_Plan.md` §21** (entries [1]–[49], with per-citation
+verification/preprint status). The frozen predecessors in `raw/` use the *same*
+numbering ([1]–[29] originated in the report; [30]–[49] in the protocol §16) —
+no renumbering happened at the merge. Wiki pages cite with the same bracket
+numbers, e.g. "EER ≈0.58% at a 60 s window [20]". Do not renumber; do not
+invent new numbers — a genuinely new reference is added to the source documents
+first, not the wiki.
+
+**Trap:** `raw/related-papers.txt` is a reference-collection export with its
+own independent numbering ([1]–[62]) that does **not** match the project
+numbering — never cite its bracket numbers. Papers in `raw/` that are not in
+plan §21 are cited by author-year (their `sources/` page), not by number.
 
 ## Workflows
 

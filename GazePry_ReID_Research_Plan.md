@@ -23,7 +23,7 @@ corrections made during verification.*
 **Part II — The research plan (cross-site gaze re-identification)**
 6. [Thesis and contributions](#6-thesis-and-contributions)
 7. [Threat model](#7-threat-model)
-8. [Research questions](#8-research-questions)
+8. [Research questions and hypotheses](#8-research-questions-and-hypotheses)
 9. [Apparatus and tracker arms](#9-apparatus-and-tracker-arms)
 10. [Participants and sessions](#10-participants-and-sessions)
 11. [Stimuli — the multi-"site" design](#11-stimuli--the-multi-site-design)
@@ -259,21 +259,77 @@ gaze. This turns Part I's limitation into the paper's thesis.
 | Canvas/font/device fingerprinting [44]–[46] | Stateless but device-bound; defeated by anti-FP browsers | Physically grounded, *person*-bound, survives fresh device + face removal |
 | EyeTell [27], GAZEploit [14] | Content-*dependent* keystroke inference | Content-*independent*; identity, not secrets |
 
-## 8. Research questions
+## 8. Research questions and hypotheses
 
-- **RQ1 (baseline):** How reliably can the webcam channel re-identify a returning user
-  *same-task, cross-session*? (test–retest across days)
-- **RQ2 (the tracking threat):** How much does re-ID degrade *cross-task / cross-stimulus* —
-  enroll on site A's content, identify on site B's? This is the headline result; biometrics
-  papers usually skip it. The closest prior framing is task-independent authentication [32].
-- **RQ3 (ceiling vs. commodity):** What is the EER / rank-1 gap between the IR ceiling
-  (Gazepoint) and the commodity webcam trackers — WebGazer, WebEyeTrack, EyeGestures, and
-  the cloud option GazeCloud — on the *same* subjects and sessions? (Report on-device webcam
-  arms separately from the cloud arm.)
-- **RQ4 (unclearability):** Does re-ID survive cookie/cache clear, incognito, a fresh browser
-  profile, a different day/lighting, a *different device webcam*, and *face de-identification*?
-- **RQ5 (defense, optional):** What perturbation of the gaze stream defeats re-ID at
-  acceptable utility cost?
+Each research question is paired with a **directional, falsifiable hypothesis (H)** and a
+**decision rule** stating what result confirms, narrows, or refutes it. This is the
+pre-registration target (§20 step 5). Conventions: metrics are defined in §14; **chance** rank-1
+= 1/(gallery size); every accuracy/EER figure is reported with a **confidence interval (CI) over
+subject splits** (§15), never a single split; δ denotes a pre-registered margin (a specific
+number fixed at pre-registration, not post-hoc). Unless stated otherwise, "the webcam channel"
+means the best-performing *on-device* arm, and the headline cell is **cross-task, cross-session,
+dynamics-only** (§13).
+
+- **RQ0 (confound — the person, or the apparatus?).** *This is the precondition for every other
+  RQ* (Appendix A.2–A.3). Does a webcam re-ID match reflect the individual's *eye-movement
+  dynamics*, rather than a shared *calibration geometry, session, tracker, capture condition, or
+  demographic stratum*?
+  - **H0.** Under a shuffled-label null, rank-1 collapses to chance and EER to ≈0.5; and the
+    signal *survives* independent re-calibration (calibration-swap), a change of lighting/seating
+    and device, and enroll-on-one-tracker/identify-on-another (cross-tracker), all at
+    above-chance accuracy.
+  - **Decision rule.** *Confirmed* if shuffled-label rank-1 ≤ 2× chance with its CI including
+    chance, **and** the calibration-swap cross-session rank-1 CI lower bound > chance. **Refuted
+    / stop** if the signal disappears once calibration or session is held independent — then the
+    "biometric" is an apparatus artifact and no downstream claim stands. Run this pilot *first*
+    (§20 step 7).
+
+- **RQ1 (baseline — returning-user re-ID).** How reliably does the webcam channel re-identify a
+  returning user *same-task, cross-session* (test–retest ≥1 week apart)?
+  - **H1.** Same-task cross-session rank-1 ≫ chance and EER ≪ 0.5.
+  - **Decision rule.** *Confirmed* if the rank-1 CI lower bound > chance **and** the EER CI upper
+    bound < 0.5 for at least the best on-device arm.
+
+- **RQ2 (the tracking threat — cross-task transfer).** How much does re-ID degrade *cross-task /
+  cross-stimulus* — enroll on site A's content, identify on site B's? This is the headline
+  result; biometrics papers usually skip it. The closest prior framing is task-independent
+  authentication [32].
+  - **H2.** Cross-task cross-session re-ID stays above chance (a real tracking threat) but is
+    *weaker* than same-task (rank-1_cross-task < rank-1_same-task).
+  - **Decision rule.** *Confirmed* if the cross-task cross-session rank-1 CI lower bound > chance.
+    *Narrowed* (fallback ladder, A.7) if only *same-genre* transfer (e.g. reading→reading) clears
+    chance — still a scoped, meaningful threat. *Refuted* if cross-task ≈ chance.
+
+- **RQ3 (ceiling vs. commodity).** What is the EER / rank-1 gap between the IR ceiling
+  (Gazepoint) and the commodity webcam trackers — WebGazer, WebEyeTrack, EyeGestures, and the
+  cloud option GazeCloud — on the *same* subjects and sessions? (Report on-device webcam arms
+  separately from the cloud arm.)
+  - **H3.** IR EER < on-device webcam EER in every matched cell, ordered WebEyeTrack ≤ EyeGestures
+    ≤ WebGazer (head-pose-aware sits closest to the ceiling); the gap *shrinks* at longer
+    observation windows.
+  - **Decision rule.** *Confirmed* if the IR-vs-webcam EER gap is positive with non-overlapping
+    CIs in the headline cell. The gap *magnitude* is the deliverable regardless of the ordering,
+    so this RQ does not fail — it quantifies.
+
+- **RQ4 (unclearability).** Does re-ID survive cookie/cache clear, incognito, a fresh profile, a
+  different day/lighting, a *different device webcam*, and *face de-identification*?
+  - **H4.** Re-ID accuracy under each state-clearing / cross-device / face-removed condition is
+    *statistically indistinguishable from baseline* (no drop beyond δ), because identity is
+    carried by movement dynamics and no client-side state. **Face de-identification is satisfied
+    *by construction***: the primary pipeline never records appearance (only the `{t,x,y}`
+    stream, §12), so removing the face cannot reduce accuracy.
+  - **Decision rule.** *Confirmed* per condition if the (baseline − intervention) rank-1
+    difference CI includes 0, or the drop is < δ. Contrast: a clearable canvas/UA fingerprint
+    (§14) is shown to *reset to chance* under the same clears — the whole point.
+
+- **RQ5 (defense, optional).** What perturbation of the gaze stream defeats re-ID at acceptable
+  utility cost?
+  - **H5.** There exists a perturbation operating point that raises attacker EER toward 0.5 while
+    a utility task (reading-AOI detection or an accessibility metric) stays within a
+    pre-registered bound — a usable point on the privacy–utility curve.
+  - **Decision rule.** *Confirmed* if some operating point raises EER by ≥ δ_priv while utility
+    degradation stays ≤ δ_util; report the full privacy–utility curve regardless of whether such
+    a point exists.
 
 ## 9. Apparatus and tracker arms
 
@@ -337,8 +393,14 @@ the repo `README.md` and `public/trackers/README-adapter.md`.
 
 ## 10. Participants and sessions
 
-- **N:** target **40–60** for a first paper; more strengthens the verification (EER) claim.
-  Use public datasets (below) to back the large-N *feasibility ceiling*.
+- **N:** target **50–60** for a first paper, with a **floor of ≥50** so the largest gallery-size
+  cell in §13 (gallery = 50) is actually populated — 40 cannot fill it. More strengthens the
+  verification (EER) claim. Use public datasets (below) to back the large-N *feasibility ceiling*.
+- **Precision / power (do before scaling):** the headline deliverable is an *interval*, not a
+  point — report the cross-task cross-session EER with a CI over subject splits (§15). Run a
+  precision check first: bootstrap from the pilot (or simulate) to confirm N≈50 yields a CI tight
+  enough to separate the webcam EER from **both** chance **and** the IR ceiling (RQ3). If it does
+  not, raise N or lengthen the observation window rather than over-reading a single split.
 - **Sessions:** **≥2–3 per participant, separated by ≥1 week.** Within-session re-ID is
   trivially easy and not the threat; *cross-session, time-separated* re-ID is the real
   "returning visitor" test and the number reviewers will look for. (The ≥1-week separation
@@ -388,8 +450,14 @@ Report **same-task** (upper bound) and **cross-task** (the tracking threat) sepa
     not a drop-in; route (a) hand-crafted features is the safer primary for the webcam claim,
     with route (b) reserved for the IR ceiling and the large-N feasibility argument.
 - **Critical control:** the primary condition **excludes the raw face image / appearance
-  features**, so the "survives de-identification" claim is clean. Run an appearance-*including*
-  arm only as an upper bound, to quantify how much signal is dynamics vs. appearance.
+  features**, so the "survives de-identification" claim is clean — in fact the capture harness
+  never records appearance at all (only the `{t, x, y}` stream), so face removal holds *by
+  construction*, not by post-hoc masking (this is exactly what RQ4/H4 asserts). Consequently the
+  appearance-*including* arm — an upper bound quantifying how much signal is dynamics vs.
+  appearance — is **contingent on first adding an appearance-embedding channel to the harness**;
+  treat it as optional, and report the dynamics-only result as the primary, clean claim. Decide
+  explicitly whether to build that channel: if not, drop the ablation and lean on the
+  by-construction argument rather than implying an ablation that cannot run.
 
 ## 13. Conditions matrix
 
@@ -799,8 +867,9 @@ as the primary methodological contribution, not an afterthought.
 The danger: a commodity webcam tracker self-calibrates per session (WebGazer fits a ridge
 regression from clicks). Two sessions of the same person may match because they share a
 *calibration geometry, screen, or lighting* — not because their **eyes** are individual. If so,
-the "biometric" is an apparatus artifact and the whole result is spurious. Controls to
-pre-register:
+the "biometric" is an apparatus artifact and the whole result is spurious. **This battery is
+RQ0 (§8)** — the precondition every other RQ depends on, and the pilot to run *first* (§20 step
+7). Controls to pre-register:
 
 - **Calibration-swap / never-share-calibration.** Gallery and probe sessions of the same person
   must use **independent** calibrations (different day, re-calibrated from scratch — the harness
@@ -813,13 +882,20 @@ pre-register:
   which reports each tracker *in isolation* for fairness.)
 - **Shuffled-label null.** Recompute the entire pipeline with subject labels permuted; rank-1
   and EER must collapse to chance. Report it — it is the cheapest credibility win.
-- **Appearance ablation** (already planned, §12): dynamics-only vs dynamics+appearance, so the
-  "survives face removal" claim is clean and the reader sees how much signal is *movement* vs
-  *looks*.
+- **Appearance ablation** (*optional / contingent*, §12): dynamics-only is the primary — the
+  harness captures no appearance, so "survives face removal" holds by construction. A
+  dynamics+appearance arm (to show how much signal is *movement* vs *looks*) requires first
+  adding an appearance-embedding channel; run it only if that channel is built.
 - **Session/lighting/time negative controls.** Include at least one session under changed
   lighting/seating and, where possible, a different webcam, and show the confusion is not
   driven by capture conditions (e.g., that impostors sharing a session's lighting are not
   systematically closer).
+- **Demographic-homogeneity control.** A lab-recruited gallery can be demographically narrow, so
+  a "match" might exploit coarse demographic clustering (age band, glasses, gender) rather than
+  fine individual identity. Recruit for spread where possible, and report whether impostor
+  distances are systematically smaller *within* shared demographic strata (the per-session
+  `condition` metadata already records glasses; capture the rest at enrollment). If they are,
+  bound the identity claim accordingly rather than overstating it.
 - **Within-session leakage bound.** Split a single session into enroll/probe halves as an
   *upper bound*, and always report the cross-session, cross-task cell separately so the easy
   case never masquerades as the threat.

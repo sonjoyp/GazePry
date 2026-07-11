@@ -55,6 +55,15 @@ re-identifying users cross-task and cross-site as an unclearable channel, and
 quantified its gap to the IR ceiling on the same subjects
 ([[ceiling-vs-commodity]], RQ3). That intersection is the contribution.
 
+**Rebut "just biometrics on a worse sensor" (plan Appendix A.1).** The
+contribution is not a new biometric model; it is (i) the first characterization
+of the *commodity webcam* channel for re-ID, (ii) the first *cross-task /
+cross-site* transfer measured as a tracking threat, (iii) the first
+*ceiling-vs-commodity* gap on the same subjects, and (iv) the reframing as a
+stateless, [[person-bound-fingerprint|person-bound]], [[unclearability|
+unclearable]] web identifier. Any one axis alone is not publishable; the stack
+is. The reusable one-paragraph novelty statement lives in plan Appendix A.9.
+
 ## Related
 
 - [[person-bound-fingerprint]], [[cross-task-generalization]],

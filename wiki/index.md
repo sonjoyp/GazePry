@@ -132,6 +132,8 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 - [[gaze-estimation]] — webcam-only "where are you looking" software.
 
 **Method, evaluation & defense**
+- [[reid-confound-controls]] — the calibration/session-artifact confound and the
+  control battery that separates *person* from *apparatus* (the #1 reviewer trap).
 - [[webcam-tracking-validation]] — the "accuracy objection is weakening"
   argument (webcam gaze approaching lab standards).
 - [[gaze-conditioned-ai]] — gaze fed to LLMs/VLMs; why gaze collection is

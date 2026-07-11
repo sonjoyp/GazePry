@@ -23,6 +23,18 @@ The publication targets and rough timeline for the [[reid-research-plan]]
   ≈ 6–8 months. Aim: a PoPETs cycle in H1 2027 or a USENIX Security 2027
   deadline. Verify exact dates against live CFPs.
 
+## Venue tuning (plan Appendix A.8)
+
+- **PoPETs (recommended first target):** submit with the
+  [[gaze-perturbation-defense|defense included]] (not optional) and the
+  [[reid-confound-controls|confound controls]] front and center.
+- **USENIX / CCS / S&P (reach):** need the working
+  [[cross-origin-collector|cross-origin linkage demo]], a crisp cross-task
+  attack number, and a responsible-disclosure section — a clean quantified
+  attack, not a feasibility study.
+- **SOUPS (companion):** the camera-consent opacity ([[enabling-conditions]]) +
+  a user study on what people believe they are granting.
+
 ## Related
 
 - [[reid-research-plan]] — the plan being submitted.

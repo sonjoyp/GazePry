@@ -2,27 +2,37 @@
 type: concept
 tags: [tracking, threat-model, embedding]
 aliases: [Third-Party Tracking Tag, Tracking Tag, Analytics Tag, One Provider Across Many Sites]
-sources: [direction-1-study-protocol, prototype-code, information-leakage-report]
+sources: [reid-research-plan, prototype-code, information-leakage-report]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-11
 ---
 
 The **third-party tracking tag** is the structural position of GazePry's
-adversary: a tracking/analytics provider whose JS SDK is embedded across many
-first-party sites — the same position as an ad or analytics tag. Each embedding
-inherits the host page's camera permission or prompts once. This is what makes
+adversary: a tracking/analytics provider whose JavaScript is embedded across
+many sites — the same position as an ad or analytics tag. This is what makes
 [[gaze-re-identification|cross-site linkage]] possible.
 
 ## Key facts
 
-- In the prototype, [[gazepry-tracker]] is literally one script embedded in
-  every task page — already the "one provider across many pages" model.
+- **Correct web-platform mechanism (plan §7, hardened 2026-07-11):** the
+  provider's script runs **first-party** — included via `<script src>` and
+  executing in each host site's *own* origin — so it uses *that site's* camera
+  permission, and the provider links visitors **server-side** across every site
+  it appears on. Camera permission is granted **per top-level origin and is not
+  silently shared across origins**: a cross-origin tracker *iframe* would need
+  explicit `Permissions-Policy` camera delegation from each top frame plus its
+  own per-origin grant. So the realistic (and still-alarming) model is the
+  first-party-included script, **not** a third-party iframe silently inheriting
+  the camera. State this precisely — a security reviewer checks it.
+- In the harness, [[gazepry-tracker]] is literally one script embedded in every
+  task page — already the "one provider across many pages" model.
 - The tag never needs a cookie or shared storage: it recomputes identity from
   gaze dynamics each visit (see [[unclearability]]).
 - To make cross-*origin* linkage literal, run the collector on a separate origin
   and point the tag at it — see [[cross-origin-collector]].
 - Structural precedent: the same embedding problem behind browsing-history side
-  channels [5], now on a physically grounded signal.
+  channels ([[weinberg-2011-history-sniffing]] [5]), now on a physically
+  grounded signal.
 
 ## Related
 
@@ -33,6 +43,6 @@ inherits the host page's camera permission or prompts once. This is what makes
 
 ## Mentions in sources
 
-- Protocol §2 (adversary); Report §7 (third-party embedding);
-  `prototype/public/gazepry-tracker.js`; `prototype/README.md` (Cross-origin
-  demo).
+- Plan §7 (adversary + corrected permission mechanism), Appendix A.4; Report §7
+  (third-party embedding); `public/gazepry-tracker.js`; `README.md`
+  (Cross-origin demonstration).

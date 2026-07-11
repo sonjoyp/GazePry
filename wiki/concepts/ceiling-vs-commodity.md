@@ -25,6 +25,11 @@ of running both devices at once via the [[simultaneous-capture-rig]].
   `{t, x, y}` stream and `reid.py` reports **per tracker**, never matching
   across trackers — the per-tracker `cross_task_cross_session` EERs *are* the
   RQ3 gap.
+- **No IR-label contamination (plan §9 critical control):** the webcam trackers
+  are measured *as deployed* (native self-calibration); Gazepoint supplies an
+  independent accuracy reference only and is **never** used to train or correct
+  the webcam gaze. Otherwise the "gap" collapses artificially. See
+  [[simultaneous-capture-rig]] and [[reid-confound-controls]].
 - **Sampling-rate caveat:** webcam ≈30 Hz vs Gazepoint 60–150 Hz; down-sample
   Gazepoint to the webcam rate for the *fair* arm, and report which
   saccade-velocity features survive 30 Hz.

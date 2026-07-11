@@ -26,6 +26,13 @@ cookie and no shared storage**.
 - Demonstrates [[unclearability]] at the origin boundary: linkage without any
   client-side state that clearing could remove.
 - Supports RQ4 (unclearability) from the [[research-questions-rq1-rq5|RQ mapping]].
+- **Permission-model caveat (plan §7 / Appendix A.4):** what crosses the origin
+  boundary here is the *linkage* (server-side), **not** the camera grant. Each
+  site obtains its own camera permission for its first-party
+  [[third-party-tracking-tag|tag]]; the demo deliberately does not rely on a
+  cross-origin iframe silently inheriting the camera (the platform forbids
+  that). Keep the demo's framing to "same provider, server-side linkage," which
+  is the realistic threat.
 
 ## Related
 

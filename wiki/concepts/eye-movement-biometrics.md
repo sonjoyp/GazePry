@@ -33,7 +33,11 @@ exists.
   (the harness's [[gaze-feature-extraction|16-feature]] route, robust at small
   N; interpretable score-fusion lineage [31]); (b) end-to-end deep model
   (Eye Know You Too-style [20]; micro-movement models [33], [34]) — the
-  ceiling, trained on public data.
+  ceiling, trained on public data. **Domain-gap caveat (plan §12):** public
+  datasets are IR at 250–1000 Hz ([36]–[38]); the webcam channel is ~30 Hz with
+  different noise, so an IR-pretrained deep model will **not** transfer to
+  webcam without explicit domain adaptation. Keep route (b) for the IR ceiling /
+  large-N feasibility; route (a) is the safer primary for the *webcam* claim.
 - The "main-sequence" peak-velocity-vs-amplitude relationship is highly
   individual and appears as `main_seq_slope` in the feature set.
 

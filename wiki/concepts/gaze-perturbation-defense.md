@@ -32,7 +32,11 @@ tradeoff curve**.
   acceptable while attacker EER rises.
 - Implementation hook: perturb the stream in [[gazepry-tracker]] before it POSTs
   to the [[reid-server]].
-- Pairing an attack with a defense "reviews better."
+- Pairing an attack with a defense "reviews better." **For a top-tier security
+  venue, treat the defense as non-optional** and add a **responsible-disclosure**
+  track (browser vendors + W3C on the camera-permission / `Permissions-Policy`
+  surface) — plan Appendix A.6, A.8. A defense also lets the paper land at
+  PoPETs even if the raw attack numbers are modest.
 
 ## Related
 

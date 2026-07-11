@@ -191,3 +191,57 @@ tables, both valid).
 exempt-vs-critical-path contradiction; 29 real `data/*.json` participant logs
 tracked in git against `CLAUDE.md` policy; README's dead links to the moved
 research docs; the GazeBaseVR and Al Zaidawi DOI fixes in the plan source.
+
+---
+
+## 2026-07-11 — INGEST (research-plan reviewer-hardening pass)
+
+Re-ingested `GazePry_ReID_Research_Plan.md` after a reviewer-facing hardening
+pass that added **Appendix A** and three surgical corrections. Folded the
+changes into the wiki.
+
+**Source updated:** [[reid-research-plan]] — new-material summary now records the
+§7/§9/§12 corrections, the §20 next-steps additions, and the Appendix A map.
+
+**Concept created (1):** [[reid-confound-controls]] — the calibration/session
+artifact confound (a webcam tracker self-calibrates per session, so a match may
+reflect calibration geometry, not the person) and the control battery that rules
+it out: calibration-swap, cross-tracker generalization, shuffled-label null,
+appearance ablation, lighting/time/device negative controls, within-session
+leakage bound. This is Appendix A.3 and the plan's #1 acceptance risk.
+
+**Concept pages updated to match the corrected plan:**
+- [[third-party-tracking-tag]] — corrected the web-platform mechanism: provider
+  script runs **first-party** on many sites (each with its own camera grant),
+  linked **server-side**; camera permission is per-top-level-origin and *not*
+  silently shared across origins (a cross-origin iframe needs `Permissions-Policy`
+  delegation). The prior "each embedding inherits the host page's camera
+  permission" was technically wrong and is now fixed.
+- [[cross-origin-collector]] — added the permission-model caveat: what crosses
+  the origin boundary is the *linkage* (server-side), not the camera grant.
+- [[enabling-conditions]] — added the consent-realism argument (grant is a real
+  friction, but gaze-request contexts proliferate: accessibility, proctoring,
+  WebXR, gaze-AI) and elevated covert calibration = no explicit step.
+- [[simultaneous-capture-rig]] — fixed the same IR-label-contamination language
+  the plan corrected ("train/validate the webcam estimate" → Gazepoint is a
+  measurement instrument only, never a training signal for re-ID).
+- [[ceiling-vs-commodity]] — added the RQ3 anti-contamination control.
+- [[eye-movement-biometrics]] — added the route-(b) domain-gap caveat (IR
+  250–1000 Hz ↛ webcam ~30 Hz without domain adaptation).
+- [[gaze-perturbation-defense]] — for top-tier, treat the defense as
+  non-optional + add responsible disclosure (browser vendors / W3C).
+- [[target-venues]] — added the venue-tuning guidance (PoPETs first with defense
+  included; USENIX/CCS need the cross-origin demo + crisp cross-task number +
+  disclosure; SOUPS consent companion).
+- [[related-work-direction-1]] — added the "just biometrics on a worse sensor"
+  rebuttal and pointer to the Appendix A.9 novelty statement.
+
+**Novelty verdict recorded (Appendix A.1):** no fatal novelty issue — the
+intersection {commodity webcam × desktop web × cross-task/cross-site × unclearable
+tracking} is unoccupied. The decisive risks are empirical (does webcam cross-task
+re-ID beat chance?), threat-model realism (camera consent + cross-origin
+mechanics), and confounds ([[reid-confound-controls]]) — not novelty.
+
+**Lint:** re-ran the Python sweep — 0 dead links, 0 orphans across the vault
+(now 115 pages; the only raw matches are `\|`-escaped table pipes, which
+Obsidian resolves).

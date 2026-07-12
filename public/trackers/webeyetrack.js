@@ -106,6 +106,32 @@
     // re-running the click grid re-personalises it). Kept for the wipe demo.
     clearModel: function () {},
     showPreview: function () {},
+
+    // Full shutdown that RELEASES THE WEBCAM. WebcamClient.stop() stops the
+    // MediaStream tracks and clears the video's srcObject; a later start()
+    // constructs a fresh WebcamClient + proxy.
+    stop: function () {
+      this._cb = null;
+      if (this._proxy) {
+        try { this._proxy.onGazeResults = null; } catch (e) {}
+        try { // free the inference worker if this build exposes a teardown
+          if (this._proxy.dispose) this._proxy.dispose();
+          else if (this._proxy.terminate) this._proxy.terminate();
+        } catch (e) {}
+        this._proxy = null;
+      }
+      if (this._cam) {
+        try { this._cam.stop(); } catch (e) {}
+        this._cam = null;
+      }
+      try { // belt and braces in case the client left the stream attached
+        var v = document.getElementById("wet-webcam");
+        if (v && v.srcObject) {
+          v.srcObject.getTracks().forEach(function (t) { t.stop(); });
+          v.srcObject = null;
+        }
+      } catch (e) {}
+    },
   };
 
   if (window.GazePry) window.GazePry.registerTracker(adapter);

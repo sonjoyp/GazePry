@@ -115,6 +115,22 @@
 
     pause: function () { try { webgazer.pause(); } catch (e) {} },
     resume: function () { return webgazer.resume(); },
+
+    // Full shutdown that RELEASES THE WEBCAM. In v3.5.3 pause() only halts the
+    // prediction loop and end() only removes the UI — the MediaStream (and the
+    // camera light) stays live until stopVideo() stops the track. The trained
+    // model is untouched (and persisted via saveDataAcrossSessions), so a later
+    // start() re-begins with the same calibration.
+    stop: function () {
+      if (!this._started) return;
+      try { // stop every track, not just getTracks()[0] like stopVideo() does
+        var v = document.getElementById(webgazer.params.videoElementId);
+        if (v && v.srcObject) v.srcObject.getTracks().forEach(function (t) { t.stop(); });
+      } catch (e) {}
+      try { webgazer.stopVideo(); } catch (e) {} // stops the stream's track, detaches video/canvas
+      try { webgazer.end(); } catch (e) {}       // pauses the loop, removes container + gaze dot
+      this._started = false;                     // let start() run begin() again
+    },
   };
 
   if (window.GazePry) window.GazePry.registerTracker(adapter);

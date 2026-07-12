@@ -76,6 +76,15 @@
     clearModel: function () {},
 
     showPreview: function () {}, // GazeCloud manages its own on-screen UI
+
+    // Full shutdown that RELEASES THE WEBCAM (and stops frames leaving the
+    // machine — doubly important for the cloud tracker). A later start() calls
+    // StartEyeTracking() again, which re-runs its built-in calibration, same as
+    // it already does on every page load.
+    stop: function () {
+      this._cb = null;
+      try { window.GazeCloudAPI.StopEyeTracking(); } catch (e) {}
+    },
   };
 
   if (window.GazePry) window.GazePry.registerTracker(adapter);

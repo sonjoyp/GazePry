@@ -112,6 +112,9 @@
       } catch (e) {
         document.getElementById("probeNote").textContent = "Probe failed: " + e;
       } finally {
+        // Probe over (matched or failed) — release the webcam; a re-probe
+        // boots the engine again.
+        GazePry.stopEngine();
         probing = false;
         btn.disabled = false;
       }

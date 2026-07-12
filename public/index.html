@@ -219,9 +219,13 @@
       startBtn.disabled = true;
       try {
         await GazePry.calibrate({ clicksPerDot: 5, fresh: true });
+        // Model saved (persists across pages) — release the webcam while the
+        // participant browses the task list; each task page re-boots the engine.
+        GazePry.stopEngine();
         showTasks();
       } catch (e) {
         console.error("calibration error:", e);
+        GazePry.stopEngine(); // don't leave a half-started camera running
         note.textContent = "Camera/calibration failed: " + (e && e.message ? e.message : e) +
           ". Check the browser console (F12) and that webcam access was allowed.";
         startBtn.disabled = false;
@@ -229,8 +233,11 @@
     });
 
     document.getElementById("calBtn").addEventListener("click", function () {
-      GazePry.calibrate({ clicksPerDot: 5 }).catch(function (e) {
+      GazePry.calibrate({ clicksPerDot: 5 }).then(function () {
+        GazePry.stopEngine(); // recalibration saved — webcam off until the next task
+      }).catch(function (e) {
         console.error("recalibration error:", e);
+        GazePry.stopEngine();
       });
     });
 

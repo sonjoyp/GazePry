@@ -39,11 +39,17 @@ GazePry.registerTracker({
   clearModel() {},        // reset the model/personalisation (fresh session + wipe demo)
   showPreview(show) {},   // optional camera/overlay preview toggle
   pause() {}, resume() {},// optional; enables the watchdog to restart a dead loop
+  stop() {},              // full shutdown that RELEASES THE WEBCAM (stop the
+                          //   MediaStream tracks — a paused loop still holds the
+                          //   camera). start() must be able to boot again after.
 });
 ```
 
 Only `family`, `start`, and `onGaze` are strictly required; the rest are optional
-and default sensibly. Coordinates **must** be viewport pixels so one feature
+and default sensibly — except that every adapter should implement `stop()`: the
+orchestrator's `GazePry.stopEngine()` is called whenever no capture/calibration
+needs the camera (task submitted, probe matched, calibration saved, `pagehide`),
+and without `stop()` it can only `pause()`, which leaves the camera light on. Coordinates **must** be viewport pixels so one feature
 extractor (`../../reid-core.js` / `analysis/features.py`) serves every tracker.
 
 ## Registered adapters

@@ -128,7 +128,23 @@
     recordCalibration: function () {},
     clearModel: function () { try { this._engine && this._engine.recalibrate(); } catch (e) {} },
     showPreview: function (show) { try { show ? this._engine.visible() : this._engine.invisible(); } catch (e) {} },
-    stop: function () { try { this._engine && this._engine.stop(); } catch (e) {} },
+
+    // Full shutdown that RELEASES THE WEBCAM. EyeGestures' own stop() only sets
+    // run=false — it never stops the MediaStream — so stop the tracks on its
+    // #video element ourselves. A later start() constructs a fresh engine (which
+    // re-runs its built-in calibration, same as it already does on every page).
+    stop: function () {
+      this._cb = null;
+      try { this._engine && this._engine.stop(); } catch (e) {}
+      this._engine = null;
+      try {
+        var v = document.getElementById("video");
+        if (v && v.srcObject) {
+          v.srcObject.getTracks().forEach(function (t) { t.stop(); });
+          v.srcObject = null;
+        }
+      } catch (e) {}
+    },
   };
 
   if (window.GazePry) window.GazePry.registerTracker(adapter);

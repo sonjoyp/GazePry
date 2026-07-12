@@ -56,6 +56,10 @@
 
     var res = await GazePry.runTask({ task: task, durationSec: dur });
 
+    // Task captured and submitted — release the webcam while the participant
+    // reads the done card. The next task page boots the engine afresh anyway.
+    GazePry.stopEngine();
+
     // local fallback record of completion (server /status is authoritative)
     try {
       var key = "gp_done_" + GazePry.identity.participant + "_" + GazePry.identity.session +

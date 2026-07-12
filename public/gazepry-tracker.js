@@ -188,6 +188,28 @@
     console.log("[GazePry] engine ready (" + adapter.label + ", outcome: " + outcome + ").");
   };
 
+  // Fully shut down the tracker and RELEASE THE WEBCAM. Pages call this as soon
+  // as nothing needs the camera (calibration saved, task submitted, probe
+  // matched) — a study prototype must not hold the camera open while idle. The
+  // next startEngine() boots the same adapter again; trained models survive the
+  // round-trip (WebGazer persists via saveDataAcrossSessions, self-calibrating
+  // engines redo their own calibration exactly as they already do per page).
+  GazePry.stopEngine = function () {
+    if (!this._engineReady) return;
+    var a = this._active;
+    this._capturing = false;
+    // Kill the watchdog first — its pause/resume kick would otherwise revive
+    // the engine we are about to stop.
+    if (this._watchdog) { clearInterval(this._watchdog); this._watchdog = null; }
+    if (a) {
+      if (a.offGaze) { try { a.offGaze(); } catch (e) {} }
+      if (a.stop) { try { a.stop(); } catch (e) {} }
+      else if (a.pause) { try { a.pause(); } catch (e) {} } // best effort: halts the loop but may keep the camera — adapters should implement stop()
+    }
+    this._engineReady = false;
+    console.log("[GazePry] engine stopped" + (a ? " (" + a.label + ")" : "") + " — webcam released.");
+  };
+
   // Keep a heartbeat alive when nothing is capturing, so the watchdog can tell a
   // live prediction loop from a dead one. Capture/probe replace this listener and
   // re-attach it when they finish.
@@ -508,6 +530,14 @@
     document.body.appendChild(t);
     setTimeout(function () { t.remove(); }, 9000);
   };
+
+  // Release the camera on navigation too. The browser stops the stream on a
+  // real unload anyway, but a bfcache restore would otherwise resurrect the
+  // page with _engineReady=true and a dead stream; stopping here keeps the
+  // state honest so the next capture re-boots the engine.
+  window.addEventListener("pagehide", function () {
+    try { GazePry.stopEngine(); } catch (e) {}
+  });
 
   window.GazePry = GazePry;
 })();

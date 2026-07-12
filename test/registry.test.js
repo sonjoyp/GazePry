@@ -28,7 +28,7 @@ function loadGazePry(opts) {
   opts = opts || {};
   const store = Object.assign({}, opts.store);
   const sandbox = {
-    window: {},
+    window: { addEventListener() {} },
     console: { log() {}, warn() {}, error() {} },
     document: {
       currentScript: { src: "http://localhost/gazepry-tracker.js" },
@@ -71,6 +71,9 @@ test("every adapter satisfies the minimum contract", () => {
     assert.ok(t.label, `${t.family} has label`);
     assert.equal(typeof t.start, "function", `${t.family} has start()`);
     assert.equal(typeof t.onGaze, "function", `${t.family} has onGaze()`);
+    // Every shipped adapter must be able to RELEASE THE WEBCAM — pause() alone
+    // leaves the camera live (see README-adapter.md).
+    assert.equal(typeof t.stop, "function", `${t.family} has stop()`);
     assert.ok(["local", "cloud"].includes(t.privacy), `${t.family} declares privacy`);
     assert.equal(typeof t.available, "boolean");
     // An unavailable adapter must tell the user how to enable it.
@@ -192,6 +195,31 @@ test("loadCondition honours a query-string intervention override", () => {
   const c = GazePry.loadCondition();
   assert.equal(c.intervention, "new-device");
   assert.equal(c.device, "phoneA");
+});
+
+test("stopEngine shuts down the adapter, detaches listeners, and resets readiness", () => {
+  const { GazePry } = loadGazePry();
+  let stopped = 0, detached = 0;
+  GazePry._active = { label: "Fake", stop: () => { stopped++; }, offGaze: () => { detached++; } };
+  GazePry._engineReady = true;
+  GazePry._capturing = true;
+  GazePry.stopEngine();
+  assert.equal(stopped, 1, "adapter.stop() called (webcam released)");
+  assert.equal(detached, 1, "gaze listener detached");
+  assert.equal(GazePry._engineReady, false, "engine no longer ready — next capture re-boots");
+  assert.equal(GazePry._capturing, false, "capture flag cleared");
+  GazePry.stopEngine(); // idempotent: a second call must not re-stop
+  assert.equal(stopped, 1, "stop not called again when engine already stopped");
+});
+
+test("stopEngine falls back to pause() for adapters without stop()", () => {
+  const { GazePry } = loadGazePry();
+  let paused = 0;
+  GazePry._active = { label: "Legacy", pause: () => { paused++; } };
+  GazePry._engineReady = true;
+  GazePry.stopEngine();
+  assert.equal(paused, 1, "pause() used as best effort");
+  assert.equal(GazePry._engineReady, false);
 });
 
 test("wipeState clears storage and the active tracker's model", () => {

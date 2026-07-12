@@ -19,4 +19,5 @@ if (!fp) {
   process.exit(2);
 }
 const input = JSON.parse(fs.readFileSync(fp, "utf8"));
-process.stdout.write(JSON.stringify(reid.extractFeatures(input.samples, input.screen)));
+// Optional input.resampleHz exercises the rate-equalization path in the parity test.
+process.stdout.write(JSON.stringify(reid.extractFeatures(input.samples, input.screen, input.resampleHz)));

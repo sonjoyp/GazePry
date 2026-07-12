@@ -507,16 +507,38 @@
     }
   };
 
-  // ---- "unclearable" demo helper ---------------------------------------
-  // Wipes conventional client state. Gaze re-identification is unaffected
-  // because identity is re-derived from the live eye-movement stream.
-  GazePry.wipeState = function () {
+  // ---- "unclearable" demo helpers --------------------------------------
+  // Two DIFFERENT axes the demo must not conflate (plan RQ4 / A.3):
+  //
+  // (1) clearWebState — clears cookies + storage: the state a privacy-conscious
+  //     user actually controls. It is IRRELEVANT to gaze re-ID, because nothing
+  //     about *who you are* is stored client-side; matching happens server-side
+  //     against enrolled sessions. Re-identifying after this clear is the genuine
+  //     "unclearable" point.
+  GazePry.clearWebState = function () {
     try { localStorage.clear(); } catch (e) {}
     try { sessionStorage.clear(); } catch (e) {}
     document.cookie.split(";").forEach(function (c) {
       document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date(0).toUTCString() + ";path=/");
     });
+  };
+
+  // (2) clearTrackerModel — clears the ACTIVE tracker's calibration model (e.g.
+  //     WebGazer's click-trained ridge regression). This stores/removes no
+  //     identity either, but it degrades the *measurement channel*: the next
+  //     probe is captured through an uncalibrated sensor and can miss until the
+  //     tracker silently re-trains from ordinary clicks/cursor motion. So a model
+  //     wipe buys *time*, not anonymity — a post-wipe miss is a calibration
+  //     artifact, not identity loss. Kept separate so the demo never sells a
+  //     recoverable sensor transient as the identifier being cleared.
+  GazePry.clearTrackerModel = function () {
     if (this._active && this._active.clearModel) { try { this._active.clearModel(); } catch (e) {} }
+  };
+
+  // Back-compat: the original single-button demo cleared both axes at once.
+  GazePry.wipeState = function () {
+    this.clearWebState();
+    this.clearTrackerModel();
   };
 
   // Small on-screen error banner so failures aren't silent for console-less users.

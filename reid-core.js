@@ -38,8 +38,31 @@ var FEATURE_NAMES = [
   "fix_rate", "sacc_rate", "fix_ratio", "gap_rate", "main_seq_slope",
 ];
 
+// Decimate a sample stream to an approximately uniform `hz` cadence by picking,
+// for each target tick, the sample whose timestamp is nearest. Gaps (x=null) are
+// preserved; returns the stream unchanged when hz is falsy or <2 samples.
+//
+// WebGazer logs at requestAnimationFrame cadence (~50–120 Hz), and that rate
+// differs across participants/sessions — so rate-sensitive features encode
+// capture cadence as much as the eye (a re-ID confound). Equalizing cadence
+// before extraction removes it. Keep byte-identical to analysis/features.py
+// resample() — the JS↔Py parity test covers it.
+function resample(samples, hz) {
+  if (!hz || samples.length < 2) return samples;
+  var step = 1000 / hz;
+  var t0 = samples[0].t, tEnd = samples[samples.length - 1].t;
+  var out = [], j = 0, n = samples.length, t = t0;
+  while (t <= tEnd + 1e-9) {
+    while (j + 1 < n && Math.abs(samples[j + 1].t - t) <= Math.abs(samples[j].t - t)) j++;
+    out.push(samples[j]);
+    t += step;
+  }
+  return out;
+}
+
 // Extract a fixed-length feature vector from one session's samples.
-function extractFeatures(samples, screen) {
+function extractFeatures(samples, screen, resampleHz) {
+  if (resampleHz) samples = resample(samples, resampleHz);
   screen = screen || {};
   var diag = Math.sqrt(
     Math.pow(screen.innerW || 1920, 2) + Math.pow(screen.innerH || 1080, 2)
@@ -188,6 +211,7 @@ module.exports = {
   FEATURE_NAMES: FEATURE_NAMES,
   VEL_THRESHOLD: VEL_THRESHOLD,
   extractFeatures: extractFeatures,
+  resample: resample,
   identify: identify,
   standardize: standardize,
 };

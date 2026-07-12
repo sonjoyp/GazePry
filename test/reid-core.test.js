@@ -81,6 +81,27 @@ test("spatial features are screen-normalised (scale-invariant)", () => {
   }
 });
 
+test("resample decimates a fast stream toward the target cadence, preserving gaps", () => {
+  const fast = [];
+  for (let i = 0; i < 200; i++) fast.push({ t: i * 10, x: 500, y: 500 }); // 2 s @ 100 Hz
+  const out = reid.resample(fast, 30);
+  assert.ok(out.length < fast.length, "stream is thinned");
+  const hz = (out.length) / ((out[out.length - 1].t - out[0].t) / 1000);
+  assert.ok(Math.abs(hz - 30) < 6, "resampled cadence is near 30 Hz");
+  // a gap survives
+  const withGap = fixation(200, 200, 30, 0)
+    .concat([{ t: 1000, x: null, y: null }])
+    .concat(fixation(400, 400, 30, 1040));
+  assert.ok(reid.resample(withGap, 30).some((p) => p.x === null), "a gap survives resampling");
+});
+
+test("resample is a no-op when hz is falsy or the stream is too short", () => {
+  const s = fixation(100, 100, 10, 0);
+  assert.equal(reid.resample(s, 0), s, "hz falsy returns the same stream");
+  const one = [{ t: 0, x: 1, y: 1 }];
+  assert.equal(reid.resample(one, 30), one, "<2 samples returns the same stream");
+});
+
 test("standardize z-scores columns and guards zero-variance columns", () => {
   const std = reid.standardize([[0, 5], [2, 5], [4, 5]]);
   assert.deepEqual(std.mu, [2, 5]);

@@ -230,3 +230,21 @@ test("wipeState clears storage and the active tracker's model", () => {
   assert.equal(Object.keys(store).length, 0, "localStorage cleared");
   assert.equal(cleared, true, "active tracker model cleared");
 });
+
+test("clearWebState clears storage but NOT the tracker model (identity-irrelevant axis)", () => {
+  const { GazePry, store } = loadGazePry({ store: { gp_participant: "P01", keep: "x" } });
+  let cleared = false;
+  GazePry._active = { clearModel: () => { cleared = true; } };
+  GazePry.clearWebState();
+  assert.equal(Object.keys(store).length, 0, "localStorage cleared");
+  assert.equal(cleared, false, "calibration model left intact — clearing web state must not touch the sensor");
+});
+
+test("clearTrackerModel clears the model but NOT storage (sensor-degrading axis)", () => {
+  const { GazePry, store } = loadGazePry({ store: { gp_participant: "P01", keep: "x" } });
+  let cleared = false;
+  GazePry._active = { clearModel: () => { cleared = true; } };
+  GazePry.clearTrackerModel();
+  assert.equal(cleared, true, "active tracker model cleared");
+  assert.ok("gp_participant" in store, "web storage left intact — model wipe is a different axis");
+});

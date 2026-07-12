@@ -37,6 +37,7 @@ corrections made during verification.*
 **Part III — Positioning and execution**
 18. [Related work and the gap this plan fills](#18-related-work-and-the-gap-this-plan-fills)
 19. [Target venues and timeline](#19-target-venues-and-timeline)
+- [19a. Current empirical status (read before quoting any number)](#19a-current-empirical-status-read-before-quoting-any-number)
 20. [Immediate next steps](#20-immediate-next-steps)
 21. [References and citation status](#21-references-and-citation-status)
 - [Appendix A — Novelty positioning, threat-model realism, and threats to validity](#appendix-a--novelty-positioning-threat-model-realism-and-threats-to-validity)
@@ -313,14 +314,29 @@ dynamics-only** (§13).
 
 - **RQ4 (unclearability).** Does re-ID survive cookie/cache clear, incognito, a fresh profile, a
   different day/lighting, a *different device webcam*, and *face de-identification*?
-  - **H4.** Re-ID accuracy under each state-clearing / cross-device / face-removed condition is
-    *statistically indistinguishable from baseline* (no drop beyond δ), because identity is
-    carried by movement dynamics and no client-side state. **Face de-identification is satisfied
-    *by construction***: the primary pipeline never records appearance (only the `{t,x,y}`
-    stream, §12), so removing the face cannot reduce accuracy.
-  - **Decision rule.** *Confirmed* per condition if the (baseline − intervention) rank-1
-    difference CI includes 0, or the drop is < δ. Contrast: a clearable canvas/UA fingerprint
-    (§14) is shown to *reset to chance* under the same clears — the whole point.
+  - **Separate two axes that the naive "wipe everything" demo conflates.** *(a) Web-state clearing*
+    — cookies, cache, storage, incognito, fresh profile — removes **no** identity, because nothing
+    person-bound is stored client-side (matching is server-side); re-ID after this clear is the
+    genuine unclearable point. *(b) Calibration-model clearing* — wiping the tracker's click-trained
+    model — also stores/removes no identity, but it **degrades the sensor**: an immediate probe is
+    captured through an uncalibrated tracker and can miss until the model **silently re-trains from
+    ordinary clicks/cursor motion**. A post-model-wipe miss is therefore a *calibration artifact,
+    not identity loss* — a wipe **buys time, not anonymity**. The two must be reported as distinct
+    conditions (the harness now exposes them as separate actions; the `intervention`/`calibQuality`
+    metadata records which was cleared), or a recoverable sensor transient will be mis-read as the
+    identifier being cleared. *(This is the same calibration confound as RQ0/A.3.)*
+  - **H4.** Re-ID accuracy under each **web-state-clearing** / cross-device / face-removed condition
+    is *statistically indistinguishable from baseline* (no drop beyond δ), because identity is
+    carried by movement dynamics and no client-side state. Under **calibration-model clearing**,
+    accuracy drops transiently and **recovers as the tracker re-calibrates** — the deliverable is
+    the recovery curve (accuracy vs. clicks/seconds since wipe), which quantifies how little time a
+    wipe buys. **Face de-identification is satisfied *by construction***: the primary pipeline never
+    records appearance (only the `{t,x,y}` stream, §12), so removing the face cannot reduce accuracy.
+  - **Decision rule.** *Confirmed* per web-state condition if the (baseline − intervention) rank-1
+    difference CI includes 0, or the drop is < δ. For the model-clear condition, *confirmed* if
+    accuracy recovers to within δ of baseline after a bounded recalibration budget. Contrast: a
+    clearable canvas/UA fingerprint (§14) is shown to *reset to chance* under the same clears — the
+    whole point.
 
 - **RQ5 (defense, optional).** What perturbation of the gaze stream defeats re-ID at acceptable
   utility cost?
@@ -374,10 +390,19 @@ would need porting to TF.js and give no calibration/UX out of the box. The four 
 above (2–5) cover the deployable open-source reality (WebGazer, EyeGestures), the near-future
 on-device ceiling (WebEyeTrack), and the cloud high-accuracy point (GazeCloud).
 
-**Sampling-rate caveat (methodological, state it):** webcam capture is ~30 Hz; Gazepoint is
-60–150 Hz. Down-sample Gazepoint to the webcam rate for the *fair* comparison arm, and note
-that low webcam framerate limits saccade-velocity features — a real constraint on what the
-commodity channel can extract.
+**Sampling-rate caveat (methodological, state it — and mind the logged-vs-true-rate trap):**
+the *true* independent frame rate of a commodity webcam is ~30 Hz, but the trackers **log** gaze
+at their prediction cadence, which is the browser's requestAnimationFrame rate — in the pilot,
+WebGazer records at **~50–120 Hz**, not 30 Hz, by interpolating/repeating predictions over a
+lower true camera rate. Two consequences: (a) saccade-velocity and main-sequence features computed
+on the logged stream partly encode *logging cadence*, not oculomotor dynamics; and (b) the logged
+rate **differs across sessions and participants** (in the pilot, P01 ≈ 50 Hz vs P02 ≈ 110 Hz),
+which makes capture rate a re-identification **confound that is correlated with identity**.
+Mitigation, now implemented in `analysis/`: **resample every session to a common cadence before
+feature extraction** (`features.resample` / `reid-core.js resample`, JS↔Py parity-tested) and run
+the **rate-equalized negative control** (`reid.py`, printed by default) — if re-ID collapses once
+rate is equalized, the "signal" was cadence. Down-sample Gazepoint to the same common rate for the
+*fair* comparison arm, and report which features survive it.
 
 **Harness status (implementation).** The capture harness is built and in this repo: a
 *tracker-agnostic* orchestrator drives one self-registering adapter per tracker (WebGazer,
@@ -439,14 +464,22 @@ Report **same-task** (upper bound) and **cross-task** (the tracking threat) sepa
   features.
 - **Two modeling routes:**
   - **(a) Hand-crafted features + classifier** — interpretable, robust at small N. Start
-    here. The interpretable score-fusion lineage ([31]) is the model here.
+    here. The interpretable score-fusion lineage ([31]) is the model here. *Implementation status:*
+    the pipeline currently uses the 16 hand-crafted features with a nearest-neighbour matcher in
+    per-feature-standardized space (i.e. a diagonal-Mahalanobis distance). A **learned metric**
+    (LDA / full-covariance Mahalanobis / [31]'s score fusion) and a richer distributional feature
+    set are the planned next step — but deliberately **deferred until N is large enough to fit and
+    validate them**: at the pilot's N=2 a learned metric has nothing to generalize across and would
+    overfit, which the shuffle-null guardrail (A.3) is designed to catch. Add it once a real cohort
+    exists, and gate every accuracy gain on the shuffle-null and the rate-equalized control.
   - **(b) End-to-end deep model** (DenseNet-style, à la Eye Know You Too [20]; see also the
     micro-movement models [33], [34]) — the ceiling; train/validate on public data, fine-tune
     on yours. **Domain-gap caveat (state it):** the public biometric datasets are IR at
-    250–1000 Hz ([36]–[38]); the webcam channel is ~30 Hz with categorically different noise,
-    so a model pretrained on IR will **not** transfer to webcam without explicit **domain
-    adaptation** (down-sample IR to the webcam rate, inject webcam-like noise, and fine-tune on
-    the simultaneous-capture data). Treat route (b) on the *webcam* channel as a research risk,
+    250–1000 Hz ([36]–[38]); the webcam channel has a ~30 Hz *true* frame rate (logged at a higher,
+    variable cadence — see the §9 sampling-rate caveat) with categorically different noise, so a
+    model pretrained on IR will **not** transfer to webcam without explicit **domain adaptation**
+    (down-sample IR to a common rate, inject webcam-like noise, and fine-tune on the
+    simultaneous-capture data). Treat route (b) on the *webcam* channel as a research risk,
     not a drop-in; route (a) hand-crafted features is the safer primary for the webcam claim,
     with route (b) reserved for the IR ceiling and the large-N feasibility argument.
 - **Critical control:** the primary condition **excludes the raw face image / appearance
@@ -665,6 +698,36 @@ single axis — is the contribution.
 wk (multi-session forces calendar time) → analysis 4–6 wk → writing 4 wk. ≈ 4–6 months
 end-to-end (IRB is exempt, so it adds no calendar time); aim at a **PoPETs cycle in H1 2027** or
 a **USENIX Security 2027** deadline. Verify exact dates against live CFPs before committing.
+
+## 19a. Current empirical status (read before quoting any number)
+
+**No re-identification claim in this plan is yet supported by data. The pilot is a
+pipeline/feasibility check, not evidence.** State this plainly to avoid over-reading it.
+
+- **N = 2 real participants.** The captured pilot is P01 and P02 on WebGazer (gallery size 2 →
+  chance rank-1 = 0.5), plus P01 alone on WebEyeTrack (cannot be scored — a 1-person gallery). The
+  plan's headline cells need N ≥ 50 (§10); the pilot fills none of them.
+- **The headline pilot number is not a result.** WebGazer cross-task/cross-session rank-1 ≈ 0.75
+  (chance 0.5), EER ≈ 0.32, with the shuffled-label null at rank-1 ≈ 0.50 — a thin margin over two
+  identities.
+- **No returning-visitor separation.** All pilot "sessions" are same-sitting (P01 S1↔S2 ≈ 14 min,
+  P02 S1↔S2 ≈ 6 min). The `≥ 1-week` cross-session cells — the actual RQ1/RQ4 threat — are **empty**;
+  `reid.py` now reports them as such rather than letting same-day blocks masquerade as the threat.
+- **A rate confound sits on top of the signal.** WebGazer logs at ~50 Hz for P01 and ~110 Hz for
+  P02 — capture rate is correlated with identity, so part of the (weak) discrimination may be
+  cadence, not eyes. The rate-equalized control (`reid.py`, default) exists precisely to test this;
+  it must clear before any number is quoted.
+- **RQ0 is unanswered.** The confound battery (calibration-swap, cross-tracker, shuffled-null,
+  rate-equalized) is the precondition (A.3); until it runs on a real cohort, "is this the person or
+  the apparatus?" is genuinely open.
+- **The synthetic `data_sim/` numbers** (cross-task/cross-session rank-1 ≈ 0.28 at N=12) are a
+  **code sanity check on generated data**, not a claim about real eyes.
+- **Modeling status.** Route (a) uses 16 hand-crafted features + a diagonal-Mahalanobis NN matcher;
+  the learned metric / richer features (§12) are deferred until N supports validating them.
+
+**Treat H1–H4 as pre-registered *predictions to be tested*, not findings — with RQ0 as the gate.**
+The gating dependency for an actual verdict is a real collection (N ≥ 50, true ≥ 1-week separation,
+the simultaneous Gazepoint rig, and populated condition metadata).
 
 ## 20. Immediate next steps
 
@@ -938,9 +1001,12 @@ shows a visible indicator — this is nothing like a silent cookie." Answers to 
   reading; that bounds the content-*dependent* vectors (D2), **not** the distributional re-ID
   signal. Make this distinction explicitly — otherwise a reviewer will cite Thilderkvist
   against you and you will have no answer on the page.
-- Report *which* features survive 30 Hz (fixation-duration statistics likely robust;
-  saccade-velocity features likely degraded) — turning the sampling-rate limitation into a
-  finding.
+- Report *which* features survive rate-equalization to a common cadence (fixation-duration
+  statistics likely robust; saccade-velocity / main-sequence features likely degraded) — turning
+  the sampling-rate limitation into a finding. **Note the direction of the risk:** the danger is not
+  only that low true rate *weakens* saccade features, but that the *logged* rate varies across
+  sessions/participants and can *manufacture* a spurious identity signal (see the §9 sampling-rate
+  caveat); the rate-equalized control (`reid.py`) is what separates the two.
 
 ## A.6 Ethics, IRB, disclosure, and artifact hygiene (table-stakes at top-tier security venues)
 

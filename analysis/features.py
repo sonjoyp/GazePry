@@ -45,7 +45,41 @@ def _quantile(sorted_a: List[float], q: float) -> float:
     return sorted_a[lo] + (sorted_a[hi] - sorted_a[lo]) * (pos - lo)
 
 
-def extract_features(samples: List[dict], screen: Optional[dict] = None) -> List[float]:
+def resample(samples: List[dict], hz: Optional[float]) -> List[dict]:
+    """Decimate a sample stream to an approximately uniform ``hz`` cadence by
+    picking, for each target tick, the sample whose timestamp is nearest. Gaps
+    (``x`` is None) are preserved. Returns the list unchanged when ``hz`` is
+    falsy or there are <2 samples.
+
+    Rationale: WebGazer logs at requestAnimationFrame cadence (~50–120 Hz here),
+    and that rate differs across participants/sessions. Rate-sensitive features
+    (saccade velocity, the various rates, the main-sequence slope) then encode
+    *capture cadence* as much as the eye, which is a re-ID confound perfectly
+    correlated with identity in the pilot. Equalizing the cadence before feature
+    extraction removes that confound. This must stay byte-identical to
+    ``reid-core.js`` ``resample()`` — the JS↔Py parity test covers it.
+    """
+    if not hz or len(samples) < 2:
+        return samples
+    step = 1000.0 / hz
+    t0 = samples[0]["t"]
+    t_end = samples[-1]["t"]
+    out: List[dict] = []
+    j = 0
+    n = len(samples)
+    t = float(t0)
+    while t <= t_end + 1e-9:
+        while j + 1 < n and abs(samples[j + 1]["t"] - t) <= abs(samples[j]["t"] - t):
+            j += 1
+        out.append(samples[j])
+        t += step
+    return out
+
+
+def extract_features(samples: List[dict], screen: Optional[dict] = None,
+                     resample_hz: Optional[float] = None) -> List[float]:
+    if resample_hz:
+        samples = resample(samples, resample_hz)
     screen = screen or {}
     diag = math.hypot(screen.get("innerW", 1920), screen.get("innerH", 1080)) or 1.0
 

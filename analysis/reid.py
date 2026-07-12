@@ -41,9 +41,27 @@ def tracker_family(s):
     return tid.split("-")[0] if tid else "webgazer"
 
 
-def load_sessions(data_dir):
-    sessions = []
+def _session_quality(samples):
+    """(duration_s, n_samples, valid_fraction, median_hz) for a raw sample list."""
+    n = len(samples)
+    if n < 2:
+        return 0.0, n, (1.0 if n and samples[0].get("x") is not None else 0.0), 0.0
+    dur_s = (samples[-1]["t"] - samples[0]["t"]) / 1000.0
+    valid = sum(1 for s in samples if s.get("x") is not None)
+    hz = (n / dur_s) if dur_s > 0 else 0.0
+    return dur_s, n, (valid / n if n else 0.0), hz
+
+
+def load_sessions(data_dir, min_valid_frac=0.2, min_dur_s=2.0, min_samples=20,
+                  resample_hz=None, verbose=False):
+    """Load session records, dropping ones too degraded to yield trustworthy
+    features (all-gap captures, sub-second clips). Dropping is reported, never
+    silent. `resample_hz`, when set, equalizes cadence before feature extraction
+    (see features.resample) — leave None for the reproducible default feature space.
+    """
+    sessions, dropped = [], []
     for fp in sorted(glob.glob(os.path.join(data_dir, "*.json"))):
+        name = os.path.basename(fp)
         try:
             s = json.load(open(fp, "r", encoding="utf-8"))
         except Exception:
@@ -51,13 +69,21 @@ def load_sessions(data_dir):
         # skip anything that is not a session record (e.g. a metrics.json dump)
         if not isinstance(s, dict) or not s.get("samples") or not s.get("participant"):
             continue
+        dur_s, n_samp, valid_frac, hz = _session_quality(s["samples"])
+        if n_samp < min_samples or dur_s < min_dur_s or valid_frac < min_valid_frac:
+            dropped.append((name, f"n={n_samp} dur={dur_s:.1f}s valid={valid_frac:.0%}"))
+            continue
         cond = s.get("condition") or {}
         sessions.append({
-            "file": os.path.basename(fp),
+            "file": name,
             "participant": s.get("participant"),
             "session": s.get("session"),
             "task": s.get("task"),
             "tracker": tracker_family(s),
+            # startedAt drives the ≥1-week elapsed-time gate (eligible(), 1.2);
+            # fall back to any parseable timestamp in the filename tail
+            "startedAt": s.get("startedAt"),
+            "median_hz": hz,
             # per-visit metadata (schema v2); older records default to baseline
             "condition": cond,
             "intervention": cond.get("intervention", "baseline"),
@@ -65,8 +91,15 @@ def load_sessions(data_dir):
             # recompute features on a subset without re-reading the files
             "samples": s["samples"],
             "screen": s.get("screen"),
-            "feat": np.array(extract_features(s["samples"], s.get("screen")), dtype=float),
+            "feat": np.array(extract_features(s["samples"], s.get("screen"),
+                                              resample_hz=resample_hz), dtype=float),
         })
+    if verbose and dropped:
+        print(f"Data-quality guard dropped {len(dropped)} session(s) "
+              f"(min valid>={min_valid_frac:.0%}, dur>={min_dur_s}s, samples>={min_samples}):")
+        for name, why in dropped:
+            print(f"  - {name}  [{why}]")
+        print()
     return sessions
 
 
@@ -80,7 +113,7 @@ def standardize(sessions):
     return mu, sd
 
 
-def eligible(probe, cand, protocol):
+def eligible(probe, cand, protocol, min_gap_days=None):
     if cand["file"] == probe["file"]:
         return False
     # Never match across trackers: feature distributions differ, so a cross-tracker
@@ -89,24 +122,37 @@ def eligible(probe, cand, protocol):
         return False
     same_task = cand["task"] == probe["task"]
     same_sess = cand["session"] == probe["session"]
+
+    def gap_ok():
+        # When a minimum elapsed gap is required, a different session *id* is not
+        # enough — the returning-visitor threat (RQ1/RQ4) needs a real time gap.
+        # Same-day "sessions" share calibration/lighting and must not count as the
+        # cross-session threat. Unknown timestamps can't be confirmed -> excluded.
+        if min_gap_days is None:
+            return True
+        ta, tb = probe.get("startedAt"), cand.get("startedAt")
+        if ta is None or tb is None:
+            return False
+        return abs(ta - tb) >= min_gap_days * 86400_000  # days -> ms
+
     if protocol == "all":
         return True
     if protocol == "same_task_cross_session":
-        return same_task and not same_sess
+        return same_task and (not same_sess) and gap_ok()
     if protocol == "cross_task":
         return not same_task
     if protocol == "cross_task_cross_session":
-        return (not same_task) and (not same_sess)
+        return (not same_task) and (not same_sess) and gap_ok()
     raise ValueError(protocol)
 
 
-def evaluate(sessions, protocol):
+def evaluate(sessions, protocol, min_gap_days=None):
     genuine, impostor = [], []
     ranks = []  # rank of the true participant, when enrolled
     n_participants_seen = set()
 
     for probe in sessions:
-        gal = [c for c in sessions if eligible(probe, c, protocol)]
+        gal = [c for c in sessions if eligible(probe, c, protocol, min_gap_days)]
         if not gal:
             continue
         # nearest gallery session per participant (in z-space)
@@ -184,7 +230,7 @@ def report_tracker(sessions, label):
     """Standardize WITHIN this tracker's sessions and print the 4-protocol table.
     Returns the metric rows (for optional json dump)."""
     if len(sessions) < 2:
-        print(f"[{label}] only {len(sessions)} session(s) — need >=2; skipping.\n")
+        print(f"[{label}] only {len(sessions)} session(s) - need >=2; skipping.\n")
         return []
     standardize(sessions)  # per-tracker stats: a fair, self-contained feature space
     participants = sorted(set(s["participant"] for s in sessions))
@@ -343,6 +389,74 @@ def within_session_bound(sessions, label):
     return r
 
 
+def rate_control(sessions, label, protocol="cross_task_cross_session", hz=30):
+    """Rate-equalized negative control (A.3, the decisive 'is it real?' test).
+    Re-extract every session at a common cadence and re-run the headline protocol.
+    Capture rate differs by participant in the pilot (P01≈50 Hz, P02≈110 Hz) and
+    drives rate-sensitive features, so a match could be tracking *cadence*, not
+    eyes. If re-ID holds after equalizing rate, the signal is (more likely) the
+    person; if it collapses toward the null, it was the apparatus."""
+    base = _eval_with(sessions, protocol, lambda s: s["feat"])
+
+    def rfeat(s):
+        return np.array(extract_features(s.get("samples") or [], s.get("screen"),
+                                         resample_hz=hz), dtype=float)
+    eq = _eval_with(sessions, protocol, rfeat)
+    f = lambda v: "  n/a " if v != v else f"{v:7.3f}"
+    print(f"=== [{label}] rate-equalized control ({protocol}) ===")
+    print(f"  as-captured    : rank-1 ={f(base['rank1'])}  EER ={f(base['eer'])}  "
+          f"(chance rank-1 ~= {f(base['chance_rank1'])})")
+    print(f"  resampled {hz:>3} Hz: rank-1 ={f(eq['rank1'])}  EER ={f(eq['eer'])}")
+    print(f"  -> if rank-1 drops toward chance after equalizing rate, the 'biometric' "
+          f"was capture cadence.\n")
+    return {"as_captured": base, "rate_equalized": eq, "hz": hz}
+
+
+def cross_session_gap_report(sessions, label, min_gap_days=7):
+    """Report the cross-session protocols restricted to gallery/probe pairs that
+    are truly >= min_gap_days apart. A different session *id* alone is not the
+    returning-visitor threat; same-day blocks share calibration/lighting. On a
+    same-sitting pilot this correctly reports *no eligible pairs* — the honest state."""
+    print(f"=== [{label}] true cross-session (>= {min_gap_days} day gap) ===")
+    any_pairs = False
+    for protocol in ("same_task_cross_session", "cross_task_cross_session"):
+        r = evaluate(sessions, protocol, min_gap_days=min_gap_days)
+        f = lambda v: "  n/a " if v != v else f"{v:7.3f}"
+        if r["n_probes_scored"] == 0:
+            print(f"  {protocol:<26} no eligible pairs >= {min_gap_days} days apart")
+        else:
+            any_pairs = True
+            print(f"  {protocol:<26} probes={r['n_probes_scored']:>3}  "
+                  f"rank-1 ={f(r['rank1'])}  EER ={f(r['eer'])}")
+    if not any_pairs:
+        print("  (pilot sessions are same-sitting; the returning-visitor threat is untested here)")
+    print()
+
+
+def capture_rate_summary(sessions, label):
+    """Print median capture rate per participant — makes the rate confound visible.
+    Wide spread across participants means rate is a candidate identity shortcut."""
+    by_p = {}
+    for s in sessions:
+        by_p.setdefault(s["participant"], []).append(s.get("median_hz") or 0.0)
+    print(f"=== [{label}] capture rate by participant (Hz, median across sessions) ===")
+    for p in sorted(by_p):
+        vals = sorted(by_p[p])
+        med = vals[len(vals) // 2]
+        print(f"  {p}: {med:5.1f} Hz  (n={len(vals)} sessions)")
+    print()
+
+
+def confound_battery(sessions, label):
+    """The controls that decide whether a match is the person or the apparatus.
+    Printed by default beside every headline number (plan A.3 / 1.3)."""
+    capture_rate_summary(sessions, label)
+    shuffle_null(sessions, label)
+    rate_control(sessions, label)
+    cross_session_gap_report(sessions, label)
+    within_session_bound(sessions, label)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--data", default=os.path.join(os.path.dirname(__file__), "..", "data"))
@@ -353,17 +467,16 @@ def main():
                     help="also print the accuracy-vs-observation-window sweep (§14 headline curve)")
     ap.add_argument("--gallery", action="store_true",
                     help="also print the accuracy-vs-gallery-size sweep (§14)")
-    ap.add_argument("--shuffle", action="store_true",
-                    help="also run the shuffled-label null control (A.3)")
-    ap.add_argument("--within-session", action="store_true",
-                    help="also print the within-session leakage upper bound (A.3)")
+    ap.add_argument("--no-battery", action="store_true",
+                    help="suppress the default confound battery (rate control, shuffle-null, "
+                         "true cross-session, within-session) — normally always printed (A.3)")
     ap.add_argument("--controls", action="store_true",
-                    help="shorthand for --windows --gallery --shuffle --within-session")
+                    help="shorthand for --windows --gallery (the heavier sweeps)")
     args = ap.parse_args()
     if args.controls:
-        args.windows = args.gallery = args.shuffle = args.within_session = True
+        args.windows = args.gallery = True
 
-    sessions = load_sessions(args.data)
+    sessions = load_sessions(args.data, verbose=True)
     if args.tracker:
         sessions = [s for s in sessions if s["tracker"] == args.tracker]
     if len(sessions) < 2:
@@ -384,13 +497,24 @@ def main():
         rows += report_tracker([s for s in sessions if s["tracker"] == tr], tr)
 
     print("Headline per tracker (real tracking threat) = cross_task_cross_session.")
-    print("rank-1 >> chance and EER well below 0.5 => gaze links users across content and visits.")
+    print("A headline number is only trustworthy once the confound battery below clears:")
+    print("  the match must survive rate-equalization, sit well above the shuffled-label null,")
+    print("  and (for the returning-visitor threat) hold on truly >=1-week-apart sessions.")
     if len(trackers) > 1:
         print("Compare cross_task_cross_session EER across trackers for the RQ3 ceiling-vs-commodity gap.")
     print()
 
-    # Additive controls / headline curves (opt-in), per tracker.
-    if args.windows or args.gallery or args.shuffle or args.within_session:
+    # Confound battery (A.3 / 1.3) — printed by default beside every headline; the
+    # controls that decide whether a match is the person or the apparatus.
+    if not args.no_battery:
+        for tr in trackers:
+            sub = [s for s in sessions if s["tracker"] == tr]
+            if len(sub) < 2:
+                continue
+            confound_battery(sub, tr)
+
+    # Heavier additive sweeps (opt-in), per tracker.
+    if args.windows or args.gallery:
         for tr in trackers:
             sub = [s for s in sessions if s["tracker"] == tr]
             if len(sub) < 2:
@@ -399,10 +523,6 @@ def main():
                 window_sweep(sub, tr)
             if args.gallery:
                 gallery_sweep(sub, tr)
-            if args.shuffle:
-                shuffle_null(sub, tr)
-            if args.within_session:
-                within_session_bound(sub, tr)
 
     if args.out:
         json.dump([{k: v for k, v in r.items() if k != "ranks"} for r in rows],

@@ -83,6 +83,48 @@ class TestFeatures(unittest.TestCase):
             self.assertAlmostEqual(a, b, places=9, msg=f"{n} not scale-invariant")
 
 
+class TestResample(unittest.TestCase):
+    """Rate equalization (the pilot's identity<->cadence confound control)."""
+
+    def _hz(self, samples):
+        dur = (samples[-1]["t"] - samples[0]["t"]) / 1000.0
+        return len(samples) / dur if dur > 0 else 0.0
+
+    def test_noop_when_hz_none_or_too_short(self):
+        s = fixation(100, 100, 10)
+        self.assertIs(features.resample(s, None), s)          # hz falsy -> unchanged object
+        one = [{"t": 0, "x": 1, "y": 1}]
+        self.assertIs(features.resample(one, 30), one)        # <2 samples -> unchanged object
+
+    def test_decimates_a_fast_stream_toward_target(self):
+        # 100 Hz stream (10 ms spacing) resampled to ~30 Hz should thin out.
+        fast = [{"t": i * 10, "x": 500, "y": 500} for i in range(200)]  # 2 s @ 100 Hz
+        out = features.resample(fast, 30)
+        self.assertLess(len(out), len(fast))
+        self.assertAlmostEqual(self._hz(out), 30, delta=6)
+
+    def test_preserves_gaps(self):
+        s = fixation(200, 200, 30) + [{"t": 1000, "x": None, "y": None}] + fixation(400, 400, 30, 1040)
+        out = features.resample(s, 30)
+        self.assertTrue(any(p["x"] is None for p in out), "a gap survives resampling")
+
+    @unittest.skipUnless(shutil.which("node"), "node not available")
+    def test_js_python_resample_parity(self):
+        fast = [{"t": i * 9, "x": 300 + (i % 7) * 20, "y": 400 + (i % 5) * 15} for i in range(160)]
+        payload = {"samples": fast, "screen": SCREEN, "resampleHz": 30}
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            json.dump(payload, fh)
+            tmp = fh.name
+        try:
+            out = subprocess.check_output(["node", FEATURES_CLI, tmp], text=True)
+        finally:
+            os.unlink(tmp)
+        js = json.loads(out)
+        py = features.extract_features(fast, SCREEN, resample_hz=30)
+        for a, b, n in zip(js, py, features.FEATURE_NAMES):
+            self.assertAlmostEqual(a, b, places=6, msg=f"JS/Py resample disagree on {n}")
+
+
 class TestParity(unittest.TestCase):
     """The JS and Python extractors must stay in lockstep (README invariant)."""
 
@@ -140,6 +182,50 @@ class TestEligibility(unittest.TestCase):
         self.assertTrue(reid.eligible(probe, same_task_cross_sess, "same_task_cross_session"))
         self.assertTrue(reid.eligible(probe, cross_both, "cross_task_cross_session"))
         self.assertFalse(reid.eligible(probe, cross_task_same_sess, "cross_task_cross_session"))
+
+    def test_min_gap_days_gates_cross_session(self):
+        DAY = 86400_000
+        probe = dict(self._s("P01", "S1", "reading", "webgazer", "a.json"), startedAt=0)
+        near = dict(self._s("P01", "S2", "serp", "webgazer", "b.json"), startedAt=DAY)      # 1 day later
+        far = dict(self._s("P01", "S3", "serp", "webgazer", "c.json"), startedAt=10 * DAY)  # 10 days later
+        # default (no gate) still counts a different session id as cross-session
+        self.assertTrue(reid.eligible(probe, near, "cross_task_cross_session"))
+        # with a >=7-day gate, the same-week pair is excluded, the far pair kept
+        self.assertFalse(reid.eligible(probe, near, "cross_task_cross_session", min_gap_days=7))
+        self.assertTrue(reid.eligible(probe, far, "cross_task_cross_session", min_gap_days=7))
+
+    def test_min_gap_days_excludes_unknown_timestamps(self):
+        # startedAt missing -> the gap can't be confirmed -> excluded (conservative)
+        probe = self._s("P01", "S1", "reading", "webgazer", "a.json")
+        cand = self._s("P01", "S2", "serp", "webgazer", "b.json")
+        self.assertFalse(reid.eligible(probe, cand, "cross_task_cross_session", min_gap_days=7))
+
+
+class TestDataQualityGuard(unittest.TestCase):
+    """load_sessions drops sessions too degraded to yield trustworthy features."""
+
+    def _write(self, tmp, name, samples):
+        rec = {"schema": "gazepry.session.v2", "participant": name.split("_")[0],
+               "session": "S1", "task": "reading", "tracker": "webgazer",
+               "trackerFamily": "webgazer", "startedAt": 1700000000000,
+               "screen": {"innerW": 1440, "innerH": 900}, "samples": samples}
+        json.dump(rec, open(os.path.join(tmp, name + ".json"), "w"))
+
+    def test_drops_all_gap_and_too_short_keeps_good(self):
+        tmp = tempfile.mkdtemp(prefix="gp-qual-")
+        try:
+            good = [{"t": i * 33, "x": 500 + (i % 5), "y": 400 + (i % 3)} for i in range(200)]  # ~6.6 s
+            allgap = [{"t": i * 33, "x": None, "y": None} for i in range(200)]                   # 0% valid
+            tooshort = [{"t": i * 33, "x": 500, "y": 400} for i in range(5)]                     # n<20
+            self._write(tmp, "P01_S1_reading_1", good)
+            self._write(tmp, "P02_S1_reading_2", allgap)
+            self._write(tmp, "P03_S1_reading_3", tooshort)
+            with contextlib.redirect_stdout(io.StringIO()):
+                sessions = reid.load_sessions(tmp, verbose=True)
+            kept = sorted(s["participant"] for s in sessions)
+            self.assertEqual(kept, ["P01"], "only the usable session survives the guard")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
 
 class TestEvaluate(unittest.TestCase):

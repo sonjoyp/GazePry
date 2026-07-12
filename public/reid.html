@@ -39,16 +39,20 @@
     </div>
 
     <div class="gp-card">
-      <h2>The "unclearable" point</h2>
+      <h2>The "unclearable" point &mdash; two different axes</h2>
       <p class="gp-note">
-        Conventional trackers die when the user clears state. Gaze does not: the identifier is re-derived from the
-        live eye stream. Wipe cookies, localStorage, sessionStorage and the tracker's local model, then re-identify &mdash;
-        the match still lands, because nothing about <em>who you are</em> was ever stored in the browser.
+        These buttons clear two things people usually lump together. <b>Cookies + storage</b> is the state a
+        privacy-conscious user controls &mdash; and it is <em>irrelevant</em> to gaze re-ID, because nothing about
+        <em>who you are</em> is stored in the browser; matching is server-side against enrolled sessions.
+        The tracker's <b>calibration model</b> is different: clearing it removes no identity, but it degrades the
+        <em>sensor</em>, so an immediate probe may miss until the tracker silently re-trains from your clicks.
+        A wipe buys <em>time</em>, not anonymity.
       </p>
       <div class="gp-row">
-        <button class="gp-btn danger" type="button" id="wipeBtn">Wipe all browser state</button>
-        <span class="gp-note" id="wipeNote"></span>
+        <button class="gp-btn danger" type="button" id="clearStateBtn">Clear cookies + storage</button>
+        <button class="gp-btn danger" type="button" id="clearModelBtn">Clear tracker calibration model</button>
       </div>
+      <p class="gp-note" id="wipeNote"></p>
     </div>
 
     <p class="gp-note"><a href="index.html">&larr; Back to hub</a></p>
@@ -140,10 +144,19 @@
 
     document.getElementById("probeBtn").addEventListener("click", probeAndIdentify);
 
-    document.getElementById("wipeBtn").addEventListener("click", function () {
-      GazePry.wipeState();
+    document.getElementById("clearStateBtn").addEventListener("click", function () {
+      GazePry.clearWebState();
       document.getElementById("wipeNote").textContent =
-        "Wiped cookies + storage + the tracker's local model. Now click ‘Re-capture 20 s probe’ again — the match still works.";
+        "Cleared cookies + storage (identity-irrelevant). Re-capture a 20 s probe — the match still lands, " +
+        "because nothing about who you are was ever stored in the browser. This is the genuine unclearable point.";
+    });
+
+    document.getElementById("clearModelBtn").addEventListener("click", function () {
+      GazePry.clearTrackerModel();
+      document.getElementById("wipeNote").textContent =
+        "Cleared the tracker's calibration model. The sensor is now uncalibrated: an immediate probe may miss — " +
+        "that is a calibration artifact, not identity loss. Browse/click for a few seconds (as you naturally would) " +
+        "so the tracker silently re-calibrates, then re-probe. A wipe buys time, not anonymity.";
     });
   </script>
 </body>

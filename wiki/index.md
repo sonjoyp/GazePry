@@ -45,7 +45,12 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 [33], [[makowski-2021-deepeyedentification-live]] [34],
 [[lohr-2022-eye-know-you-too]] [20], [[al-zaidawi-2022-multi-dataset]] [35],
 [[aziz-2026-gaze-offset-fusion]] [29], [[griffith-2021-gazebase]] [36],
-[[lohr-2023-gazebasevr]] [37].
+[[lohr-2023-gazebasevr]] [37]. *Added to plan §21 on 2026-07-13 as [50]–[54]:*
+[[eberz-2016-looks-like-eve]] [50] (cross-task, 50 Hz — closest prior art),
+[[liao-2022-wayfinding]] [51] (stimulus-independent, real-world),
+[[rigas-2016-saccadic-vigor]] [52] (saccade dynamics),
+[[li-2018-texture-features]] [53] (scanpath texture, template aging),
+[[galdi-2016-critical-survey]] [54] (survey + provenance of the withdrawn 5.8% figure).
 
 **Content-dependent gaze attacks** — [[chen-2018-eyetell]] [27],
 [[wang-2020-gazerevealer]] [8], [[wang-2024-gazeploit]] [14],
@@ -146,6 +151,8 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
   cross_task_cross_session).
 - [[reid-metrics]] — rank-1/rank-5, CMC, EER, ROC; the two headline curves.
 - [[synthetic-data-results]] — verify-without-a-webcam sanity numbers.
+- [[pilot-empirical-status]] — the N=2 pilot state; no re-ID claim is evidence
+  yet (read before quoting any harness number).
 - [[cross-origin-collector]] — the literal cross-origin linkage demo.
 - [[gaze-perturbation-defense]] — the optional RQ5 defense.
 - [[related-work-direction-1]] — positioning and the gap being filled.

@@ -4,7 +4,7 @@ tags: [biometrics, oculomotor, foundations]
 aliases: [Eye-Movement Biometrics, Oculomotor Biometrics, Main Sequence, Scanpath Biometrics]
 sources: [information-leakage-report, reid-research-plan, prototype-code]
 reviewed: false
-updated: 2026-07-11
+updated: 2026-07-13
 ---
 
 **Eye-movement biometrics** is the mature research field establishing that
@@ -28,7 +28,21 @@ exists.
   commodity gap ([[ceiling-vs-commodity]]).
 - Task-independence is the weak spot the plan exploits: Kinnunen et al. [32] is
   the canonical task-independent authentication attempt (honest failure modes:
-  small pool, high error) — the anchor for [[cross-task-generalization]].
+  small pool, high error) — the anchor for [[cross-task-generalization]]. Two
+  stronger, later data points (added to plan §21 on 2026-07-13): **Eberz et al.
+  2016 [50]** ([[eberz-2016-looks-like-eve]]) authenticates across reading/writing/browsing
+  with error comparable to a fixed task set **and still works at 50 Hz**, and
+  **Liao et al. 2022 [51]** ([[liao-2022-wayfinding]]) does implicit,
+  stimulus-independent ID in **real-world** wayfinding (78% / EER 6.3%, dropping
+  to 64% leave-one-route-out) — cross-task recognition is feasible, but both are
+  cooperative IR/mobile trackers, not covert webcam re-ID.
+- **Feature families beyond fixation/saccade statistics:** saccadic *vigor* +
+  acceleration (the main-sequence dynamics, Rigas et al. 2016 **[52]**
+  [[rigas-2016-saccadic-vigor]], EyeLink 1000 / 322 subjects) and *texture* of
+  the scanpath trajectory (GWT, Li et al. 2018 **[53]**
+  [[li-2018-texture-features]], EER ≈0.89% short-term). Rigas notes the vigor signal occupies a **>75 Hz band**;
+  Li et al. show **template aging inflates EER 74–1075%** — both are cautions for
+  the ~30 Hz, long-interval webcam cell.
 - Two modeling routes (plan §12): (a) hand-crafted features + classifier
   (the harness's [[gaze-feature-extraction|16-feature]] route, robust at small
   N; interpretable score-fusion lineage [31]); (b) end-to-end deep model
@@ -46,6 +60,10 @@ exists.
 - [[gaze-feature-extraction]] — route (a), as implemented.
 - [[ceiling-vs-commodity]] — the IR-vs-webcam gap this ceiling defines.
 - [[gazebase]] — public data for the deep/ceiling model.
+- [[eberz-2016-looks-like-eve]] — closest cross-task + low-rate (50 Hz) prior art.
+- [[liao-2022-wayfinding]] — stimulus-independent recognition in the real world.
+- [[rigas-2016-saccadic-vigor]], [[li-2018-texture-features]] — saccade-dynamics
+  and scanpath-texture feature families (high-Hz / template-aging cautions).
 - [[related-work-direction-1]] — the full biometrics lineage [30]–[37].
 
 ## Mentions in sources

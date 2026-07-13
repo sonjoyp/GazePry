@@ -4,7 +4,7 @@ tags: [related-work, literature, positioning]
 aliases: [Related Work, Related Work Direction 1, The Gap, Prior Work]
 sources: [reid-research-plan]
 reviewed: false
-updated: 2026-07-11
+updated: 2026-07-13
 ---
 
 How the [[reid-research-plan]] is positioned against prior work (plan §18,
@@ -23,7 +23,14 @@ setting, task-transfer, framing}.
   template-aging [35]. Research-grade IR ceilings, not the webcam threat.
 - **The cross-task problem** ([[cross-task-generalization]], RQ2): Kinnunen et
   al. [32] — the canonical task-independent authentication paper; the closest
-  prior framing, under-studied.
+  prior *framing*, under-studied. Two stronger data points (added to plan §21 on
+  2026-07-13): **Eberz et al. 2016 [50]** ([[eberz-2016-looks-like-eve]]) is the
+  **closest prior art overall** — cross-task authentication
+  (reading/writing/browsing) that still works at **50 Hz** — and **Liao et al.
+  2022 [51]** ([[liao-2022-wayfinding]]) shows stimulus-independent ID in
+  real-world wayfinding (leave-one-route-out). Both strengthen "cross-task
+  recognition exists"; neither closes the gap (see below). Plan §18.1 adds Rigas
+  [52], Li [53], and the Galdi survey [54] to the foundations.
 - **Longitudinal / large-N datasets** ([[gazebase]]): GazeBase [36], GazeBaseVR
   [37], JuDo1000 [38].
 - **Behavioral biometrics as an unclearable, scalable identifier** (the
@@ -63,6 +70,17 @@ cross-site* transfer measured as a tracking threat, (iii) the first
 stateless, [[person-bound-fingerprint|person-bound]], [[unclearability|
 unclearable]] web identifier. Any one axis alone is not publishable; the stack
 is. The reusable one-paragraph novelty statement lives in plan Appendix A.9.
+
+**Handling the closest prior art — Eberz et al. 2016 [50]**
+([[eberz-2016-looks-like-eve]]). A reviewer *will* cite it: cross-task, 50 Hz,
+2-week stable. Pre-empt it with three distinctions the paper itself grants —
+(1) it **downsamples clean 500 Hz IR** to 50 Hz, not a natively ~30 Hz noisy
+self-calibrating webcam (the [[ceiling-vs-commodity]] gap); (2) it **authenticates
+a cooperating, enrolled** user (1:1 defense) rather than covertly
+**re-identifying** an unconsented one (1:N attack); (3) it lives on a
+**workstation**, with no browser, [[same-origin-policy]], or
+[[unclearability|unclearable]] cross-site framing. It establishes feasibility of
+two ingredients; it does not occupy the cell.
 
 ## Related
 

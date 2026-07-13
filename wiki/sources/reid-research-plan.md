@@ -4,7 +4,7 @@ tags: [research-plan, threat-model, re-identification, study-design]
 aliases: [ReID Research Plan, Research Plan, GazePry_ReID_Research_Plan, Cross-Site Gaze Re-Identification Research Plan]
 sources: [reid-research-plan]
 reviewed: false
-updated: 2026-07-11
+updated: 2026-07-13
 ---
 
 The consolidated blueprint for the [[gazepry]] paper: *Cross-Site Gaze
@@ -14,12 +14,47 @@ Re-Identification as an Unclearable Web Tracking Vector*
 [[direction-1-study-protocol]] (now Parts II–III, the plan proper) into one
 self-contained document; both predecessors are frozen in `raw/`. This is now the
 **living planning document** and holds the project's canonical bibliography
-(§21, entries [1]–[49]) together with per-citation verification status.
+(§21, entries [1]–[54] — [50]–[54] appended 2026-07-13) together with
+per-citation verification status.
 
 **Reviewer-hardening pass (2026-07-11).** After the full literature ingest the
 plan gained **Appendix A** (reviewer-facing novelty defense + threats to
 validity) and three surgical corrections to previously shaky claims — see the
 new-material summary below.
+
+**Confounds/empirical-status pass (commit 4c616bb, 2026-07-12).** A pipeline
+refactor added **§19a Current empirical status**, split **RQ4** into two axes,
+and rewrote the **§9 sampling-rate caveat** around a logged-vs-true-rate trap —
+folded into the wiki 2026-07-13. Key new facts:
+- **§19a — no re-ID claim is yet supported by data.** The pilot is **N=2** real
+  participants (P01, P02 on WebGazer; gallery size 2 → chance rank-1 = 0.5), plus
+  P01 alone on WebEyeTrack (unscorable, 1-person gallery). Headline pilot number
+  is **not a result**: WebGazer cross-task/cross-session **rank-1 ≈0.75, EER
+  ≈0.32, shuffled-label null ≈0.50** — a thin margin over two identities. All
+  pilot "sessions" are **same-sitting** (≈6–14 min apart); the ≥1-week
+  cross-session cells (the real RQ1/RQ4 threat) are **empty**. See
+  [[pilot-empirical-status]].
+- **Logged-vs-true-rate confound (§9).** WebGazer logs at the browser
+  `requestAnimationFrame` cadence (**pilot: ~50 Hz P01 vs ~110 Hz P02**), not the
+  true ~30 Hz camera rate — so **capture rate is correlated with identity**. New
+  mitigation in `analysis/`: `features.resample` / `reid-core.js resample` (JS↔Py
+  parity-tested) + a **rate-equalized negative control** (`reid.py`, default). See
+  [[gaze-feature-extraction]], [[analysis-pipeline]], [[ceiling-vs-commodity]].
+- **RQ4 split into two axes.** *(a) web-state clearing* (cookies/cache/incognito/
+  fresh profile) removes no identity — the genuine [[unclearability|unclearable]]
+  point; *(b) calibration-model clearing* degrades the **sensor** and silently
+  re-trains from clicks, so a post-wipe miss is a **calibration artifact, not
+  identity loss** — a wipe "buys time, not anonymity," and the deliverable is the
+  **recovery curve**. The harness now exposes the two as separate actions with
+  `intervention`/`calibQuality` metadata. See [[unclearability]].
+- **RQ0 is the gate.** The confound battery (calibration-swap, cross-tracker,
+  shuffled-null, **rate-equalized**) is the precondition for every other RQ;
+  treat H1–H4 as pre-registered predictions until it runs on a real cohort
+  ([[reid-confound-controls]]).
+- **Modeling status.** Route (a) currently = 16 hand-crafted features + a
+  **diagonal-Mahalanobis nearest-neighbour** matcher; a learned metric / richer
+  features are **deferred until N supports validating them**
+  ([[gaze-feature-extraction]]).
 
 ## Key facts
 
@@ -84,9 +119,11 @@ new-material summary below.
   participant gaze files before release).
 - **§21 corrections (supersede earlier drafts):** George & Routray [31] is
   **EER ≈2.59%** (BioEye 2015, random-stimulus) — the earlier "≈5.8%, 320
-  subjects" did not check out; EyeTell [27] ≈70% top-5 is the **Android
-  lock-pattern** result, not a 6-digit-PIN result; EKYT [20] EER must always be
-  quoted with its window. Preprint-flagged (numbers indicative): [16], [18],
+  subjects" did not check out (and [[galdi-2016-critical-survey|Galdi's survey]]
+  attributes that exact 88.6%/5.8%/320-subject figure to a **Rigas multi-stimulus
+  fusion scheme**, not George & Routray); EyeTell [27] ≈70% top-5 is the
+  **Android lock-pattern** result, not a 6-digit-PIN result; EKYT [20] EER must
+  always be quoted with its window. Preprint-flagged (numbers indicative): [16], [18],
   [23], [25], [26], [29], [35], [41]; cite the published versions of [20]
   (IEEE TIFS) and [35] (Signal Processing: Image Communication).
 

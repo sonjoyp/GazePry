@@ -245,3 +245,107 @@ mechanics), and confounds ([[reid-confound-controls]]) — not novelty.
 **Lint:** re-ran the Python sweep — 0 dead links, 0 orphans across the vault
 (now 115 pages; the only raw matches are `\|`-escaped table pipes, which
 Obsidian resolves).
+
+---
+
+## 2026-07-13 — INGEST (5 new biometrics papers + research-plan confounds pass)
+
+Triggered by "ingest". Two bodies of new material since the 2026-07-11 passes:
+**(A)** five PDFs added to `raw/` (commit c25ac14), and **(B)** a research-plan
+update (commit 4c616bb, 2026-07-12) that landed after
+[[reid-research-plan]]'s `updated` date. Text extracted with the scratchpad
+PyMuPDF venv (Read's PDF path lacks poppler here) and read end-to-end.
+
+**A — Source pages created (5).** All five are **eye-movement biometrics** papers.
+At first ingest none was in the plan's §21, so they were written up author-year;
+later in this same session they were **added to the plan §21 as [50]–[54]** (see
+the "Plan document updated" subsection below), and the pages now cite those
+numbers — never their `raw/related-papers.txt` numbers ([63]–[67], a
+collection-export index that does not match project citations; SCHEMA trap):
+- [[eberz-2016-looks-like-eve]] — *Looks Like Eve* (Oxford, ACM TOPS 2016).
+  **Closest external prior art:** cross-task auth (reading/writing/browsing) that
+  still works at **50 Hz**, 2-week stable, EER ≈1.0%. Recorded the three
+  distinctions that keep GazePry's gap open (downsampled clean IR ≠ native webcam;
+  authentication ≠ covert re-ID; workstation ≠ open web).
+- [[liao-2022-wayfinding]] — stimulus-independent ID in real-world wayfinding
+  (SMI ETG 60 Hz, 39 subjects; 78%/EER 6.3%, leave-one-route-out 64%). The
+  real-world analogue of [[cross-task-generalization]].
+- [[rigas-2016-saccadic-vigor]] — saccadic vigor + acceleration into CEM-B
+  (EyeLink 1000, 322 subjects; final EER ≈11.92%). Vigor sits in a **>75 Hz
+  band** → literature support for "which saccade features survive the webcam rate."
+- [[li-2018-texture-features]] — GWT scanpath-texture features (Tobii TX300, 58
+  subjects; EER ≈0.89% short-term) with **template aging inflating EER
+  74–1075%** — a caution for the long-interval cross-session cell.
+- [[galdi-2016-critical-survey]] — critical survey; **resolves a standing
+  correction**: attributes the "Rank-1 88.6% / EER 5.8% / 320 subjects" figure
+  (once misattributed to George & Routray, withdrawn in plan §21) to a **Rigas
+  multi-stimulus fusion scheme**. Noted on [[reid-research-plan]] §21 and the
+  Galdi/[[rigas-2016-saccadic-vigor]] pages (exact Rigas paper still to pin —
+  Open question).
+
+*(The evidence-summary Eberz/Liao rows and the related-work / cross-task mentions
+were first written author-year, then renumbered to [50]/[51] in the plan-update
+subsection below.)*
+
+**A — Concepts updated (5):** [[eye-movement-biometrics]] (low-rate/cross-task
+evidence + vigor/texture feature families), [[evidence-summary]] (added Eberz +
+Liao rows, author-year), [[related-work-direction-1]] (Eberz as closest prior
+art with the three distinctions; Liao under task-independence),
+[[cross-task-generalization]] (Eberz/Liao as external evidence),
+[[ceiling-vs-commodity]] (which features die at low rate: Eberz microsaccade
+degradation, Rigas >75 Hz band).
+
+**B — Research-plan re-ingest (commit 4c616bb).** Folded the plan's confounds/
+empirical-status pass into [[reid-research-plan]] and the affected pages:
+- **New concept [[pilot-empirical-status]]** (plan §19a): the "read before quoting
+  any number" state — **N=2 pilot**, WebGazer cross-task/cross-session rank-1
+  ≈0.75 (chance 0.5), EER ≈0.32, shuffled-null ≈0.50; all sessions same-sitting
+  (≥1-week cells empty); a **rate confound** (P01 ≈50 Hz vs P02 ≈110 Hz logged);
+  RQ0 unanswered. Linked from [[gazepry]], [[evidence-summary]],
+  [[synthetic-data-results]], [[research-questions-rq1-rq5]],
+  [[reid-confound-controls]], [[analysis-pipeline]].
+- **RQ4 corrected** ([[unclearability]], [[research-questions-rq1-rq5]]): split
+  into *(a) web-state clearing* (genuine unclearable point, server-side matching)
+  vs *(b) calibration-model clearing* (degrades the sensor, silently re-trains —
+  a wipe "buys time, not anonymity"; deliverable = recovery curve). The earlier
+  "wipe everything, match still lands" demo description was **wrong** and is fixed.
+- **Rate confound / resample** ([[gaze-feature-extraction]], [[analysis-pipeline]],
+  [[ceiling-vs-commodity]], [[reid-confound-controls]]): logged rate =
+  `requestAnimationFrame` cadence, not true ~30 Hz, and varies by participant →
+  confound correlated with identity. New `features.resample`/`reid-core.js
+  resample` (JS↔Py parity-tested) + rate-equalized negative control (`reid.py`
+  default), plus data-quality guard and returning-visitor `min_gap_days` gate.
+- **RQ0 elevated to the gate** ([[reid-confound-controls]],
+  [[research-questions-rq1-rq5]]); **modeling status** recorded (16 features +
+  diagonal-Mahalanobis NN; learned metric deferred until N supports it).
+
+**Plan document updated ([50]–[54], user-requested).** On request, the five
+papers were woven into `GazePry_ReID_Research_Plan.md` itself — the "add a
+genuinely new reference to the source document first, then reflect it in the
+wiki" flow (SCHEMA). Added **§21 entries [50]–[54]** (Eberz, Liao, Rigas, Li,
+Galdi — all peer-reviewed, details verified from the PDFs), continuing the plan's
+own numbering (**not** the `related-papers.txt` [63]–[67]). Cited in **§18.1**
+(Rigas/Li foundations + Galdi survey), **§18.2** (Eberz as closest prior art with
+three distinctions; Liao stimulus-independence), **§18.8** and **A.1** (the gap /
+"just a worse sensor" rebuttal), **§9** and **A.5** (Eberz 50 Hz + microsaccade
+degradation, Rigas >75 Hz band), and the **§21 [31] verification note** (Galdi
+names the Rigas-fusion source of the withdrawn 88.6%/5.8%/320-subject figure).
+Re-synced the wiki to the new numbers: [[SCHEMA]] ([1]–[54]; related-papers now
+[1]–[67]), the five `sources/` pages, [[eye-movement-biometrics]],
+[[evidence-summary]], [[related-work-direction-1]], [[cross-task-generalization]],
+[[ceiling-vs-commodity]], [[reid-research-plan]], and [[index]].
+
+**Non-paper raw handling:** `raw/related-papers.txt` grew to [1]–[67] (commit
+c25ac14) — still a collection export, still **not** the project numbering (SCHEMA
+trap unchanged; no page).
+
+**Lint (post-ingest):** Python sweep over **121 pages — 1309 resolved
+`[[links]]`, 0 dead links, 0 orphans**. The only raw regex hits are SCHEMA/log's
+literal `[[links]]` examples and `\|`-escaped table pipes (both valid); a second
+normalized pass confirmed 0 real dead links.
+
+**Still open for a human** (carried forward): IRB exempt-vs-critical-path
+contradiction; participant `data/*.json` logs tracked in git against `CLAUDE.md`
+policy (now P01 S1–S3 + P02 S1–S2); README dead links to moved docs; GazeBaseVR
+and Al Zaidawi DOI fixes in the plan source; pin the exact Rigas fusion paper
+behind the 88.6%/5.8%/320-subject figure.

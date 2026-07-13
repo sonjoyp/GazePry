@@ -402,7 +402,10 @@ Mitigation, now implemented in `analysis/`: **resample every session to a common
 feature extraction** (`features.resample` / `reid-core.js resample`, JS↔Py parity-tested) and run
 the **rate-equalized negative control** (`reid.py`, printed by default) — if re-ID collapses once
 rate is equalized, the "signal" was cadence. Down-sample Gazepoint to the same common rate for the
-*fair* comparison arm, and report which features survive it.
+*fair* comparison arm, and report which features survive it. The literature predicts the
+casualties: Eberz [50] shows authentication survives to 50 Hz but **microsaccade-tied features
+degrade most**, and Rigas [52] locates saccadic vigor in a **>75 Hz band** — but note Eberz
+*decimates a clean 500 Hz IR* stream, so it bounds the best case, not the natively noisy webcam.
 
 **Harness status (implementation).** The capture harness is built and in this repo: a
 *tracker-agnostic* orchestrator drives one self-registering adapter per tracker (WebGazer,
@@ -591,6 +594,21 @@ the commodity gap (RQ3).
 - **Al Zaidawi et al. [35]** — cross-dataset identification and explicit **template-aging**
   analysis; directly relevant to the cross-session stability claim (RQ4) and to honest
   degradation reporting.
+- **Rigas, Komogortsev & Shadmehr [52]** — adds **saccadic vigor and acceleration** (the
+  main-sequence dynamics) to the CEM-B framework on 322 subjects at 1000 Hz across random-dot /
+  text / video stimuli. Two uses here: it names the peak-velocity-vs-amplitude features route
+  (a) leans on, and it locates the vigor signal in a **>75 Hz band** — direct evidence for the
+  §9 caveat that a ~30 Hz webcam cannot resolve these cues (feeds the "which features survive"
+  finding, A.5).
+- **Li et al. [53]** — texture (Gabor-wavelet) features of the scanpath *trajectory* on a
+  **visual-search** task (58 subjects, Tobii TX300); best EER ≈0.89% short-term but with
+  **template aging inflating EER by 74–1075%** — a concrete long-interval degradation number to
+  set expectations for the ≥1-week cell, and a search-task analogue for the SERP "site" (§6).
+- **Galdi et al. [54]** — a **critical survey** of gaze-for-authentication that flags the
+  field's lack of shared datasets/protocols and the difficulty of **uncontrolled settings**
+  (remote trackers, webcams) — the exact regime this plan operates in. It also names the source
+  of the withdrawn "88.6% Rank-1 / 5.8% EER / 320 subjects" figure (a Rigas multi-stimulus
+  fusion scheme, *not* George & Routray — see the §21 verification note).
 
 ### 18.2 The cross-task problem — the RQ2 headline has precedent but is under-studied
 
@@ -602,6 +620,21 @@ tracking threat needs task/stimulus transfer ("enroll on site A, identify on sit
   RQ2 and should anchor the cross-task discussion — including its honest failure modes (small
   subject pool, high error rates), which motivate the plan's longer windows and distributional
   features.
+- **Eberz et al., "Looks Like Eve" [50]** — the **closest prior art overall**. It authenticates
+  users **across everyday tasks** (reading, writing, browsing, video) with error comparable to a
+  fixed task set, is **stable over a 2-week gap**, and **still works at 50 Hz** (downsampling a
+  500 Hz Tobii; microsaccade-tied features degrade most). A reviewer *will* cite it, so the plan
+  must pre-empt it with three distinctions it itself grants: (i) it decimates a **clean 500 Hz
+  IR** signal, not a natively ~30 Hz noisy self-calibrating webcam (the RQ3 gap); (ii) it
+  **authenticates a cooperating, enrolled** user (1:1 defense) rather than covertly
+  **re-identifying** an unconsented one (1:N attack); (iii) it runs on a **workstation** — no
+  browser, no same-origin boundary, no unclearable cross-site framing. It proves two ingredients
+  are feasible; it does not occupy the cell (see A.1).
+- **Liao et al. [51]** — implicit, **stimulus-independent** identification in **real-world
+  wayfinding** (SMI ETG glasses at 60 Hz, 39 subjects): 78% / EER 6.3% overall, and 64% /
+  EER 12.1% under a **leave-one-route-out** split — the real-world analogue of enroll-on-A /
+  identify-on-B. Evidence that stimulus-free transfer holds outside the lab, at an already-low
+  60 Hz rate; still a cooperative wearable IR tracker, not a covert webcam.
 
 ### 18.3 Longitudinal & large-N datasets (the ceiling and the gallery-size axis, §10, §13)
 
@@ -679,12 +712,13 @@ About You?" [21], and AR privacy-concern attitudes [28].
 ### 18.8 The gap this plan fills
 
 Stack the four axes and the white space is unambiguous: eye-movement biometrics is proven on
-**IR hardware** ([20], [30]–[37]); behavioral-biometric tracking at **scale/cross-device** is
-proven in **VR** ([39], [40], [42]); stateless web tracking is proven for **device-bound
-fingerprints** ([44]–[46]). No one has shown **commodity webcam gaze, on the open desktop web,
-re-identifying users cross-task and cross-site as an unclearable tracking channel**, and
-quantified its gap to the IR ceiling on the *same* subjects (RQ3). That intersection — not any
-single axis — is the contribution.
+**IR hardware** ([20], [30]–[37]); **cross-task / low-rate** recognition is proven, but only on
+cooperative **IR / mobile** trackers ([50] at 50 Hz downsampled, [51] at 60 Hz);
+behavioral-biometric tracking at **scale/cross-device** is proven in **VR** ([39], [40], [42]);
+stateless web tracking is proven for **device-bound fingerprints** ([44]–[46]). No one has shown
+**commodity webcam gaze, on the open desktop web, re-identifying users cross-task and cross-site
+as an unclearable tracking channel**, and quantified its gap to the IR ceiling on the *same*
+subjects (RQ3). That intersection — not any single axis — is the contribution.
 
 ## 19. Target venues and timeline
 
@@ -768,7 +802,11 @@ TVCG, IEEE TIFS, Pattern Recognition Letters).*
   to this paper. The published paper reports an **EER of about 2.59% on the random-stimulus
   task** using the BioEye 2015 competition data; the "320 subjects" figure did not check out.
   Quote the paper's own subject count and per-task EERs directly when writing the related-work
-  section.
+  section. **Provenance of the withdrawn figure:** Galdi et al.'s survey [54] attributes exactly
+  "Rank-1 IR 88.6%, EER 5.8%, 320 subjects" to a **Rigas et al. multi-stimulus, multi-biometric
+  fusion scheme** (jumping-point-of-light + text + video) — a sibling of [52], *not* George &
+  Routray. Cite that Rigas fusion paper directly if the number is used (pin its exact year/venue
+  first — the survey cites it via its own numbering).
 - **[27] EyeTell corrected.** The 4-digit-PIN figures are top-5 ≈65% and top-50 ≈90%; the
   ≈70% figure is the **Android lock-pattern** top-5 result, not a 6-digit PIN result. Verify
   any top-1 / 6-digit numbers against the paper's tables before quoting.
@@ -877,6 +915,16 @@ TVCG, IEEE TIFS, Pattern Recognition Letters).*
 
 [49] B. David-John, D. Hosfelt, K. Butler, and E. Jain, "For Your Eyes Only: Privacy-preserving eye-tracking datasets," in *Proc. 2022 Symp. Eye Tracking Research and Applications*, ETRA '22, ACM, Jun. 2022, pp. 1–6, doi: 10.1145/3517031.3529618.
 
+[50] S. Eberz, K. B. Rasmussen, V. Lenders, and I. Martinovic, "Looks Like Eve: Exposing Insider Threats Using Eye Movement Biometrics," *ACM Trans. Priv. Secur.*, vol. 19, no. 1, art. 1, pp. 1:1–1:31, Jun. 2016, doi: 10.1145/2904018. *(Cross-task continuous authentication, 2-week-stable, reliable down to 50 Hz on a downsampled 500 Hz Tobii; 30 subjects.)*
+
+[51] H. Liao, W. Zhao, C. Zhang, and W. Dong, "Exploring Eye Movement Biometrics in Real-World Activities: A Case Study of Wayfinding," *Sensors*, vol. 22, no. 8, art. 2949, Apr. 2022, doi: 10.3390/s22082949. *(Implicit, stimulus-independent ID in real-world wayfinding; SMI ETG glasses at 60 Hz, 39 subjects; leave-one-route-out 64% / EER 12.1%.)*
+
+[52] I. Rigas, O. Komogortsev, and R. Shadmehr, "Biometric Recognition via Eye Movements: Saccadic Vigor and Acceleration Cues," *ACM Trans. Appl. Percept.*, vol. 13, no. 2, art. 6, pp. 6:1–6:21, Jan. 2016, doi: 10.1145/2842614. *(Saccadic vigor/acceleration added to CEM-B; EyeLink 1000 at 1000 Hz, 322 subjects; vigor signal in a >75 Hz band.)*
+
+[53] C. Li, J. Xue, C. Quan, J. Yue, and C. Zhang, "Biometric recognition via texture features of eye movement trajectories in a visual searching task," *PLoS ONE*, vol. 13, no. 4, art. e0194475, Apr. 2018, doi: 10.1371/journal.pone.0194475. *(Gabor-wavelet scanpath-texture features; Tobii TX300, 58 subjects; EER ≈0.89% short-term, template aging inflates EER 74–1075%.)*
+
+[54] C. Galdi, M. Nappi, D. Riccio, and H. Wechsler, "Eye movement analysis for human authentication: a critical survey," *Pattern Recognition Letters*, vol. 84, pp. 272–283, Dec. 2016, doi: 10.1016/j.patrec.2016.11.002. *(Critical survey; standards/uncontrolled-settings critique; attributes the 88.6%/5.8%/320-subject figure to a Rigas fusion scheme — see the [31] verification note.)*
+
 ---
 
 # Appendix A — Novelty positioning, threat-model realism, and threats to validity
@@ -893,7 +941,10 @@ The empty cell is real. Stacking the four axes:
 - Eye-movement biometrics is proven, but only on **research-grade IR hardware**, cooperative
   enrollment, and framed as *authentication* — Holland [30], George & Routray [31] (EER ≈2.59%,
   153 subjects), Kinnunen [32], Deep Eyedentification [33], [34], Eye Know You Too [20]
-  (0.58% EER at 60 s → 3.66% at 5 s), Al Zaidawi [35].
+  (0.58% EER at 60 s → 3.66% at 5 s), Al Zaidawi [35], Rigas [52], Li [53]. **Cross-task and
+  low-rate are already shown** — Eberz [50] (cross-task, 2-week-stable, 50 Hz), Liao [51]
+  (stimulus-independent, real-world, 60 Hz) — but on cooperative IR/mobile trackers and as
+  *authentication*, never as covert commodity-webcam re-ID (the three distinctions in §18.2).
 - Behavioral re-ID at population **scale / cross-device** is proven, but only in **VR** — Nair
   55,541 users at 94.3% from 100 s [39], Miller 95% of 511 from <5 min [40], Patergianakis
   96.6% on GazeBaseVR video-watching [42].
@@ -1003,10 +1054,16 @@ shows a visible indicator — this is nothing like a silent cookie." Answers to 
   against you and you will have no answer on the page.
 - Report *which* features survive rate-equalization to a common cadence (fixation-duration
   statistics likely robust; saccade-velocity / main-sequence features likely degraded) — turning
-  the sampling-rate limitation into a finding. **Note the direction of the risk:** the danger is not
-  only that low true rate *weakens* saccade features, but that the *logged* rate varies across
-  sessions/participants and can *manufacture* a spurious identity signal (see the §9 sampling-rate
-  caveat); the rate-equalized control (`reid.py`) is what separates the two.
+  the sampling-rate limitation into a finding. This has **direct precedent**: Eberz [50] finds
+  authentication survives downsampling to 50 Hz but that **microsaccade-tied features degrade
+  most** (statistically significant), and Rigas [52] places the saccadic-vigor signal in a
+  **>75 Hz band** — so the expected casualty list is known in advance. **Note the direction of
+  the risk:** the danger is not only that low true rate *weakens* saccade features, but that the
+  *logged* rate varies across sessions/participants and can *manufacture* a spurious identity
+  signal (see the §9 sampling-rate caveat); the rate-equalized control (`reid.py`) is what
+  separates the two. (Caveat when citing Eberz: it decimates a **clean 500 Hz IR** stream,
+  whereas the webcam is *natively* low-rate and noisy — "50 Hz works" is encouraging, not
+  equivalent.)
 
 ## A.6 Ethics, IRB, disclosure, and artifact hygiene (table-stakes at top-tier security venues)
 

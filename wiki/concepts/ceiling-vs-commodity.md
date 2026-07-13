@@ -4,7 +4,7 @@ tags: [methodology, rq3, evaluation]
 aliases: [Ceiling vs Commodity, Ceiling vs. Commodity, RQ3, Hardware Gap]
 sources: [reid-research-plan, readme]
 reviewed: false
-updated: 2026-07-11
+updated: 2026-07-13
 ---
 
 **Ceiling vs commodity** is the RQ3 measurement: the EER/rank-1 gap between
@@ -30,9 +30,27 @@ of running both devices at once via the [[simultaneous-capture-rig]].
   independent accuracy reference only and is **never** used to train or correct
   the webcam gaze. Otherwise the "gap" collapses artificially. See
   [[simultaneous-capture-rig]] and [[reid-confound-controls]].
-- **Sampling-rate caveat:** webcam ≈30 Hz vs Gazepoint 60–150 Hz; down-sample
-  Gazepoint to the webcam rate for the *fair* arm, and report which
-  saccade-velocity features survive 30 Hz.
+- **Sampling-rate caveat (expanded, plan §9, 2026-07-12):** the webcam's *true*
+  frame rate is ~30 Hz, but trackers **log** at the browser `requestAnimationFrame`
+  cadence — in the pilot WebGazer logged **~50–120 Hz** by interpolating/repeating
+  predictions. Two consequences: (a) saccade-velocity / main-sequence features
+  computed on the logged stream partly encode *logging cadence*, not oculomotor
+  dynamics; and (b) the logged rate **differs across sessions/participants**
+  (pilot: P01 ≈50 Hz vs P02 ≈110 Hz), making capture rate a re-ID **confound
+  correlated with identity**. Mitigation now in `analysis/`: **resample every
+  session to a common cadence** before feature extraction (`features.resample` /
+  `reid-core.js resample`, JS↔Py parity-tested) and run the **rate-equalized
+  negative control** (`reid.py`, default) — if re-ID collapses once rate is
+  equalized, the "signal" was cadence ([[reid-confound-controls]]). Down-sample
+  Gazepoint to the same common rate for the *fair* arm, and report which features
+  survive.
+- **Literature on which features die at low rate:** Eberz et al. 2016 **[50]**
+  ([[eberz-2016-looks-like-eve]]) show authentication survives downsampling to
+  **50 Hz**, but **microsaccade-associated features degrade most** (p<0.05); Rigas
+  et al. 2016 **[52]** ([[rigas-2016-saccadic-vigor]]) note saccadic-vigor
+  information sits in a **>75 Hz band** at 1000 Hz. Caveat: Eberz *decimates clean IR*, whereas the
+  webcam is *natively* low-rate and noisy — "50 Hz works" is encouraging, not
+  equivalent.
 - Analysis distinguishes channels by the `tracker` field; both feed the same
   [[gaze-feature-extraction|features.py]].
 - **Honest framing:** even a degraded-but-non-random webcam EER is a publishable
@@ -46,6 +64,9 @@ of running both devices at once via the [[simultaneous-capture-rig]].
   — the five arms.
 - [[eye-movement-biometrics]] — the IR ceiling literature.
 - [[reid-metrics]] — the EER/rank-1 measured across arms.
+- [[reid-confound-controls]] — the rate-equalized negative control lives here too.
+- [[eberz-2016-looks-like-eve]], [[rigas-2016-saccadic-vigor]] — which features
+  survive low rate, and the frequency band vigor occupies.
 
 ## Mentions in sources
 

@@ -5,7 +5,7 @@ tags: [project, security, privacy, eye-tracking]
 aliases: [GazePry, GazePry Project]
 sources: [readme, information-leakage-report, direction-1-study-protocol]
 reviewed: false
-updated: 2026-07-10
+updated: 2026-07-13
 ---
 
 **GazePry** is a security/privacy research project studying what a
@@ -28,11 +28,16 @@ multi-tracker harness documented in [[readme]].
   [[gazepoint]] IR ceiling. The deprecated SearchGazer demo is archived in
   `legacy-searchgazer/`.
 - Institution context: TAMU (the plan's IRB gate is a TAMU protocol).
+- **Empirical status (plan §19a):** the study is at an **N=2 pilot** — a
+  pipeline/feasibility check, **not evidence yet**. No re-ID claim is supported by
+  data; RQ0 (confounds) is the gate. See [[pilot-empirical-status]] before
+  quoting any harness number.
 
 ## Related
 
 - [[reid-research-plan]] — the living blueprint (thesis, apparatus, metrics,
   bibliography §21).
+- [[pilot-empirical-status]] — current N=2 pilot state and its caveats.
 - [[information-leakage-report]], [[direction-1-study-protocol]] — the frozen
   predecessor documents.
 - [[drive-by-web-adversary]] — the threat model that distinguishes GazePry from

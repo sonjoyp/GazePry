@@ -65,8 +65,3 @@
 [65] C. Galdi, M. Nappi, D. Riccio, and H. Wechsler, “Eye movement analysis for human authentication: a critical survey,” Pattern Recognition Letters, vol. 84, pp. 272–283, Dec. 2016, doi: 10.1016/j.patrec.2016.11.002.
 [66] I. Rigas, O. Komogortsev, and R. Shadmehr, “Biometric Recognition via Eye Movements: Saccadic Vigor and Acceleration Cues,” ACM Trans. Appl. Percept., vol. 13, no. 2, p. 6:1-6:21, Jan. 2016, doi: 10.1145/2842614.
 [67] C. Li, J. Xue, C. Quan, J. Yue, and C. Zhang, “Biometric recognition via texture features of eye movement trajectories in a visual searching task,” PLoS One, vol. 13, no. 4, p. e0194475, Apr. 2018, doi: 10.1371/journal.pone.0194475.
-
-
-
-
-

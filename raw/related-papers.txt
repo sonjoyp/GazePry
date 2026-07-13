@@ -60,3 +60,13 @@
 [60] S. Zimmeck, J. S. Li, H. Kim, S. M. Bellovin, and T. Jebara, “A Privacy Analysis of Cross-device Tracking,” in 26th USENIX Security Symposium (USENIX Security 17), 2017, pp. 1391–1408. Accessed: Jul. 09, 2026. [Online]. Available: https://www.usenix.org/conference/usenixsecurity17/technical-sessions/presentation/zimmeck
 [61] V. Nair et al., “Unique Identification of 50,000+ Virtual Reality Users from Head & Hand Motion Data,” presented at the 32nd USENIX Security Symposium (USENIX Security 23), 2023, pp. 895–910. Accessed: Jul. 09, 2026. [Online]. Available: https://www.usenix.org/conference/usenixsecurity23/presentation/nair-identification
 [62] J. Li, A. R. Chowdhury, K. Fawaz, and Y. Kim, “Kalεido: Real-Time Privacy Control for Eye-Tracking Systems,” presented at the 30th USENIX Security Symposium (USENIX Security 21), 2021, pp. 1793–1810. Accessed: Jul. 09, 2026. [Online]. Available: https://www.usenix.org/conference/usenixsecurity21/presentation/li-jingjie
+[63] H. Liao, W. Zhao, C. Zhang, and W. Dong, “Exploring Eye Movement Biometrics in Real-World Activities: A Case Study of Wayfinding,” Sensors (Basel), vol. 22, no. 8, p. 2949, Apr. 2022, doi: 10.3390/s22082949.
+[64] S. Eberz, K. B. Rasmussen, V. Lenders, and I. Martinovic, “Looks Like Eve: Exposing Insider Threats Using Eye Movement Biometrics,” ACM Trans. Priv. Secur., vol. 19, no. 1, p. 1:1-1:31, Jun. 2016, doi: 10.1145/2904018.
+[65] C. Galdi, M. Nappi, D. Riccio, and H. Wechsler, “Eye movement analysis for human authentication: a critical survey,” Pattern Recognition Letters, vol. 84, pp. 272–283, Dec. 2016, doi: 10.1016/j.patrec.2016.11.002.
+[66] I. Rigas, O. Komogortsev, and R. Shadmehr, “Biometric Recognition via Eye Movements: Saccadic Vigor and Acceleration Cues,” ACM Trans. Appl. Percept., vol. 13, no. 2, p. 6:1-6:21, Jan. 2016, doi: 10.1145/2842614.
+[67] C. Li, J. Xue, C. Quan, J. Yue, and C. Zhang, “Biometric recognition via texture features of eye movement trajectories in a visual searching task,” PLoS One, vol. 13, no. 4, p. e0194475, Apr. 2018, doi: 10.1371/journal.pone.0194475.
+
+
+
+
+

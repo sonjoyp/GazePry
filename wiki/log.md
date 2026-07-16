@@ -349,3 +349,79 @@ contradiction; participant `data/*.json` logs tracked in git against `CLAUDE.md`
 policy (now P01 S1–S3 + P02 S1–S2); README dead links to moved docs; GazeBaseVR
 and Al Zaidawi DOI fixes in the plan source; pin the exact Rigas fusion paper
 behind the 88.6%/5.8%/320-subject figure.
+
+---
+
+## 2026-07-16 — INGEST (Direction 2 blueprint + 12 reading/search/cursor papers)
+
+Triggered by a user request to (a) write a full D2 — *reading content & search
+intent* — direction and (b) "always update the wiki based on the new relevant
+papers." D2 was previously only a row in [[leakage-vectors-d1-d6]]; it is now a
+developed direction. The user's brief: webcam **eye-tracking + mouse-tracking**
+that leaks **non-gaze-biometric** information — satisfied by D2 (payload =
+content/intent, not identity) with the mouse promoted to a first-class channel.
+
+**New source doc:** `GazePry_D2_Reading_Search_Intent_Direction.md` (repo root) →
+[[d2-reading-search-intent-direction]]. *"No Clicks, No Privacy"* — first-party,
+within-site reconstruction of considered-but-unclicked / zero-click / re-read
+intent from webcam gaze + permission-free cursor; **surveillance surplus** over
+the clickstream; **cursor floor vs gaze ceiling** (the D2 analogue of
+[[ceiling-vs-commodity]]). Confronts the two D2 killers head-on: the same-origin
+objection ([[same-origin-policy]] — scoped within-site, no cross-site claim) and
+webcam coarseness ([[thilderkvist-2024-limitations]] — coarse-AOI only).
+
+**New paper source pages (12).** Retrieved and bibliographically **verified via web
+search 2026-07-16** (venue/DOI/pages/authors); each page is grounded in the
+retrieved **abstract/metadata, not a full-PDF read** (flagged on the page — a
+deep-read pass is the follow-up). These fill the **mouse-cursor + search-behavior
+gap** the project bibliography entirely lacked. Cited **author-year** per the
+SCHEMA trap (not in plan §21); the D2 doc's local labels **G/B/A/Q/R** are
+doc-local, *not* shared numbering:
+- *Cursor-as-gaze-proxy (G):* [[guo-2010-gaze-from-cursor]] [G1],
+  [[huang-2011-no-clicks-no-problem]] [G2] (the paper D2 inverts),
+  [[huang-2012-gaze-cursor-alignment]] [G3] (alignment strongest on SERPs),
+  [[leiva-2020-attentive-cursor]] [G4], [[latifzadeh-2025-serp-mouse-eye]] [G5]
+  (**preprint** — simultaneous mouse+eye SERP dataset).
+- *Reading/relevance (B, R):* [[buscher-2008-implicit-relevance]] [B1],
+  [[buscher-2012-attentive-documents]] [B2], [[rayner-1998-reading-eye-movements]]
+  [R1].
+- *Zero-click / good abandonment (A):* [[li-2009-good-abandonment]] [A1],
+  [[williams-2016-good-abandonment]] [A2] (**DOL to verify**).
+- *Query-log / web-search privacy (Q):* [[jones-2007-query-log-privacy]] [Q1],
+  [[gervais-2014-web-search-privacy]] [Q2] (CCS '14 — the top-venue precedent;
+  **author list to verify**).
+
+**New concepts (2):** [[reading-search-intent-leakage]] (vector D2 as a direction:
+examination-surplus, zero-click intent, extends query-log privacy, RQ0 saliency-
+prior gate) and [[cursor-tracking]] (permission-free mouse-as-gaze-proxy; distinct
+from [[covert-calibration]], which uses clicks only to train the regression).
+
+**Bidirectional links added** to [[leakage-vectors-d1-d6]] (D2 row now links the
+direction; new "D2 is a developed direction" note + Related), [[two-regimes-of-leakage]]
+(content-dependent regime hosts a real within-site threat), [[searchgazer]] (its
+benign AOI tool is what D2 weaponizes), [[task-suite]] (SERP = D2 headline surface;
+needs zero-click variants + first-class cursor logging), [[gaze-feature-extraction]]
+(D2 adds a separate AOI-anchored cursor extractor — content-*anchored*, vs D4's
+content-*independent* 16-D). [[index]] updated (new source doc, a "Reading,
+search-behavior & cursor tracking (D2)" paper group, a "reading/search-intent
+thesis (Direction 2)" concept block).
+
+**Citation-convention decision (SCHEMA-compliant):** the 12 papers are **not**
+added to the canonical plan §21 numbering — that shared-bib merge is a flagged
+next step (D2 doc §12 step 6) requiring a source-doc edit the user has not asked
+for. Until then, wiki cites them author-year, exactly as the ~11 non-§21
+webcam-validation papers are handled.
+
+**Lint (post-ingest):** Python sweep over **136 pages — 1509 `[[links]]`, 0 real
+dead links, 0 orphaned new pages**. The sweep first caught **2 genuine bugs** — a
+`[[reading-search-intent-leakage]]` link split across a line break in
+[[jones-2007-query-log-privacy]] and [[li-2009-good-abandonment]] (Obsidian won't
+resolve a newline inside a link) — both **fixed**, then re-verified clean. Remaining
+regex hits are the known `\|`-escaped table pipes (Obsidian-valid).
+
+**Open for a human / next passes:** (1) deep-read the 12 PDFs to deepen each source
+page beyond the abstract (Open questions flag the specifics — e.g. Guo & Agichtein's
+cursor feature set, the datasets' licensing); (2) verify the [A2] Williams DOI and
+[Q2] Gervais author list against the ACM DL; (3) if D2 advances, **merge G/B/A/Q/R
+into plan §21** as new shared-bib numbers ([55]–…), then re-sync the wiki (the
+[50]–[54] flow). Prior open items unchanged.

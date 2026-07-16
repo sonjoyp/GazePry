@@ -14,6 +14,9 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 **Project documents & code**
 - [[reid-research-plan]] — the living blueprint (motivation + study plan +
   positioning); canonical bibliography [1]–[49] in §21.
+- [[d2-reading-search-intent-direction]] — the **Direction 2** blueprint
+  (*"No Clicks, No Privacy"*): reading/search-intent leakage via webcam gaze +
+  permission-free [[cursor-tracking]]; own bibliography (groups G/B/A/Q/R).
 - [[readme]] — repo front door **and** harness manual: quick start, pluggable
   trackers, tests, rig/cross-origin recipes.
 - [[information-leakage-report]] — threat-model survey (frozen in `raw/`; now
@@ -80,6 +83,16 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 [[danry-2026-gaze-to-guidance]] [26], [[dmello-2012-gaze-tutor]] [1],
 [[dmello-2012-autotutor]] [2].
 
+**Reading, search-behavior & cursor tracking (Direction 2)** *(added 2026-07-16;
+cited author-year — not in plan §21; doc-local labels G/B/A/Q/R)* —
+[[guo-2010-gaze-from-cursor]] [G1], [[huang-2011-no-clicks-no-problem]] [G2],
+[[huang-2012-gaze-cursor-alignment]] [G3], [[leiva-2020-attentive-cursor]] [G4],
+[[latifzadeh-2025-serp-mouse-eye]] [G5] (preprint),
+[[buscher-2008-implicit-relevance]] [B1], [[buscher-2012-attentive-documents]] [B2],
+[[rayner-1998-reading-eye-movements]] [R1], [[li-2009-good-abandonment]] [A1],
+[[williams-2016-good-abandonment]] [A2], [[jones-2007-query-log-privacy]] [Q1],
+[[gervais-2014-web-search-privacy]] [Q2].
+
 ## Entities (`entities/`)
 
 **Trackers** *(five arms — see [[ceiling-vs-commodity]])*
@@ -135,6 +148,12 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 - [[covert-calibration]] — building a gaze model from ordinary clicks.
 - [[third-party-tracking-tag]] — one provider embedded across many sites.
 - [[gaze-estimation]] — webcam-only "where are you looking" software.
+
+**The reading/search-intent thesis (Direction 2)**
+- [[reading-search-intent-leakage]] — recovering latent reading/search intent
+  (vector D2); *"No Clicks, No Privacy"* — the examination-surplus over clicks.
+- [[cursor-tracking]] — permission-free mouse-cursor tracking as a Web-scale gaze
+  proxy; the D2 floor to webcam gaze's ceiling.
 
 **Method, evaluation & defense**
 - [[reid-confound-controls]] — the calibration/session-artifact confound and the

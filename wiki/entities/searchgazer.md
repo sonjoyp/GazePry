@@ -29,6 +29,8 @@ reading/search vector]] and the SERP stimulus in the [[task-suite]]. It is now
 
 - [[webgazer]] — the current engine that replaces it.
 - [[task-suite]] — the SERP task inherits SearchGazer's AOI instrumentation.
+- [[reading-search-intent-leakage]] — the D2 direction that reframes SearchGazer's
+  benign AOI-identification tool as a privacy attack (examination surveillance).
 
 ## Mentions in sources
 

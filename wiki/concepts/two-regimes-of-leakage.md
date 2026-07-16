@@ -33,6 +33,10 @@ Direction 1 all follow from it.
 
 - [[leakage-vectors-d1-d6]] — the six vectors, mapped to these two regimes.
 - [[gaze-re-identification]] — the content-independent vector Direction 1 uses.
+- [[reading-search-intent-leakage]] — the **content-dependent** vector (D2)
+  developed as a direction: it shows the content-dependent regime still hosts a
+  real threat *within a site* (first-party, zero-click intent) even though
+  [[same-origin-policy]] blocks it cross-site.
 - [[survives-de-identification]] — a property specific to the content-independent
   regime.
 

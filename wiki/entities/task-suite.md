@@ -28,6 +28,10 @@ headline. Implemented as `public/tasks/*.html` in the [[capture-harness]].
 - [[cross-task-generalization]] — the RQ2 test these tasks enable.
 - [[searchgazer]] — the SERP task's AOI lineage.
 - [[capture-harness]] — where these pages live.
+- [[reading-search-intent-leakage]] — the D2 direction makes the **SERP** task its
+  headline surface (strongest cursor–gaze alignment); it needs click-required vs
+  **zero-click/good-abandonment** SERP variants and a first-class
+  [[cursor-tracking|cursor]] (move/hover/scroll) log, not just calibration clicks.
 
 ## Mentions in sources
 

@@ -16,7 +16,7 @@ content-independent; D6 covers defenses.
 | ID | Vector | Regime | What leaks | Evidence |
 |---|---|---|---|---|
 | **D1** | On-screen keyboard / PIN inference | content-dependent | PINs, passwords, unlock codes | [8], [12], [27] |
-| **D2** | Reading content & search intent | content-dependent | what the user reads, queries, attends to | [4], [7] |
+| **D2** | [[reading-search-intent-leakage\|Reading content & search intent]] | content-dependent | what the user reads, queries, attends to | [4], [7] |
 | **D3** | Cognitive & affective state | content-independent | attention, confusion, mind-wandering, engagement, load | [1], [2], [22], [26] |
 | **D4** | Behavioral-biometric [[gaze-re-identification|re-ID]] & cross-site tracking | content-independent | persistent identity, linkage across sessions/sites/devices | [20], [29] |
 | **D5** | Attribute & demographic inference | content-independent | gender, age, geographic origin | [10], [21] |
@@ -26,12 +26,20 @@ content-independent; D6 covers defenses.
   [[searchgazer]] AOI instrumentation); D1 is the natural content-dependent
   demonstrator; D3 partially exploitable via dwell-time/pupil; D4–D5 need a
   matching/attribute model on the per-frame feature stream.
-- **D4 is Direction 1** — see [[direction-1-study-protocol]].
+- **D4 is Direction 1** — see [[direction-1-study-protocol]] and
+  [[gaze-re-identification]].
+- **D2 is now a developed direction** — see
+  [[reading-search-intent-leakage]] and [[d2-reading-search-intent-direction]]
+  (*"No Clicks, No Privacy"*): first-party reading/search-intent leakage via webcam
+  gaze + permission-free [[cursor-tracking]]. Content-dependent, so scoped
+  within-site (not cross-site), but hosts a real threat via zero-click intent.
 
 ## Related
 
 - [[two-regimes-of-leakage]] — the two-way split this table refines.
 - [[gaze-re-identification]] — vector D4, the project's lead direction.
+- [[reading-search-intent-leakage]] — vector D2, developed as the second direction.
+- [[cursor-tracking]] — the permission-free mouse modality D2 adds.
 - [[evidence-summary]] — the quantitative backing for these vectors.
 
 ## Mentions in sources

@@ -52,6 +52,11 @@ and implemented twice: `reid-core.js` (JS, for the live demo) and `features.py`
 - [[eye-movement-biometrics]] — the feature family's research lineage.
 - [[reid-confound-controls]] — the rate-equalized negative control `resample`
   feeds; [[ceiling-vs-commodity]] — the logged-vs-true-rate caveat.
+- [[cursor-tracking]] — the [[reading-search-intent-leakage|D2 direction]] adds a
+  **separate, AOI-anchored cursor-feature extractor** beside this one (hover/dwell/
+  path/scroll). Note the contrast: these 16 features are content-**independent**
+  dynamics for D4 identity; D2's cursor+gaze features are content-**anchored** to
+  the adversary's known layout — a different pipeline, not a re-parameterization.
 
 ## Mentions in sources
 

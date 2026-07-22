@@ -60,6 +60,107 @@ function resample(samples, hz) {
   return out;
 }
 
+// ---- I-DT dispersion-threshold fixation detection (Direction D7) --------
+// The I-VT threshold above is velocity-based and coarse at webcam rates. D7's
+// load-bearing feature is fixation *duration* (it is the measure that survives
+// concealment — Schwedes & Wentura 2012; Millen & Hancock 2019), so it needs a
+// segmentation algorithm that is stable at ~30 Hz. Thilderkvist & Dobslaw 2024
+// introduced a dispersion-threshold algorithm precisely because none existed
+// for low-frequency webcam data; this is that family (Salvucci & Goldberg
+// I-DT). Keep byte-identical to analysis/features.py detect_fixations_idt() —
+// the JS<->Py parity test covers it.
+//
+// Threshold is in screen-diagonal units so it is resolution independent;
+// returned centroids are in VIEWPORT PIXELS because AOI assignment is in pixels.
+//
+// PARAMETERS ARE SET BY THE SENSOR, NOT BY TASTE. A lab-grade default (~0.045
+// diag, about 1.5-2 deg) finds ZERO fixations in commodity webcam data: at a
+// realistic 1.4 deg accuracy / ~50-70 px per-sample error (Kaduk et al. 2024),
+// the raw point cloud of a genuine fixation already spans more than that. Two
+// consequences, both deliberate:
+//   1. SMOOTH FIRST. A short centred moving average over the run cuts the
+//      per-sample noise by ~sqrt(smoothWin) before dispersion is measured.
+//      Smoothing never crosses a gap, so a blink cannot fuse two fixations.
+//   2. The default threshold is set relative to the TILE, not the fovea. D7
+//      scores whole-tile AOIs (~700 px apart), so "sustained looking at one
+//      tile" is the object of interest; a threshold that resolves within-tile
+//      structure is both unattainable and unnecessary here.
+// Both are exposed so the analysis can report sensitivity rather than hiding a
+// tuned constant.
+var DISP_THRESHOLD = 0.10;  // screen-diagonal units, tile-scale (see above)
+var IDT_MIN_FIX_MS = 100;
+var IDT_SMOOTH_WIN = 5;     // samples; 1 disables smoothing
+
+// Centred moving average over one gap-free run. Returns a new array; the
+// timestamps are untouched.
+function _smoothRun(run, win) {
+  if (!win || win < 2 || run.length < 2) return run;
+  var h = Math.floor(win / 2), n = run.length, out = new Array(n);
+  for (var i = 0; i < n; i++) {
+    var a = Math.max(0, i - h), b = Math.min(n - 1, i + h);
+    var sx = 0, sy = 0;
+    for (var k = a; k <= b; k++) { sx += run[k].x; sy += run[k].y; }
+    var c = b - a + 1;
+    out[i] = { t: run[i].t, x: sx / c, y: sy / c };
+  }
+  return out;
+}
+
+function _dispersion(run, i, j) {
+  var minX = run[i].x, maxX = run[i].x, minY = run[i].y, maxY = run[i].y;
+  for (var k = i + 1; k <= j; k++) {
+    if (run[k].x < minX) minX = run[k].x;
+    if (run[k].x > maxX) maxX = run[k].x;
+    if (run[k].y < minY) minY = run[k].y;
+    if (run[k].y > maxY) maxY = run[k].y;
+  }
+  return (maxX - minX) + (maxY - minY);
+}
+
+function detectFixationsIDT(samples, screen, opts) {
+  opts = opts || {};
+  screen = screen || {};
+  var diag = Math.sqrt(
+    Math.pow(screen.innerW || 1920, 2) + Math.pow(screen.innerH || 1080, 2)
+  ) || 1;
+  var thresh = (opts.dispersion == null ? DISP_THRESHOLD : opts.dispersion) * diag;
+  var minDur = opts.minDurMs == null ? IDT_MIN_FIX_MS : opts.minDurMs;
+  var smoothWin = opts.smoothWin == null ? IDT_SMOOTH_WIN : opts.smoothWin;
+
+  // split into runs of consecutive valid samples (a gap ends a candidate)
+  var runs = [], cur = [];
+  for (var i = 0; i < samples.length; i++) {
+    var s = samples[i];
+    if (s.x == null || s.y == null) { if (cur.length) { runs.push(cur); cur = []; } continue; }
+    cur.push({ t: s.t, x: s.x, y: s.y });
+  }
+  if (cur.length) runs.push(cur);
+
+  var fixations = [];
+  for (var r = 0; r < runs.length; r++) {
+    var run = _smoothRun(runs[r], smoothWin);
+    var a = 0, n = run.length;
+    while (a < n) {
+      // grow to the minimum duration
+      var b = a;
+      while (b + 1 < n && run[b].t - run[a].t < minDur) b++;
+      if (run[b].t - run[a].t < minDur) break; // not enough samples left
+      if (_dispersion(run, a, b) > thresh) { a++; continue; }
+      // extend while it stays a fixation
+      while (b + 1 < n && _dispersion(run, a, b + 1) <= thresh) b++;
+      var sx = 0, sy = 0;
+      for (var k = a; k <= b; k++) { sx += run[k].x; sy += run[k].y; }
+      var cnt = b - a + 1;
+      fixations.push({
+        tStart: run[a].t, tEnd: run[b].t, durMs: run[b].t - run[a].t,
+        x: sx / cnt, y: sy / cnt, n: cnt,
+      });
+      a = b + 1;
+    }
+  }
+  return fixations;
+}
+
 // Extract a fixed-length feature vector from one session's samples.
 function extractFeatures(samples, screen, resampleHz) {
   if (resampleHz) samples = resample(samples, resampleHz);
@@ -210,7 +311,11 @@ function identify(probeFeatures, gallery, opts) {
 module.exports = {
   FEATURE_NAMES: FEATURE_NAMES,
   VEL_THRESHOLD: VEL_THRESHOLD,
+  DISP_THRESHOLD: DISP_THRESHOLD,
+  IDT_MIN_FIX_MS: IDT_MIN_FIX_MS,
+  IDT_SMOOTH_WIN: IDT_SMOOTH_WIN,
   extractFeatures: extractFeatures,
+  detectFixationsIDT: detectFixationsIDT,
   resample: resample,
   identify: identify,
   standardize: standardize,

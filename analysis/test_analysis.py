@@ -28,12 +28,19 @@ warnings.simplefilter("ignore", ResourceWarning)
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+import aoi_features  # noqa: E402
 import features  # noqa: E402
+import probe_protocol  # noqa: E402
+import recognition  # noqa: E402
 import reid  # noqa: E402
 import simulate  # noqa: E402
+import simulate_probe  # noqa: E402
 
 SCREEN = {"innerW": 1440, "innerH": 900}
+BIG_SCREEN = {"innerW": 1920, "innerH": 1080}
 FEATURES_CLI = os.path.join(HERE, "..", "test", "features-cli.js")
+IDT_CLI = os.path.join(HERE, "..", "test", "idt-cli.js")
+PROBE_PLAN_CLI = os.path.join(HERE, "..", "test", "probe-plan-cli.js")
 
 
 def fixation(x, y, frames, t0=0):
@@ -350,6 +357,335 @@ class TestLoadAndReportPerTracker(unittest.TestCase):
             self.assertTrue(all(r["tracker"] == "webgazer" for r in rows))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+# =========================================================================
+# Direction D7 — recognition & concealed-knowledge leakage
+# =========================================================================
+
+def steady(x, y, ms, t0=0, step=16):
+    return [{"t": t0 + t, "x": x, "y": y} for t in range(0, ms, step)]
+
+
+class TestIDT(unittest.TestCase):
+    """The dispersion-threshold detector that produces D7's fixation durations."""
+
+    def test_clean_dwell_is_one_fixation(self):
+        f = features.detect_fixations_idt(steady(500, 400, 600), BIG_SCREEN)
+        self.assertEqual(len(f), 1)
+        self.assertAlmostEqual(f[0]["durMs"], 592, delta=20)
+        self.assertAlmostEqual(f[0]["x"], 500, delta=1)
+
+    def test_gap_splits_a_dwell(self):
+        s = (steady(500, 400, 400)
+             + [{"t": 420, "x": None, "y": None}, {"t": 440, "x": None, "y": None}]
+             + steady(500, 400, 400, 460))
+        self.assertEqual(len(features.detect_fixations_idt(s, BIG_SCREEN)), 2)
+
+    def test_short_dwell_rejected(self):
+        self.assertEqual(features.detect_fixations_idt(steady(500, 400, 60), BIG_SCREEN), [])
+
+    def test_empty_and_all_gap_inputs(self):
+        self.assertEqual(features.detect_fixations_idt([], BIG_SCREEN), [])
+        self.assertEqual(
+            features.detect_fixations_idt([{"t": 0, "x": None, "y": None}], BIG_SCREEN), [])
+
+    def test_zero_fixations_at_lab_threshold(self):
+        """REGRESSION. A lab-grade threshold finds NOTHING in webcam-noise data.
+
+        This silently zeroed every fixation-derived feature during the build:
+        with no fixations the columns become constants and report AUC 0.500,
+        which is indistinguishable from "no effect". Pinned so the shipped
+        defaults cannot drift back to a value that cannot see a webcam.
+        """
+        rng = __import__("random").Random(99)
+        diag = math.hypot(1920, 1080)
+        sigma = 0.03 * diag                     # ~66 px, realistic webcam error
+        s = [{"t": t, "x": 900 + rng.gauss(0, sigma), "y": 500 + rng.gauss(0, sigma)}
+             for t in range(0, 800, 16)]
+        lab = features.detect_fixations_idt(s, BIG_SCREEN, dispersion=0.045, smooth_win=1)
+        self.assertEqual(len(lab), 0, "lab threshold saw fixations — update the note in features.py")
+        tuned = features.detect_fixations_idt(s, BIG_SCREEN)
+        self.assertGreaterEqual(len(tuned), 1, "shipped defaults must recover the dwell")
+
+    def test_ordered_and_non_overlapping(self):
+        s = steady(200, 200, 400) + steady(1500, 300, 400, 500) + steady(800, 900, 400, 1000)
+        f = features.detect_fixations_idt(s, BIG_SCREEN)
+        for a, b in zip(f, f[1:]):
+            self.assertGreaterEqual(b["tStart"], a["tEnd"])
+
+
+class TestIDTParity(unittest.TestCase):
+    @unittest.skipUnless(shutil.which("node"), "node not available")
+    def test_js_python_idt_agree(self):
+        rng = __import__("random").Random(5)
+        noisy = [{"t": t, "x": 900 + rng.gauss(0, 40), "y": 500 + rng.gauss(0, 40)}
+                 for t in range(0, 900, 16)]
+        streams = [
+            steady(500, 400, 600),
+            steady(300, 300, 400) + [{"t": 420, "x": None, "y": None}] + steady(1200, 800, 400, 460),
+            noisy,
+        ]
+        for stream in streams:
+            for opts in ({}, {"dispersion": 0.2, "smoothWin": 1}, {"smoothWin": 7, "minDurMs": 150}):
+                payload = {"samples": stream, "screen": BIG_SCREEN}
+                payload.update(opts)
+                with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+                    json.dump(payload, fh)
+                    tmp = fh.name
+                try:
+                    out = subprocess.check_output(["node", IDT_CLI, tmp], text=True)
+                finally:
+                    os.unlink(tmp)
+                js = json.loads(out)
+                py = features.detect_fixations_idt(
+                    stream, BIG_SCREEN,
+                    dispersion=opts.get("dispersion"),
+                    min_dur_ms=opts.get("minDurMs"),
+                    smooth_win=opts.get("smoothWin"))
+                self.assertEqual(len(js), len(py), f"fixation count differs for opts={opts}")
+                for a, b in zip(js, py):
+                    self.assertEqual(a["tStart"], b["tStart"])
+                    self.assertEqual(a["tEnd"], b["tEnd"])
+                    self.assertAlmostEqual(a["x"], b["x"], places=6)
+                    self.assertAlmostEqual(a["y"], b["y"], places=6)
+                    self.assertEqual(a["n"], b["n"])
+
+
+class TestProbeProtocol(unittest.TestCase):
+    def test_groups_balanced_for_numbered_ids(self):
+        pids = [f"P{i:02d}" for i in range(1, 41)]
+        counts = {}
+        for p in pids:
+            g = probe_protocol.group_for(p)
+            counts[g] = counts.get(g, 0) + 1
+        self.assertEqual(len(counts), probe_protocol.N_GROUPS)
+        self.assertEqual(max(counts.values()) - min(counts.values()), 0)
+
+    def test_each_item_familiar_for_half_the_groups(self):
+        for exp in ("E1", "E2", "E3"):
+            items = probe_protocol.SETS[exp]["items"]
+            for i in range(len(items)):
+                n = sum(1 for g in range(probe_protocol.N_GROUPS)
+                        if probe_protocol.is_familiar(i, g))
+                self.assertEqual(n, probe_protocol.N_GROUPS // 2)
+
+    def test_one_probe_per_trial(self):
+        for array_n in (2, 4):
+            b = probe_protocol.build_trials("P07", "E1", array_n, 20)
+            self.assertEqual(len(b["trials"]), 20)
+            for t in b["trials"]:
+                self.assertEqual(len(t["slots"]), array_n)
+                fam = [s for s in t["slots"] if s["familiar"]]
+                self.assertEqual(len(fam), 1)
+                self.assertEqual(fam[0]["itemId"], t["probeItemId"])
+                self.assertEqual(len({s["itemId"] for s in t["slots"]}), array_n)
+
+    def test_layout_refuses_small_viewport(self):
+        self.assertTrue(probe_protocol.layout(4, 1920, 1080)["ok"])
+        self.assertFalse(probe_protocol.layout(4, 1024, 640)["ok"])
+
+
+class TestProbeProtocolParity(unittest.TestCase):
+    """The browser protocol and the Python port must build the SAME design.
+
+    Divergence here would mean the analysis is scoring a different experiment
+    from the one the participant actually saw — silent and unrecoverable.
+    """
+
+    @unittest.skipUnless(shutil.which("node"), "node not available")
+    def test_js_python_plans_agree(self):
+        for pid, exp, arr, n in (("P01", "E1", 4, 12), ("P02", "E2", 2, 10),
+                                 ("P17", "E3", 4, 15), ("pilot-alpha", "E1", 4, 8)):
+            out = subprocess.check_output(
+                ["node", PROBE_PLAN_CLI, pid, exp, str(arr), str(n)], text=True)
+            js = json.loads(out)
+            py = probe_protocol.build_trials(pid, exp, arr, n)
+            self.assertEqual(js["counterbalanceGroup"], py["counterbalanceGroup"],
+                             f"group differs for {pid}")
+            self.assertEqual(js["arrayN"], py["arrayN"])
+            self.assertEqual(len(js["trials"]), len(py["trials"]))
+            for jt, pt in zip(js["trials"], py["trials"]):
+                self.assertEqual(jt["probeItemId"], pt["probeItemId"])
+                self.assertEqual(jt["slots"],
+                                 [[s["itemId"], s["familiar"]] for s in pt["slots"]])
+
+
+class TestAOIFeatures(unittest.TestCase):
+    def _aois(self):
+        L = probe_protocol.layout(4, 1920, 1080)
+        return [{"slot": i, "itemId": f"i{i}", "familiar": i == 1, "rect": L["rects"][i]}
+                for i in range(4)]
+
+    def test_soft_weights_sum_to_one(self):
+        aois = self._aois()
+        for (x, y) in [(100, 100), (960, 540), (1800, 1000)]:
+            w = aoi_features.aoi_weights(x, y, aois, 100.0, soft=True)
+            self.assertAlmostEqual(sum(w), 1.0, places=9)
+
+    def test_hard_assignment_picks_containing_rect(self):
+        aois = self._aois()
+        r = aois[2]["rect"]
+        cx, cy = r["x"] + r["w"] / 2, r["y"] + r["h"] / 2
+        w = aoi_features.aoi_weights(cx, cy, aois, 100.0, soft=False)
+        self.assertEqual(w.index(1.0), 2)
+        self.assertEqual(sum(w), 1.0)
+
+    def test_soft_favours_the_nearest_tile(self):
+        aois = self._aois()
+        r = aois[0]["rect"]
+        w = aoi_features.aoi_weights(r["x"] + r["w"] / 2, r["y"] + r["h"] / 2,
+                                     aois, 120.0, soft=True)
+        self.assertEqual(max(range(4), key=lambda i: w[i]), 0)
+
+    def test_degenerate_trials_return_none_not_zeros(self):
+        """A zero-filled row is indistinguishable from 'looked nowhere', which
+        is a real and different observation — so unscorable trials are dropped."""
+        sess = {"schema": "gazepry.probe.v1", "screen": BIG_SCREEN, "samples": []}
+        self.assertIsNone(aoi_features.extract_trial(
+            sess, {"index": 0, "onsetT": 0, "offsetT": 4000, "aois": self._aois()}))
+        # missing clock anchor
+        self.assertIsNone(aoi_features.extract_trial(
+            sess, {"index": 0, "onsetT": None, "offsetT": None, "aois": self._aois()}))
+
+    def test_relativise_zero_sums_within_trial(self):
+        rows = [{"features": {k: float(i + 1) for k in aoi_features.FEATURE_NAMES}}
+                for i in range(4)]
+        out = aoi_features.relativise(rows)
+        for k in aoi_features.FEATURE_NAMES:
+            self.assertAlmostEqual(sum(r["rel"][k] for r in out), 0.0, places=9)
+
+    def test_extract_session_ignores_non_probe_schema(self):
+        self.assertEqual(aoi_features.extract_session({"schema": "gazepry.session.v2"}), [])
+
+    def test_extract_session_drops_unanchored(self):
+        s = simulate_probe.make_session("P01", "E1", 4, 3, 0.8, 1, "webgazer",
+                                        "naive", "memory-adjacent", "immediate")
+        s["clockAnchored"] = False
+        self.assertEqual(aoi_features.extract_session(s), [])
+
+
+class TestRecognitionMetrics(unittest.TestCase):
+    def test_auc_basics(self):
+        import numpy as np
+        self.assertAlmostEqual(recognition.auc(np.array([1., 2, 3, 4]), np.array([0, 0, 1, 1])), 1.0)
+        self.assertAlmostEqual(recognition.auc(np.array([4., 3, 2, 1]), np.array([0, 0, 1, 1])), 0.0)
+        # all ties -> exactly chance
+        self.assertAlmostEqual(recognition.auc(np.array([1., 1, 1, 1]), np.array([0, 0, 1, 1])), 0.5)
+
+    def test_auc_is_nan_when_a_class_is_missing(self):
+        """'Undefined' and 'no better than chance' are different results."""
+        import numpy as np
+        self.assertTrue(math.isnan(recognition.auc(np.array([1., 2]), np.array([1, 1]))))
+
+    def test_tpr_at_fpr(self):
+        import numpy as np
+        s = np.array([0.9, 0.8, 0.7, 0.1, 0.05])
+        y = np.array([1, 1, 1, 0, 0])
+        self.assertAlmostEqual(recognition.tpr_at_fpr(s, y, 0.1), 1.0)
+
+    def test_logistic_regression_separates(self):
+        import numpy as np
+        rng = np.random.default_rng(0)
+        X = np.vstack([rng.normal(0, 1, (80, 3)), rng.normal(2.5, 1, (80, 3))])
+        y = np.array([0] * 80 + [1] * 80)
+        m = recognition.LogisticRegression().fit(X, y)
+        self.assertGreater(recognition.auc(m.decision(X), y), 0.95)
+
+    def test_logistic_regression_survives_a_constant_column(self):
+        import numpy as np
+        rng = np.random.default_rng(1)
+        X = np.hstack([rng.normal(0, 1, (60, 2)), np.ones((60, 1))])
+        y = np.array([0, 1] * 30)
+        m = recognition.LogisticRegression().fit(X, y)
+        self.assertTrue(np.all(np.isfinite(m.decision(X))))
+
+
+class TestRecognitionEndToEnd(unittest.TestCase):
+    """The pipeline must find the effect when it is there, and NOT when it isn't.
+
+    The null half is the one that matters: a pipeline that reports a signal on
+    effect=0 data is broken in a way no amount of real collection would reveal.
+    """
+
+    @staticmethod
+    def _sessions(effect, n=12, trials=24, seed=3):
+        return [simulate_probe.make_session(f"P{i + 1:02d}", "E1", 4, trials, effect,
+                                            seed * 1000 + i, "webgazer", "naive",
+                                            "memory-adjacent", "immediate")
+                for i in range(n)]
+
+    def test_recovers_a_planted_effect(self):
+        res = recognition.evaluate(self._sessions(0.9), n_boot=120)
+        self.assertNotIn("error", res)
+        self.assertGreater(res["auc_per_aoi"], 0.7)
+        self.assertGreater(res["auc_ci"][0], 0.5)
+        self.assertGreater(res["probe_id_acc"], res["probe_id_chance"])
+
+    def test_reports_chance_on_a_null_dataset(self):
+        res = recognition.evaluate(self._sessions(0.0), n_boot=120)
+        self.assertLess(abs(res["auc_per_aoi"] - 0.5), 0.08,
+                        f"found signal in a null dataset: AUC={res['auc_per_aoi']:.3f}")
+        ok, _ = recognition.rq0_verdict(res)
+        self.assertFalse(ok, "RQ0 must NOT certify a signal on null data")
+
+    def test_rq0_nulls_collapse_on_real_effect_data(self):
+        res = recognition.evaluate(self._sessions(0.9), n_boot=120)
+        self.assertLess(abs(res["null_shuffled_auc"] - 0.5), 0.08,
+                        "shuffled-label null did not collapse")
+        self.assertLess(abs(res["null_saliency_auc"] - 0.5), 0.08,
+                        "saliency-only baseline is not at chance — counterbalancing or "
+                        "the group-balanced training fold is broken")
+        ok, reasons = recognition.rq0_verdict(res)
+        self.assertTrue(ok, "RQ0 gate should pass on clean effect data: " + "; ".join(reasons))
+
+    def test_segmentation_produces_fixations(self):
+        """Guards the failure mode where I-DT finds nothing and every
+        fixation feature quietly becomes a constant reporting AUC 0.500."""
+        res = recognition.evaluate(self._sessions(0.9), n_boot=60)
+        self.assertGreater(res["fixations_per_trial"], 1.0)
+
+    def test_feasible_ks_require_both_classes(self):
+        import numpy as np
+        rows = []
+        for cls, cnt in ((1, 3), (0, 12)):
+            for it in range(10):
+                for _ in range(cnt):
+                    rows.append({"participant": "P01", "itemId": f"{cls}-{it}",
+                                 "familiar": bool(cls)})
+        scores = np.zeros(len(rows))
+        ks = recognition.feasible_ks(rows, scores, candidates=(1, 5, 10), min_pairs=8)
+        self.assertIn(1, ks)
+        self.assertNotIn(5, ks, "k=5 has no familiar pairs and would yield a bare nan")
+
+    def test_loader_skips_d4_sessions_and_reports_drops(self):
+        tmp = tempfile.mkdtemp(prefix="gp-probe-")
+        try:
+            good = simulate_probe.make_session("P01", "E1", 4, 5, 0.8, 1, "webgazer",
+                                               "naive", "memory-adjacent", "immediate")
+            bad = dict(good)
+            bad["clockAnchored"] = False
+            for name, obj in (("a.json", good), ("b.json", bad),
+                              ("c.json", {"schema": "gazepry.session.v2", "samples": []})):
+                with open(os.path.join(tmp, name), "w", encoding="utf-8") as fh:
+                    json.dump(obj, fh)
+            with contextlib.redirect_stdout(io.StringIO()) as buf:
+                got = recognition.load_probe_sessions(tmp, verbose=True)
+            self.assertEqual(len(got), 1)
+            self.assertIn("no clock anchor", buf.getvalue())
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestServerExcludesProbeSessions(unittest.TestCase):
+    """D7 probe sessions share the data dir with D4 sessions but must never
+    enter the re-ID gallery: their stream is chopped into adversary-driven 4 s
+    trials, so a whole-session dynamics vector measures the trial structure."""
+
+    def test_probe_schema_is_marked_for_exclusion(self):
+        s = simulate_probe.make_session("P01", "E1", 4, 3, 0.8, 1, "webgazer",
+                                        "naive", "memory-adjacent", "immediate")
+        self.assertTrue(str(s["schema"]).startswith("gazepry.probe"))
 
 
 if __name__ == "__main__":

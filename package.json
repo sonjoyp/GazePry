@@ -8,7 +8,12 @@
     "start": "node server.js",
     "test": "npm run test:js && npm run test:py",
     "test:js": "node --test test/*.test.js",
-    "test:py": "python3 analysis/test_analysis.py"
+    "test:py": "node scripts/run-python.js analysis/test_analysis.py",
+    "d7:sim": "node scripts/run-python.js analysis/simulate_probe.py --out data_probe_sim --subjects 20 --trials 40 --effect 0.8 --seed 7",
+    "d7:null": "node scripts/run-python.js analysis/simulate_probe.py --out data_probe_null --subjects 20 --trials 40 --effect 0 --seed 11",
+    "d7:eval": "node scripts/run-python.js analysis/recognition.py --data data_probe_sim --experiment E1",
+    "d7:eval:null": "node scripts/run-python.js analysis/recognition.py --data data_probe_null --experiment E1",
+    "d7:verify": "npm run d7:sim && npm run d7:null && npm run d7:eval && npm run d7:eval:null"
   },
   "engines": { "node": ">=18" },
   "license": "GPL-3.0-or-later"

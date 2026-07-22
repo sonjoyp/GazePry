@@ -131,6 +131,36 @@ test("POST /identify against a self-copy returns the right person (no exclude)",
   assert.equal(r.json.rank1, "P02", "probe copied from P02's stream matches P02");
 });
 
+test("D7 probe sessions are ingested but kept OUT of the re-ID gallery", async () => {
+  // Probe sessions share the data dir with D4 sessions. Their gaze stream is
+  // chopped into 4 s trials driven by an adversary-chosen stimulus, so a
+  // whole-session dynamics vector over one would describe the trial structure
+  // rather than the person — it must never become gallery material.
+  const probe = {
+    schema: "gazepry.probe.v1",
+    participant: "PX9", session: "S1", task: "probe",
+    tracker: "webgazer-3.5.3", trackerFamily: "webgazer",
+    experiment: "E1", arrayN: 4, coverTask: "memory-adjacent", awareness: "naive",
+    counterbalanceGroup: 1, startedAt: Date.now(), screen: SCREEN,
+    clockAnchored: true, nTrials: 1,
+    trials: [{ index: 0, probeItemId: "abs00", onsetT: 0, offsetT: 400, aois: [] }],
+    nSamples: streamA.length, samples: streamA,
+  };
+  const ing = await post("/ingest", probe);
+  assert.equal(ing.status, 200, "a probe session must still be accepted and stored");
+  assert.ok(fs.existsSync(path.join(dataDir, ing.json.stored)));
+
+  const s = await getJson("/sessions");
+  assert.ok(!s.json.participants.includes("PX9"), "probe participant leaked into /sessions");
+  assert.ok(!s.json.sessions.some((e) => e.task === "probe"), "probe task leaked into the gallery");
+
+  const st = await getJson("/status?participant=PX9&session=S1&tracker=webgazer");
+  assert.deepEqual(st.json.tasks, [], "probe completion is not tracked via the re-ID gallery");
+
+  const id = await post("/identify", { samples: streamA, screen: SCREEN, tracker: "webgazer" });
+  assert.ok(!id.json.galleryParticipants.includes("PX9"), "probe entry became identifiable");
+});
+
 test("GET / serves the hub and path traversal is blocked", async () => {
   const home = await fetch(BASE + "/");
   assert.equal(home.status, 200);

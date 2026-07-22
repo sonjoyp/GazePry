@@ -46,7 +46,7 @@ GazePry/                          (repo root — the experiment lives here)
   server.js            zero-dependency Node server: serves the harness, ingests
                        sessions, exposes a LIVE nearest-neighbour re-ID endpoint
   reid-core.js         gaze feature extraction + matching (JS, for the live demo)
-  public/              the capture harness (one shared "tracking tag", 5 tasks)
+  public/              the capture harness (one shared "tracking tag", 6 tasks)
     gazepry-tracker.js   tracker-AGNOSTIC orchestrator: identity, calibration,
                          capture, watchdog, submit — drives the active adapter
     trackers/            one self-registering adapter per webcam tracker
@@ -61,19 +61,32 @@ GazePry/                          (repo root — the experiment lives here)
       eyegestures/         EyeGestures WASM engine + shim + deps
     web/                 WebEyeTrack BlazeGaze TF.js model (served at /web/)
     task-runner.js       shared boot code for the task pages
+    probe-protocol.js    D7: stimulus sets + counterbalanced trial builder
+                         (runs in the browser AND in Node, so tests/simulator
+                         use the same code the participant sees)
     index.html           consent + identity + TRACKER PICKER + calibration + hub
     tasks/*.html         reading · serp · images · video · form  (5 "sites")
+                         + probe (D7 recognition array, trial-structured)
     reid.html            live re-ID + the "unclearable" (wipe-state) demo
   scripts/
     vendor-trackers.sh   fetch WebEyeTrack + EyeGestures into public/ (idempotent)
   analysis/            the authoritative offline evaluation (Python)
     features.py          content-independent features (mirrors reid-core.js)
+                         + I-DT dispersion fixation detection (D7)
     reid.py              cross-task/cross-session re-ID: rank-1, rank-5, EER, CMC
     simulate.py          synthetic gaze generator (pipeline verification)
+    probe_protocol.py    D7: Python port of probe-protocol.js (parity-tested)
+    aoi_features.py      D7: soft AOI assignment + per-trial features
+    recognition.py       D7: classifier, LOPO CV, AUC-vs-k, RQ0 gate
+    simulate_probe.py    D7: synthetic probe sessions (incl. --effect 0 null)
     test_analysis.py     stdlib unittest: features, tracker split, JS/Py parity
     requirements.txt
+  scripts/
+    run-python.js        resolves python3/python/py so `npm test` works anywhere
   test/                the regression suite (node:test, zero deps)
     reid-core.test.js    feature contract + nearest-neighbour matcher
+    idt.test.js          D7: dispersion-threshold fixation detection
+    probe-protocol.test.js  D7: counterbalancing, trial structure, geometry
     registry.test.js     adapter registry, contract, identity/tracker resolution
     server.test.js       ingest/status/sessions/identify over a live server
     features-cli.js      helper: JS feature vector for the Python parity test
@@ -172,6 +185,15 @@ uses stdlib `unittest`. What's covered:
 - **Analysis** — features, `tracker_family`, protocol eligibility (never matches
   across trackers), `evaluate`, `simulate`, per-tracker reporting, and a
   **JS↔Python parity** test proving `reid-core.js` and `features.py` agree.
+- **Direction D7** — the counterbalancing invariants (every item familiar for
+  half the cohort; slot position carries no familiarity information; exactly one
+  probe per trial), I-DT segmentation in both languages plus a **second JS↔Python
+  parity** test, a **third parity** test proving the browser trial protocol and
+  its Python port build the *same design*, AOI soft/hard assignment, and an
+  end-to-end check that the pipeline recovers a planted effect **and reports
+  chance on a null dataset**. Two regression tests pin the failure modes found
+  while building it (zero-fixation collapse at a lab-grade threshold; the
+  leave-one-out bias in the saliency control).
 
 When you change a feature, add or update a test in the same commit so the
 guarantee keeps up with the code. If you change the feature set, the parity test
@@ -250,6 +272,99 @@ These are a **code sanity check on synthetic data, not a claim about real eyes.*
 Real numbers come from the browser harness.
 
 ---
+
+## Direction D7 — recognition & concealed-knowledge probe
+
+A second, independent experiment lives in the same harness. Where D4 asks *who
+is this visitor*, **D7 asks what they have seen before**: a page renders a
+coarse tile array and infers, from dwell asymmetry and fixation timing alone,
+which tile the visitor recognises. See
+[`GazePry_D7_Recognition_Knowledge_Direction.md`](GazePry_D7_Recognition_Knowledge_Direction.md).
+
+### Collect
+
+Open the hub and pick **Recognition probe**. The setup card sets the design
+cell (experiment E1/E2/E3, array size, cover task, awareness condition, delay,
+trial count); the participant then just does the task.
+
+```
+fixation cross (500 ms) → tile array (4000 ms) → cover-task prompt
+```
+
+Sessions are written as `gazepry.probe.v1` records carrying a `trials[]` array
+(per-trial AOI rectangles, onset/offset, familiarity role) alongside the raw
+`{t,x,y}` stream. They are ingested by the same server but are **excluded from
+the D4 re-ID gallery**, because a whole-session dynamics vector over
+adversary-driven 4 s trials describes the trial structure, not the person.
+
+Three things the page enforces rather than assumes:
+
+- **It refuses to run in a small window.** Tiles must be ≥400×300 px with ≥250 px
+  gaps — the geometry Van der Cruyssen et al. 2024 actually validated on
+  WebGazer. A smaller layout is outside the published envelope, so the Begin
+  button disables instead of quietly collecting unusable data.
+- **Counterbalancing is derived from the participant ID**, so every item is the
+  familiar one for half the cohort. Without this the classifier could separate
+  the classes on which *pictures* they are; with it, item salience and slot
+  position are orthogonal to familiarity by construction.
+- **Trial marks are mapped onto the sample clock**, anchored on the first gaze
+  sample. Adapters emit their own clock base, so a `performance.now()` onset
+  would not be on the same axis as the samples. If the anchor never lands the
+  session records `clockAnchored: false` and the analysis drops it.
+
+### Evaluate
+
+```bash
+npm run d7:verify        # simulate effect + null datasets, evaluate both
+```
+
+or directly:
+
+```bash
+cd analysis
+python simulate_probe.py --out ../data_probe_sim  --subjects 20 --trials 40 --effect 0.8
+python simulate_probe.py --out ../data_probe_null --subjects 20 --trials 40 --effect 0
+python recognition.py --data ../data_probe_sim --experiment E1 --plot k.png
+```
+
+`recognition.py` reports per-AOI AUC with a CI bootstrapped **over
+participants**, TPR@FPR=0.10, probe-identification accuracy, the item-level
+**AUC-vs-k curve** (*"how many tiles before a page knows which sites you use"*),
+and per-feature d′ split by feature family. Cross-validation is
+leave-one-participant-out; it never splits within a person.
+
+**The RQ0 gate runs on every invocation** and must clear before any number
+counts: a shuffled-label null (familiarity permuted within participant) and a
+saliency-only baseline (item identity + slot position, familiarity withheld)
+both have to sit at ≈0.500. On the synthetic effect data they land at 0.510 and
+0.488 while the real signal reaches 0.918; on the null dataset the headline
+collapses to 0.525 with a CI including chance and the gate correctly refuses to
+certify it.
+
+| dataset | per-AOI AUC | 95% CI | probe id (chance .25) | RQ0 |
+|---|---|---|---|---|
+| `--effect 0.8` | 0.918 | [0.901, 0.933] | 0.751 | PASS |
+| `--effect 0` (null) | 0.525 | [0.498, 0.544] | 0.261 | correctly refuses |
+
+**These are a code sanity check on generated data, not a claim about real eyes.**
+The generator writes the effect in by construction. Real numbers require the E1
+pilot.
+
+### Two findings from building it
+
+- **A lab-grade I-DT threshold finds zero fixations in webcam-noise data.** At a
+  realistic ~1.4° error the raw point cloud of a genuine fixation already exceeds
+  a 0.045-diagonal dispersion threshold, so every fixation-derived feature
+  silently becomes a constant reporting AUC 0.500 — indistinguishable from "no
+  effect". The detector therefore smooths first and uses a tile-scale threshold,
+  `recognition.py` prints fixations-per-trial and warns when it collapses, and
+  the failure is pinned by a regression test in both languages.
+- **Leave-one-participant-out biases the saliency control.** Holding a
+  participant out leaves their own counterbalance group short by one, tilting
+  every item's training marginal *away* from their labels with a perfectly
+  consistent sign — which showed up as an alarming AUC of 0.10 from a design
+  that was actually fine. The control now balances group counts within each
+  training fold.
 
 ## Gazepoint ground-truth rig (RQ3: ceiling vs commodity)
 

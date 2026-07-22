@@ -7,6 +7,10 @@
 # Synthetic verification output is regenerable (python analysis/simulate.py)
 #data_sim/
 
+# D7 synthetic probe output is regenerable (npm run d7:verify)
+data_probe_sim/
+data_probe_null/
+
 # Node
 node_modules/
 

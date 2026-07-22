@@ -458,6 +458,127 @@
     });
   };
 
+  // ---- trial-structured capture (Direction D7) --------------------------
+  /*
+   * Capture one continuous gaze stream while a caller-supplied `sequence`
+   * drives a series of trials, and record where each trial's AOIs were.
+   *
+   *   GazePry.runTrialSession({
+   *     task: "probe", experiment: "E1", arrayN: 4,
+   *     coverTask: "memory-adjacent", awareness: "naive",
+   *     counterbalanceGroup: 2, meta: {...},
+   *     sequence: async function (ctx) { ...ctx.trial(rec)... }
+   *   })
+   *
+   * The page owns the stimulus; the orchestrator owns capture. That split
+   * keeps every adapter's sample-collection path identical to runTask().
+   *
+   * CLOCK ALIGNMENT (the part that is easy to get silently wrong). Adapters
+   * emit their own clock base — WebGazer passes elapsed-since-start, others may
+   * pass something else — so a trial onset taken from performance.now() would
+   * not be on the same axis as the samples. We therefore anchor once, on the
+   * first sample, and map wall-clock into sample-clock from then on. If the
+   * anchor never lands (no samples at all) trial marks carry t: null rather
+   * than a fabricated zero, and the analysis drops the session.
+   */
+  GazePry.runTrialSession = function (opts) {
+    opts = opts || {};
+    var task = opts.task || "probe";
+    var self = this;
+
+    return new Promise(async function (resolve, reject) {
+     try {
+      await self.startEngine();
+      var a = self._active;
+      if (a.showPreview) a.showPreview(false);
+      self._samples = [];
+      self._capturing = true;
+      var startedAt = Date.now();
+      var t0 = performance.now();
+      var gaps = 0;
+
+      // sample-clock anchor (see the note above)
+      var anchorClock = null, anchorPerf = null;
+      function sampleClockNow() {
+        if (anchorClock == null) return null;
+        return Math.round(anchorClock + (performance.now() - anchorPerf));
+      }
+
+      a.onGaze(function (data, clock) {
+        GazePry._lastBeat = performance.now();
+        if (!self._capturing) return;
+        if (anchorClock == null) { anchorClock = clock; anchorPerf = performance.now(); }
+        if (data == null) {
+          gaps++;
+          self._samples.push({ t: Math.round(clock), x: null, y: null });
+        } else {
+          self._samples.push({
+            t: Math.round(clock),
+            x: Math.round(data.x * 10) / 10,
+            y: Math.round(data.y * 10) / 10,
+          });
+        }
+      });
+
+      var trials = [];
+      var ctx = {
+        // Stamp the current instant on the sample clock. Pages call this at
+        // array onset and offset.
+        now: sampleClockNow,
+        // Record one completed trial. `rec` must already carry onsetT/offsetT
+        // taken from ctx.now(), plus the AOI rectangles as laid out on screen.
+        trial: function (rec) { trials.push(rec); },
+        count: function () { return trials.length; },
+      };
+
+      await opts.sequence(ctx);
+
+      self._capturing = false;
+      if (a.offGaze) a.offGaze();
+      self._attachIdle();
+
+      var session = {
+        schema: "gazepry.probe.v1",
+        participant: self.identity.participant,
+        session: self.identity.session,
+        task: task,
+        tracker: a.id,
+        trackerFamily: a.family,
+        // D7 design cell (§6.6) — every axis the analysis slices on.
+        experiment: opts.experiment || null,
+        arrayN: opts.arrayN || null,
+        coverTask: opts.coverTask || null,
+        awareness: opts.awareness || "naive",
+        counterbalanceGroup: opts.counterbalanceGroup == null ? null : opts.counterbalanceGroup,
+        delayCondition: opts.delayCondition || null,
+        startedAt: startedAt,
+        durationMs: Math.round(performance.now() - t0),
+        condition: self.loadCondition(),
+        calibClicksPerDot: self._calibClicksPerDot || null,
+        screen: {
+          w: screen.width, h: screen.height, dpr: window.devicePixelRatio || 1,
+          innerW: window.innerWidth, innerH: window.innerHeight,
+        },
+        userAgent: navigator.userAgent,
+        nSamples: self._samples.length,
+        nGaps: gaps,
+        nTrials: trials.length,
+        clockAnchored: anchorClock != null,
+        trials: trials,
+        samples: self._samples,
+        meta: opts.meta || null,
+      };
+      var res = await self.submit(session);
+      resolve({ session: session, submit: res });
+     } catch (e) {
+      self._capturing = false;
+      console.error("[GazePry] trial capture failed:", e);
+      GazePry._toast("Trial capture error: " + (e && e.message ? e.message : e) + " — see console (F12).");
+      reject(e);
+     }
+    });
+  };
+
   function buildHud(task) {
     var el = document.createElement("div");
     el.id = "gp-hud";

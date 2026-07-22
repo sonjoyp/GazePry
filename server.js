@@ -79,6 +79,12 @@ function loadGallery() {
       let sess;
       try { sess = JSON.parse(fs.readFileSync(fp, "utf8")); } catch (e) { continue; }
       if (!sess.samples) continue;
+      // Direction D7 probe sessions live in the same data dir but are NOT
+      // re-identification material: their gaze stream is chopped into 4 s
+      // trials driven by an adversary-chosen stimulus, so a whole-session
+      // dynamics vector over it would be measuring the trial structure, not the
+      // person. Keep them out of the D4 gallery entirely.
+      if (String(sess.schema || "").startsWith("gazepry.probe")) continue;
       entry = {
         key,
         participant: sess.participant, session: sess.session, task: sess.task,

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Recognition probe task — GazePry D7</title>
+  <link rel="stylesheet" href="../tracker.css" />
+  <style>
+    /* The array is absolutely positioned from ProbeProtocol.layout() so the
+       logged AOI rectangles are exactly what was on screen — never inferred
+       from CSS after the fact. */
+    #stage { position: fixed; inset: 0; background: #0b0d10; display: none; }
+    #stage.on { display: block; }
+    .ptile { position: absolute; border-radius: 14px; overflow: hidden;
+      border: 1px solid var(--gp-border); background: #12151a; }
+    .ptile svg { width: 100%; height: 100%; display: block; }
+    .ptile .plabel { position: absolute; left: 0; right: 0; bottom: 0;
+      text-align: center; font: 600 20px/2.2 system-ui, sans-serif;
+      color: #e8ecf1; background: rgba(0,0,0,.45); }
+    #fixcross { position: fixed; inset: 0; display: none; align-items: center;
+      justify-content: center; font: 300 64px system-ui, sans-serif; color: #cfd6de;
+      background: #0b0d10; }
+    #fixcross.on { display: flex; }
+    #cover { position: fixed; inset: 0; display: none; align-items: center;
+      justify-content: center; flex-direction: column; gap: 18px;
+      background: #0b0d10; color: #e8ecf1; text-align: center; padding: 24px; }
+    #cover.on { display: flex; }
+    #cover .q { font: 500 22px system-ui, sans-serif; max-width: 640px; }
+    #cover .opts { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    #progress { position: fixed; top: 10px; right: 14px; color: var(--gp-muted);
+      font: 500 13px system-ui, sans-serif; z-index: 5; }
+    #setup { max-width: 760px; margin: 0 auto; padding: 24px 24px 120px; }
+    #geomwarn { color: #ffb4b4; font-weight: 600; }
+    label.f { display: block; margin: 10px 0 4px; color: var(--gp-muted); font-size: 13px; }
+  </style>
+</head>
+<body class="gp-body">
+  <div class="gp-startbar" id="gp-startbar">
+    <span class="gp-note">Task: <b>Recognition probe (D7)</b> · <span id="gp-who"></span></span>
+  </div>
+
+  <div id="setup">
+    <div class="gp-card">
+      <h2>Recognition probe — session setup</h2>
+      <p class="gp-note">
+        Direction D7 (<code>GazePry_D7_Recognition_Knowledge_Direction.md</code>).
+        The experimenter sets the design cell; the participant just does the task.
+      </p>
+
+      <label class="f" for="exp">Experiment</label>
+      <select id="exp">
+        <option value="E1">E1 — lab-installed familiarity (run this first)</option>
+        <option value="E2">E2 — real-world service familiarity</option>
+        <option value="E3">E3 — sensitive-topic exposure</option>
+      </select>
+
+      <label class="f" for="arrayn">Array size</label>
+      <select id="arrayn">
+        <option value="4">4 tiles (realistic web layout)</option>
+        <option value="2">2 tiles (highest signal)</option>
+      </select>
+
+      <label class="f" for="cover">Cover task</label>
+      <select id="cover-sel">
+        <option value="memory-adjacent">memory-adjacent (countermeasure-resistant)</option>
+        <option value="low-demand">low-demand (most naturalistic)</option>
+      </select>
+
+      <label class="f" for="aware">Awareness condition (RQ4)</label>
+      <select id="aware">
+        <option value="naive">naive — participant not told what is measured</option>
+        <option value="countermeasure">countermeasure — instructed to conceal</option>
+      </select>
+
+      <label class="f" for="delay">E1 delay condition</label>
+      <select id="delay">
+        <option value="immediate">immediate (study phase runs now)</option>
+        <option value="min20">~20 minutes (study phase already done)</option>
+        <option value="week1">~1 week (study phase already done)</option>
+      </select>
+
+      <label class="f" for="ntrials">Trials</label>
+      <input id="ntrials" type="number" value="40" min="4" max="120" />
+
+      <p id="geomline" class="gp-note"></p>
+      <p id="geomwarn"></p>
+      <div class="gp-row">
+        <button class="gp-btn" type="button" id="begin">Begin</button>
+        <a class="gp-btn" href="../index.html">&larr; Back to tasks</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="progress"></div>
+  <div id="fixcross">+</div>
+  <div id="stage"></div>
+  <div id="cover">
+    <div class="q" id="coverq"></div>
+    <div class="opts" id="coveropts"></div>
+  </div>
+
+  <script src="../gazepry-tracker.js"></script>
+  <script src="../trackers/webgazer.js"></script>
+  <script src="../trackers/gazecloud.js"></script>
+  <script src="../trackers/webeyetrack.js"></script>
+  <script src="../trackers/eyegestures.js"></script>
+  <script src="../probe-protocol.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    if (!GazePry.requireIdentity()) return;
+    var P = ProbeProtocol;
+
+    var el = function (id) { return document.getElementById(id); };
+    var stage = el("stage"), fix = el("fixcross"), cover = el("cover");
+
+    document.addEventListener("DOMContentLoaded", function () {
+      var who = el("gp-who");
+      if (who) {
+        var t = GazePry.getTracker(GazePry.identity.tracker);
+        who.textContent = GazePry.identity.participant + " · " + GazePry.identity.session +
+          " · " + (t ? t.label : GazePry.identity.tracker);
+      }
+      el("arrayn").onchange = showGeom;
+      showGeom();
+      el("begin").onclick = begin;
+    });
+
+    // Refuse to run outside the validated stimulus envelope (§6.2) rather than
+    // collecting data at a geometry no published result covers.
+    function showGeom() {
+      var n = parseInt(el("arrayn").value, 10);
+      var L = P.layout(n, window.innerWidth, window.innerHeight);
+      el("geomline").textContent =
+        "Viewport " + window.innerWidth + "x" + window.innerHeight +
+        " → tiles " + L.tileW + "x" + L.tileH + " px, gap " + L.gap + " px " +
+        "(minimum " + P.GEOM.minTileW + "x" + P.GEOM.minTileH + ", gap " + P.GEOM.minGap + ").";
+      el("geomwarn").textContent = L.ok ? "" :
+        "Window too small for the validated geometry. Maximise the window (or use a larger display) before running — smaller tiles are outside the envelope of Van der Cruyssen et al. 2024.";
+      el("begin").disabled = !L.ok;
+      return L;
+    }
+
+    function svgFor(item, w, h) {
+      // Procedural, CSP-safe, deterministic per item.
+      var rnd = P.mulberry32(item.seed);
+      var s = '<svg viewBox="0 0 200 150" preserveAspectRatio="none">';
+      s += '<rect width="200" height="150" fill="hsl(' + item.hue + ',32%,13%)"/>';
+      for (var k = 0; k < 7; k++) {
+        var cx = Math.floor(rnd() * 200), cy = Math.floor(rnd() * 150);
+        var rad = 10 + Math.floor(rnd() * 30);
+        var h2 = (item.hue + Math.floor(rnd() * 110)) % 360;
+        var op = (0.3 + rnd() * 0.55).toFixed(2);
+        if ((item.glyph + k) % 2)
+          s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rad + '" fill="hsl(' + h2 + ',70%,60%)" opacity="' + op + '"/>';
+        else
+          s += '<rect x="' + cx + '" y="' + cy + '" width="' + rad * 2 + '" height="' + rad + '" rx="4" fill="hsl(' + h2 + ',70%,60%)" opacity="' + op + '"/>';
+      }
+      s += "</svg>";
+      return s;
+    }
+
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    // Render one trial's array and return the AOI rectangles actually used.
+    function renderArray(trial, L) {
+      stage.innerHTML = "";
+      var aois = [];
+      trial.slots.forEach(function (sl, i) {
+        var r = L.rects[i];
+        var d = document.createElement("div");
+        d.className = "ptile";
+        d.style.left = r.x + "px"; d.style.top = r.y + "px";
+        d.style.width = r.w + "px"; d.style.height = r.h + "px";
+        d.innerHTML = svgFor(sl.item, r.w, r.h) +
+          (sl.item.label ? '<div class="plabel">' + sl.item.label + "</div>" : "");
+        stage.appendChild(d);
+        aois.push({ slot: i, itemId: sl.itemId, familiar: sl.familiar,
+          rect: { x: r.x, y: r.y, w: r.w, h: r.h } });
+      });
+      return aois;
+    }
+
+    function askCover(coverDef, trial) {
+      return new Promise(function (resolve) {
+        el("coverq").textContent = coverDef.prompt;
+        var opts = el("coveropts");
+        opts.innerHTML = "";
+        trial.slots.forEach(function (sl, i) {
+          var b = document.createElement("button");
+          b.className = "gp-btn";
+          b.type = "button";
+          b.textContent = sl.item.label || "Image " + (i + 1);
+          b.onclick = function () { cover.classList.remove("on"); resolve(i); };
+          opts.appendChild(b);
+        });
+        var none = document.createElement("button");
+        none.className = "gp-btn";
+        none.type = "button";
+        none.textContent = "None of these";
+        none.onclick = function () { cover.classList.remove("on"); resolve(-1); };
+        opts.appendChild(none);
+        cover.classList.add("on");
+      });
+    }
+
+    // E1 study phase: install familiarity, with perfect ground truth (§6.5).
+    async function studyPhase(plan) {
+      var items = P.studySet(plan);
+      fix.textContent = "Take a look at these. You will not be tested on them.";
+      fix.style.font = "500 22px system-ui, sans-serif";
+      fix.classList.add("on");
+      await sleep(2500);
+      fix.classList.remove("on");
+      fix.style.font = "";
+      fix.textContent = "+";
+      var L = P.layout(2, window.innerWidth, window.innerHeight);
+      for (var i = 0; i < items.length; i++) {
+        stage.innerHTML = "";
+        var r = L.rects[0];
+        var d = document.createElement("div");
+        d.className = "ptile";
+        d.style.left = Math.round((window.innerWidth - r.w) / 2) + "px";
+        d.style.top = Math.round((window.innerHeight - r.h) / 2) + "px";
+        d.style.width = r.w + "px"; d.style.height = r.h + "px";
+        d.innerHTML = svgFor(items[i], r.w, r.h) +
+          (items[i].label ? '<div class="plabel">' + items[i].label + "</div>" : "");
+        stage.appendChild(d);
+        stage.classList.add("on");
+        el("progress").textContent = "Familiarisation " + (i + 1) + " / " + items.length;
+        await sleep(P.TIMING.arrayMs + 1000);
+      }
+      stage.classList.remove("on");
+      stage.innerHTML = "";
+    }
+
+    async function begin() {
+      var L = showGeom();
+      if (!L.ok) return;
+      var plan = {
+        participant: GazePry.identity.participant,
+        experiment: el("exp").value,
+        arrayN: parseInt(el("arrayn").value, 10),
+        nTrials: parseInt(el("ntrials").value, 10),
+      };
+      var built = P.buildTrials(plan);
+      var coverDef = P.COVER_TASKS[el("cover-sel").value];
+      var awareness = el("aware").value;
+      var delay = el("exp").value === "E1" ? el("delay").value : null;
+
+      el("setup").style.display = "none";
+      el("gp-startbar").style.display = "none";
+
+      if (awareness === "countermeasure") {
+        fix.textContent = "For this block, try to look at every image equally so that no one could tell which ones you recognise.";
+        fix.style.font = "500 22px system-ui, sans-serif";
+        fix.classList.add("on");
+        await sleep(6000);
+        fix.classList.remove("on");
+        fix.style.font = ""; fix.textContent = "+";
+      }
+
+      try {
+        await GazePry.startEngine();
+      } catch (e) {
+        el("setup").style.display = "";
+        el("geomwarn").textContent = "Camera failed to start — see console (F12).";
+        return;
+      }
+
+      // The E1 study phase runs BEFORE capture starts: familiarisation gaze is
+      // not part of the probe data and must not enter the recording window.
+      if (built.experiment === "E1" && delay === "immediate") await studyPhase(plan);
+
+      var res = await GazePry.runTrialSession({
+        task: "probe",
+        experiment: built.experiment,
+        arrayN: built.arrayN,
+        coverTask: coverDef.id,
+        awareness: awareness,
+        counterbalanceGroup: built.counterbalanceGroup,
+        delayCondition: delay,
+        meta: {
+          timing: P.TIMING,
+          geom: { tileW: L.tileW, tileH: L.tileH, gap: L.gap },
+          coverDemandsMemory: coverDef.demandsMemory,
+          stimulusNotes: P.STIMULUS_NOTES,
+          protocolVersion: "d7.v1",
+        },
+        sequence: async function (ctx) {
+          for (var i = 0; i < built.trials.length; i++) {
+            var trial = built.trials[i];
+            el("progress").textContent = "Trial " + (i + 1) + " / " + built.trials.length;
+
+            fix.classList.add("on");
+            await sleep(P.TIMING.fixationMs);
+            fix.classList.remove("on");
+
+            var aois = renderArray(trial, L);
+            stage.classList.add("on");
+            var onsetT = ctx.now();
+            await sleep(P.TIMING.arrayMs);
+            var offsetT = ctx.now();
+            stage.classList.remove("on");
+            stage.innerHTML = "";
+
+            var resp = await askCover(coverDef, trial);
+            await sleep(P.TIMING.blankMs);
+
+            ctx.trial({
+              index: trial.index,
+              probeItemId: trial.probeItemId,
+              onsetT: onsetT, offsetT: offsetT,
+              coverResponseSlot: resp,
+              coverResponseItemId: resp >= 0 ? trial.slots[resp].itemId : null,
+              coverResponseFamiliar: resp >= 0 ? trial.slots[resp].familiar : null,
+              aois: aois,
+            });
+          }
+        },
+      });
+
+      GazePry.stopEngine();
+      el("progress").textContent = "";
+      showDone(res, built);
+    }
+
+    function showDone(res, built) {
+      var via = res.submit.via === "server"
+        ? "Saved to server: <code>" + (res.submit.stored || "") + "</code>"
+        : "Server unavailable — downloaded <code>" + (res.submit.file || "") +
+          "</code> (move it into <code>data/</code>)";
+      var d = document.createElement("div");
+      d.className = "gp-card gp-done";
+      d.innerHTML =
+        "<h2>Recognition probe complete (" + built.experiment + ")</h2>" +
+        '<p class="gp-note">' + res.session.nTrials + " trials, " +
+        res.session.nSamples + " gaze samples, " + res.session.nGaps + " gaps, in " +
+        Math.round(res.session.durationMs / 1000) + " s. Clock anchored: " +
+        (res.session.clockAnchored ? "yes" : "<b>NO — session unusable</b>") + ".</p>" +
+        '<p class="gp-note">' + via + "</p>" +
+        (built.experiment === "E1" ? "" :
+          '<p class="gp-note"><b>Now collect the post-hoc familiarity questionnaire</b> — ' +
+          "for " + built.experiment + " the labels come from self-report, not from this page.</p>") +
+        '<div class="gp-row"><a class="gp-btn" href="../index.html">&larr; Back to tasks</a></div>';
+      document.body.appendChild(d);
+    }
+  })();
+  </script>
+</body>
+</html>

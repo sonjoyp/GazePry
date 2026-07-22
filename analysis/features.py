@@ -76,6 +76,125 @@ def resample(samples: List[dict], hz: Optional[float]) -> List[dict]:
     return out
 
 
+# ---- I-DT dispersion-threshold fixation detection (Direction D7) ----------
+# The I-VT threshold above is velocity-based and coarse at webcam rates. D7's
+# load-bearing feature is fixation *duration* (the measure that survives
+# concealment -- Schwedes & Wentura 2012; Millen & Hancock 2019), so it needs a
+# segmentation algorithm that is stable at ~30 Hz. Thilderkvist & Dobslaw 2024
+# introduced a dispersion-threshold algorithm precisely because none existed for
+# low-frequency webcam data; this is that family (Salvucci & Goldberg I-DT).
+# Must stay byte-identical to reid-core.js detectFixationsIDT() -- the JS<->Py
+# parity test covers it.
+#
+# The threshold is in screen-diagonal units (resolution independent); returned
+# centroids are in VIEWPORT PIXELS, because AOI assignment is done in pixels.
+#
+# PARAMETERS ARE SET BY THE SENSOR, NOT BY TASTE. A lab-grade default (~0.045
+# diag, about 1.5-2 deg) finds ZERO fixations in commodity webcam data: at a
+# realistic 1.4 deg accuracy / ~50-70 px per-sample error (Kaduk et al. 2024),
+# the raw point cloud of a genuine fixation already spans more than that. Two
+# consequences, both deliberate:
+#   1. SMOOTH FIRST. A short centred moving average over the run cuts per-sample
+#      noise by ~sqrt(smooth_win) before dispersion is measured. Smoothing never
+#      crosses a gap, so a blink cannot fuse two fixations into one.
+#   2. The default threshold is set relative to the TILE, not the fovea. D7
+#      scores whole-tile AOIs (~700 px apart), so "sustained looking at one
+#      tile" is the object of interest; a threshold that resolves within-tile
+#      structure is both unattainable and unnecessary here.
+# Both are exposed so the analysis can report sensitivity rather than hiding a
+# tuned constant. See test_analysis.py::TestIDT::test_zero_fixations_at_lab_threshold.
+DISP_THRESHOLD = 0.10    # screen-diagonal units, tile-scale (see above)
+IDT_MIN_FIX_MS = 100
+IDT_SMOOTH_WIN = 5       # samples; 1 disables smoothing
+
+
+def _smooth_run(run, win):
+    """Centred moving average over one gap-free run; timestamps untouched."""
+    if not win or win < 2 or len(run) < 2:
+        return run
+    h, n = win // 2, len(run)
+    out = []
+    for i in range(n):
+        a, b = max(0, i - h), min(n - 1, i + h)
+        c = b - a + 1
+        sx = sum(run[k][1] for k in range(a, b + 1))
+        sy = sum(run[k][2] for k in range(a, b + 1))
+        out.append((run[i][0], sx / c, sy / c))
+    return out
+
+
+def _dispersion(run, i: int, j: int) -> float:
+    min_x = max_x = run[i][1]
+    min_y = max_y = run[i][2]
+    for k in range(i + 1, j + 1):
+        x, y = run[k][1], run[k][2]
+        if x < min_x:
+            min_x = x
+        if x > max_x:
+            max_x = x
+        if y < min_y:
+            min_y = y
+        if y > max_y:
+            max_y = y
+    return (max_x - min_x) + (max_y - min_y)
+
+
+def detect_fixations_idt(samples: List[dict], screen: Optional[dict] = None,
+                         dispersion: Optional[float] = None,
+                         min_dur_ms: Optional[float] = None,
+                         smooth_win: Optional[int] = None) -> List[dict]:
+    """Segment a gaze stream into fixations by dispersion threshold.
+
+    Returns ``[{"tStart","tEnd","durMs","x","y","n"}, ...]`` with ``x``/``y`` the
+    centroid in viewport pixels. A gap (``x`` is None) ends a candidate window,
+    so a blink never merges two fixations into one long one.
+    """
+    screen = screen or {}
+    diag = math.hypot(screen.get("innerW", 1920), screen.get("innerH", 1080)) or 1.0
+    thresh = (DISP_THRESHOLD if dispersion is None else dispersion) * diag
+    min_dur = IDT_MIN_FIX_MS if min_dur_ms is None else min_dur_ms
+    sm = IDT_SMOOTH_WIN if smooth_win is None else smooth_win
+
+    runs: List[list] = []
+    cur: list = []
+    for s in samples:
+        x, y = s.get("x"), s.get("y")
+        if x is None or y is None:
+            if cur:
+                runs.append(cur)
+                cur = []
+            continue
+        cur.append((s["t"], x, y))
+    if cur:
+        runs.append(cur)
+
+    fixations: List[dict] = []
+    for raw_run in runs:
+        run = _smooth_run(raw_run, sm)
+        a, n = 0, len(run)
+        while a < n:
+            b = a
+            while b + 1 < n and run[b][0] - run[a][0] < min_dur:
+                b += 1
+            if run[b][0] - run[a][0] < min_dur:
+                break
+            if _dispersion(run, a, b) > thresh:
+                a += 1
+                continue
+            while b + 1 < n and _dispersion(run, a, b + 1) <= thresh:
+                b += 1
+            cnt = b - a + 1
+            sx = sum(run[k][1] for k in range(a, b + 1))
+            sy = sum(run[k][2] for k in range(a, b + 1))
+            fixations.append({
+                "tStart": run[a][0], "tEnd": run[b][0],
+                "durMs": run[b][0] - run[a][0],
+                "x": sx / cnt, "y": sy / cnt, "n": cnt,
+            })
+            a = b + 1
+    return fixations
+
+
 def extract_features(samples: List[dict], screen: Optional[dict] = None,
                      resample_hz: Optional[float] = None) -> List[float]:
     if resample_hz:

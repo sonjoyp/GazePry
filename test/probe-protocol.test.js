@@ -175,6 +175,27 @@ test("stimulus sets are big enough for a 4-tile array and have unique ids", () =
   }
 });
 
+test("items are real image files, and E2/E3 are flagged as placeholders", () => {
+  const fs = require("fs");
+  const stimRoot = path.join(__dirname, "..", "public", "stimuli");
+  for (const expId of ["E1", "E2", "E3"]) {
+    for (const it of P.SETS[expId].items) {
+      assert.ok(it.file, `${expId}/${it.id} has no image file`);
+      assert.ok(fs.existsSync(path.join(stimRoot, it.file)), "missing " + it.file);
+    }
+  }
+  // E2/E3 measure naturally acquired familiarity, so shipping generated
+  // stand-ins must be visible to the code, not only to a reader of the docs.
+  assert.equal(P.usesPlaceholders("E1"), false);
+  assert.equal(P.usesPlaceholders("E2"), true);
+  assert.equal(P.usesPlaceholders("E3"), true);
+});
+
+test("installStimuli rejects a foreign manifest", () => {
+  assert.throws(() => P.installStimuli({ schema: "something.else", sets: {} }),
+    /gazepry\.stimuli\.v1/);
+});
+
 test("E3 contains no protected-characteristic topics", () => {
   // The direction deliberately scopes E3 to health/finance/legal/civic
   // (D7 §6.5). This asserts that scoping so it cannot drift in later.

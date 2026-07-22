@@ -20,7 +20,14 @@ function arg(name, def) {
 const PORT = parseInt(arg("port", process.env.PORT || "8080"), 10);
 const PUBLIC = path.join(__dirname, "public");
 const DATA = path.resolve(arg("data", path.join(__dirname, "data")));
+// Post-hoc questionnaire labels live in their OWN directory, never in DATA.
+// Service usage and topic exposure are precisely the data the D7 attack claims
+// to extract, so they are the most sensitive thing the study holds — and
+// keeping them out of the gaze directory means a careless `git add data/` or a
+// bulk copy of session logs cannot sweep them along.
+const LABELS = path.resolve(arg("labels", path.join(__dirname, "labels")));
 fs.mkdirSync(DATA, { recursive: true });
+fs.mkdirSync(LABELS, { recursive: true });
 
 const MIME = {
   ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8",
@@ -134,6 +141,79 @@ const server = http.createServer(async (req, res) => {
     }
   }
 
+  // POST /labels — store a post-hoc questionnaire response (D7 E2/E3).
+  // Written to LABELS, not DATA. Raw ordinals are stored as given; the
+  // familiar/unfamiliar cut is an analysis decision, not a collection one.
+  if (req.method === "POST" && pathname === "/labels") {
+    try {
+      const rec = JSON.parse(await readBody(req));
+      if (!rec.participant || !rec.session || !rec.experiment || !Array.isArray(rec.items))
+        return sendJson(res, 400, { error: "missing participant/session/experiment/items" });
+      const answered = rec.items.filter((i) => i && i.response != null).length;
+      if (!answered)
+        return sendJson(res, 400, { error: "no answered items" });
+      const fn = [safeName(rec.participant), safeName(rec.session),
+        safeName(rec.experiment), "labels", Date.now()].join("_") + ".json";
+      fs.writeFileSync(path.join(LABELS, fn), JSON.stringify(rec));
+      console.log(`labels: ${fn} (${answered}/${rec.items.length} answered)`);
+      return sendJson(res, 200, { stored: fn, answered, total: rec.items.length });
+    } catch (e) {
+      return sendJson(res, 400, { error: String(e) });
+    }
+  }
+
+  // GET /probe-status — D7 collection progress. Enumerates probe sessions with
+  // the quality signals an operator has to act on WHILE the participant is
+  // still in the room, plus whether a questionnaire has been filed for each.
+  if (req.method === "GET" && pathname === "/probe-status") {
+    const p = query.get("participant"), s = query.get("session");
+    const labelled = new Set();
+    for (const fn of fs.readdirSync(LABELS)) {
+      if (!fn.endsWith(".json")) continue;
+      try {
+        const l = JSON.parse(fs.readFileSync(path.join(LABELS, fn), "utf8"));
+        labelled.add([l.participant, l.session, l.experiment].join("|"));
+      } catch (e) { /* a corrupt label file must not hide the gaze sessions */ }
+    }
+    const out = [];
+    for (const fn of fs.readdirSync(DATA)) {
+      if (!fn.endsWith(".json")) continue;
+      let sess;
+      try { sess = JSON.parse(fs.readFileSync(path.join(DATA, fn), "utf8")); } catch (e) { continue; }
+      if (!String(sess.schema || "").startsWith("gazepry.probe")) continue;
+      if (p && sess.participant !== p) continue;
+      if (s && sess.session !== s) continue;
+      const nSamples = sess.nSamples || (sess.samples || []).length;
+      const nGaps = sess.nGaps || 0;
+      const nTrials = sess.nTrials || (sess.trials || []).length;
+      const key = [sess.participant, sess.session, sess.experiment].join("|");
+      // Hard failures first: an unanchored session has no usable trial marks at
+      // all, so it is not "low quality", it is unscorable.
+      const problems = [];
+      if (sess.clockAnchored === false) problems.push("no clock anchor (no gaze samples reached the recorder)");
+      if (!nTrials) problems.push("no trials recorded");
+      if (nTrials && nSamples / nTrials < 60) problems.push("very few samples per trial");
+      if (nSamples && nGaps / nSamples > 0.4) problems.push("over 40% gaps (face lost or blinking)");
+      out.push({
+        file: fn, participant: sess.participant, session: sess.session,
+        experiment: sess.experiment, arrayN: sess.arrayN, coverTask: sess.coverTask,
+        awareness: sess.awareness, delayCondition: sess.delayCondition,
+        tracker: sess.trackerFamily, counterbalanceGroup: sess.counterbalanceGroup,
+        nTrials, nSamples, nGaps, startedAt: sess.startedAt,
+        needsLabels: sess.experiment === "E2" || sess.experiment === "E3",
+        hasLabels: labelled.has(key),
+        problems,
+        usable: problems.length === 0,
+      });
+    }
+    out.sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
+    return sendJson(res, 200, {
+      count: out.length,
+      participants: Array.from(new Set(out.map((x) => x.participant))),
+      sessions: out,
+    });
+  }
+
   // GET /status — which tasks this participant/session/tracker has completed.
   // tracker is optional; when given, completion is scoped to that tracker so the
   // same session on a different tracker is tracked independently.
@@ -188,4 +268,5 @@ server.listen(PORT, () => {
   console.log(`GazePry server → http://localhost:${PORT}`);
   console.log(`  web root: ${PUBLIC}`);
   console.log(`  data dir: ${DATA}`);
+  console.log(`  labels:   ${LABELS}  (questionnaire responses, kept separate)`);
 });

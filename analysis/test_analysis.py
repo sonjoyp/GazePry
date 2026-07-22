@@ -30,6 +30,7 @@ sys.path.insert(0, HERE)
 
 import aoi_features  # noqa: E402
 import features  # noqa: E402
+import labels  # noqa: E402
 import probe_protocol  # noqa: E402
 import recognition  # noqa: E402
 import reid  # noqa: E402
@@ -464,7 +465,7 @@ class TestProbeProtocol(unittest.TestCase):
 
     def test_each_item_familiar_for_half_the_groups(self):
         for exp in ("E1", "E2", "E3"):
-            items = probe_protocol.SETS[exp]["items"]
+            items = probe_protocol.sets()[exp]["items"]
             for i in range(len(items)):
                 n = sum(1 for g in range(probe_protocol.N_GROUPS)
                         if probe_protocol.is_familiar(i, g))
@@ -675,6 +676,231 @@ class TestRecognitionEndToEnd(unittest.TestCase):
             self.assertIn("no clock anchor", buf.getvalue())
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestStimulusPack(unittest.TestCase):
+    """The stimulus manifest is now the single source of the item tables, and
+    the images are real files rather than shapes drawn at runtime."""
+
+    def test_manifest_loads_and_is_shared_by_both_languages(self):
+        m = probe_protocol.load_manifest()
+        self.assertEqual(m["schema"], "gazepry.stimuli.v1")
+        self.assertEqual(set(m["sets"]), {"E1", "E2", "E3"})
+
+    def test_every_item_points_at_a_file_that_exists(self):
+        root = os.path.dirname(probe_protocol.MANIFEST_PATH)
+        for sid, s in probe_protocol.sets().items():
+            self.assertGreaterEqual(len(s["items"]), 8, f"{sid} too small for a 4-tile array")
+            ids = [i["id"] for i in s["items"]]
+            self.assertEqual(len(set(ids)), len(ids), f"{sid} has duplicate ids")
+            for it in s["items"]:
+                fp = os.path.join(root, it["file"].replace("/", os.sep))
+                self.assertTrue(os.path.exists(fp), f"missing stimulus {it['file']}")
+                self.assertGreater(os.path.getsize(fp), 1000, f"{it['file']} is suspiciously tiny")
+
+    def test_e1_images_meet_the_minimum_size(self):
+        sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+        import make_stimuli
+        root = os.path.dirname(probe_protocol.MANIFEST_PATH)
+        m = probe_protocol.load_manifest()
+        min_w, min_h = m["minSize"]["w"], m["minSize"]["h"]
+        for it in probe_protocol.sets()["E1"]["items"]:
+            size = make_stimuli.read_png_size(
+                os.path.join(root, it["file"].replace("/", os.sep)))
+            self.assertIsNotNone(size, f"unreadable {it['file']}")
+            self.assertGreaterEqual(size[0], min_w)
+            self.assertGreaterEqual(size[1], min_h)
+
+    def test_e1_is_real_and_e2_e3_are_flagged_placeholders(self):
+        """E2/E3 measure naturally acquired familiarity, so shipping stand-ins
+        must be visible to the tooling, not just documented."""
+        self.assertFalse(probe_protocol.uses_placeholders("E1"))
+        self.assertTrue(probe_protocol.uses_placeholders("E2"))
+        self.assertTrue(probe_protocol.uses_placeholders("E3"))
+
+    def test_e1_stimuli_are_mutually_distinguishable(self):
+        """A 'novel' tile that looks like a studied one contaminates the
+        familiarity contrast in a way counterbalancing cannot undo."""
+        s = probe_protocol.sets()["E1"]
+        self.assertIn("minPairDistance", s)
+        self.assertGreater(s["minPairDistance"], 15.0,
+                           "E1 fractals are too similar to each other")
+
+    def test_e3_has_no_protected_characteristics(self):
+        allowed = {"health", "finance", "legal", "civic"}
+        for it in probe_protocol.sets()["E3"]["items"]:
+            self.assertIn(it.get("category"), allowed,
+                          f"unexpected E3 category: {it.get('category')}")
+
+    def test_generator_is_deterministic(self):
+        sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+        import make_stimuli
+        a = make_stimuli.julia(4242)
+        b = make_stimuli.julia(4242)
+        self.assertTrue((a == b).all(), "same seed must give the same image")
+        c = make_stimuli.julia(4243)
+        self.assertFalse((a == c).all(), "different seeds must differ")
+
+    def test_generated_images_contain_no_garbage_pixels(self):
+        """REGRESSION: the smooth escape-time formula can go negative, and a
+        NaN cast to uint8 is a garbage pixel rather than an obvious error."""
+        sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+        import make_stimuli
+        import numpy as np
+        for seed in (11, 1009, 77777):
+            img = make_stimuli.julia(seed)
+            self.assertEqual(img.dtype, np.uint8)
+            self.assertGreater(float(img.std()), 25.0,
+                               "image is nearly uniform — little to recognise")
+
+    def test_checker_flags_a_missing_file(self):
+        tmp = tempfile.mkdtemp(prefix="gp-stim-")
+        try:
+            sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+            import make_stimuli
+            m = {"schema": "gazepry.stimuli.v1", "minSize": {"w": 10, "h": 10},
+                 "sets": {"E1": {"items": [{"id": f"i{n}", "file": "e1/nope.png"}
+                                           for n in range(8)]}}}
+            with open(os.path.join(tmp, "manifest.json"), "w", encoding="utf-8") as fh:
+                json.dump(m, fh)
+            with contextlib.redirect_stdout(io.StringIO()) as buf:
+                rc = make_stimuli.check(tmp)
+            self.assertEqual(rc, 1)
+            self.assertIn("missing file", buf.getvalue())
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestSelfReportLabels(unittest.TestCase):
+    """E2/E3 ground truth is the questionnaire, not the counterbalance role."""
+
+    @staticmethod
+    def _write_labels(tmp, participant, experiment, responses, when=1):
+        rec = {"schema": "gazepry.labels.v1", "participant": participant,
+               "session": "S1", "experiment": experiment, "collectedAt": when,
+               "items": [{"itemId": k, "response": v} for k, v in responses.items()]}
+        fn = f"{participant}_S1_{experiment}_labels_{when}.json"
+        with open(os.path.join(tmp, fn), "w", encoding="utf-8") as fh:
+            json.dump(rec, fh)
+        return rec
+
+    def test_loads_and_keys_by_cell(self):
+        tmp = tempfile.mkdtemp(prefix="gp-lab-")
+        try:
+            self._write_labels(tmp, "P01", "E2", {"mail": 3, "vid": 0})
+            labs = labels.load_labels(tmp)
+            self.assertIn(("P01", "S1", "E2"), labs)
+            self.assertEqual(labels.response_map(labs[("P01", "S1", "E2")])["mail"], 3)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_latest_questionnaire_wins(self):
+        tmp = tempfile.mkdtemp(prefix="gp-lab-")
+        try:
+            self._write_labels(tmp, "P01", "E2", {"mail": 0}, when=1)
+            self._write_labels(tmp, "P01", "E2", {"mail": 3}, when=2)
+            with contextlib.redirect_stdout(io.StringIO()) as buf:
+                labs = labels.load_labels(tmp, verbose=True)
+            self.assertEqual(labels.response_map(labs[("P01", "S1", "E2")])["mail"], 3)
+            self.assertIn("multiple questionnaires", buf.getvalue())
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_ignores_foreign_schemas(self):
+        tmp = tempfile.mkdtemp(prefix="gp-lab-")
+        try:
+            with open(os.path.join(tmp, "x.json"), "w", encoding="utf-8") as fh:
+                json.dump({"schema": "gazepry.probe.v1"}, fh)
+            self.assertEqual(labels.load_labels(tmp), {})
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_threshold_applies_and_is_adjustable(self):
+        rows = [{"participant": "P01", "sessionId": "S1", "experiment": "E2",
+                 "itemId": f"i{v}", "familiar": False} for v in range(4)]
+        labs = {("P01", "S1", "E2"): {"items": [
+            {"itemId": f"i{v}", "response": v} for v in range(4)]}}
+        kept, _ = labels.apply_labels(rows, labs, threshold=2)
+        self.assertEqual([r["familiar"] for r in kept], [False, False, True, True])
+        kept1, _ = labels.apply_labels(rows, labs, threshold=1)
+        self.assertEqual([r["familiar"] for r in kept1], [False, True, True, True])
+
+    def test_unanswered_items_are_dropped_not_defaulted(self):
+        """A blank answer is participant fatigue, not evidence of unfamiliarity;
+        defaulting it to False would manufacture negatives."""
+        rows = [{"participant": "P01", "sessionId": "S1", "experiment": "E2",
+                 "itemId": "a", "familiar": False},
+                {"participant": "P01", "sessionId": "S1", "experiment": "E2",
+                 "itemId": "b", "familiar": False}]
+        labs = {("P01", "S1", "E2"): {"items": [
+            {"itemId": "a", "response": 3}, {"itemId": "b", "response": None}]}}
+        kept, rep = labels.apply_labels(rows, labs)
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(rep["unanswered_items"], 1)
+
+    def test_rows_without_a_questionnaire_are_dropped_and_reported(self):
+        rows = [{"participant": "P09", "sessionId": "S1", "experiment": "E2",
+                 "itemId": "a", "familiar": True}]
+        kept, rep = labels.apply_labels(rows, {})
+        self.assertEqual(kept, [])
+        self.assertEqual(rep["missing_questionnaire_cells"], ["P09/S1/E2"])
+
+    def test_evaluate_refuses_e2_without_labels(self):
+        """Scoring E2 on the counterbalance role would measure a label the
+        design never controlled — so it must be an error, not a silent default."""
+        ss = [simulate_probe.make_session(f"P{i + 1:02d}", "E2", 4, 10, 0.9, 700 + i,
+                                          "webgazer", "naive", "memory-adjacent", None)
+              for i in range(6)]
+        res = recognition.evaluate(ss, n_boot=20)
+        self.assertIn("error", res)
+        self.assertIn("questionnaire", res["error"])
+
+    def test_evaluate_uses_self_report_when_provided(self):
+        tmp = tempfile.mkdtemp(prefix="gp-lab-")
+        try:
+            ss = [simulate_probe.make_session(f"P{i + 1:02d}", "E2", 4, 12, 0.9, 800 + i,
+                                              "webgazer", "naive", "memory-adjacent", None)
+                  for i in range(8)]
+            # Self-report that AGREES with the planted effect for each participant.
+            items = [it["id"] for it in probe_protocol.sets()["E2"]["items"]]
+            for i, s in enumerate(ss):
+                fam = {a["itemId"] for t in s["trials"] for a in t["aois"] if a["familiar"]}
+                self._write_labels(tmp, s["participant"], "E2",
+                                   {it: (3 if it in fam else 0) for it in items})
+            res = recognition.evaluate(ss, n_boot=60, labels_dir=tmp)
+            self.assertNotIn("error", res)
+            self.assertEqual(res["label_source"], "self-report")
+            self.assertGreater(res["auc_per_aoi"], 0.7)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_self_report_that_contradicts_gaze_collapses_to_chance(self):
+        """The label really is driving the score: keep the same gaze, randomise
+        the questionnaire, and the result must fall apart."""
+        tmp = tempfile.mkdtemp(prefix="gp-lab-")
+        try:
+            import random
+            rng = random.Random(5)
+            ss = [simulate_probe.make_session(f"P{i + 1:02d}", "E2", 4, 12, 0.9, 900 + i,
+                                              "webgazer", "naive", "memory-adjacent", None)
+                  for i in range(8)]
+            items = [it["id"] for it in probe_protocol.sets()["E2"]["items"]]
+            for s in ss:
+                self._write_labels(tmp, s["participant"], "E2",
+                                   {it: rng.choice([0, 3]) for it in items})
+            res = recognition.evaluate(ss, n_boot=60, labels_dir=tmp)
+            self.assertLess(abs(res["auc_per_aoi"] - 0.5), 0.12,
+                            f"random labels still scored {res['auc_per_aoi']:.3f}")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_e1_does_not_need_labels(self):
+        ss = [simulate_probe.make_session(f"P{i + 1:02d}", "E1", 4, 12, 0.9, 600 + i,
+                                          "webgazer", "naive", "memory-adjacent", "immediate")
+              for i in range(8)]
+        res = recognition.evaluate(ss, n_boot=40)
+        self.assertNotIn("error", res)
+        self.assertEqual(res["label_source"], "counterbalance")
 
 
 class TestServerExcludesProbeSessions(unittest.TestCase):

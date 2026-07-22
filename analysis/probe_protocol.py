@@ -15,6 +15,8 @@ signed or unsigned. So uint32 arithmetic here reproduces int32 arithmetic there.
 """
 from __future__ import annotations
 
+import json
+import os
 import re
 from typing import Dict, List, Optional
 
@@ -60,58 +62,50 @@ def shuffled(arr: List, rnd) -> List:
     return a
 
 
-# ---- stimulus sets (mirror of the JS tables) ------------------------------
-def _make_abstract_items(n: int) -> List[dict]:
-    return [{
-        "id": "abs" + ("0" if i < 10 else "") + str(i),
-        "label": "", "kind": "abstract",
-        "hue": round((360 / n) * i), "glyph": i % 6, "seed": 1009 + i * 37,
-    } for i in range(n)]
+# ---- stimulus sets (loaded from the shared manifest) ----------------------
+# Items are REAL IMAGE FILES described by public/stimuli/manifest.json, which
+# scripts/make_stimuli.py generates. Both this port and probe-protocol.js read
+# that one file, so the item table cannot drift between the browser and the
+# analysis -- previously the tables were duplicated in both languages and kept
+# in step only by the parity test.
+MANIFEST_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "public", "stimuli", "manifest.json")
+
+_MANIFEST: Optional[dict] = None
 
 
-_BRANDS = [
-    ("mail", "Mailbox", "high"), ("vid", "Streamline", "high"),
-    ("shop", "Marketplace", "high"), ("soc", "Circle", "high"),
-    ("map", "Wayfind", "high"), ("news", "Dispatch", "medium"),
-    ("bank", "Ledger", "medium"), ("fit", "Stride", "medium"),
-    ("code", "Forge", "medium"), ("note", "Sheaf", "medium"),
-    ("trav", "Compass", "low"), ("food", "Larder", "low"),
-    ("game", "Arcade", "low"), ("learn", "Tutor", "low"),
-    ("photo", "Album", "low"), ("music", "Chord", "low"),
-]
-
-_TOPICS = [
-    ("t_sleep", "Sleep problems", "health"), ("t_diab", "Blood sugar", "health"),
-    ("t_ment", "Therapy options", "health"), ("t_derm", "Skin conditions", "health"),
-    ("t_debt", "Debt consolidation", "finance"), ("t_mort", "Mortgage rates", "finance"),
-    ("t_pens", "Retirement planning", "finance"), ("t_tax", "Tax deductions", "finance"),
-    ("t_tenc", "Tenant rights", "legal"), ("t_will", "Making a will", "legal"),
-    ("t_emp", "Employment disputes", "legal"), ("t_imm", "Visa paperwork", "legal"),
-    ("t_vote", "Voter registration", "civic"), ("t_coun", "Local council", "civic"),
-    ("t_recy", "Recycling rules", "civic"), ("t_perm", "Building permits", "civic"),
-]
+def load_manifest(path: Optional[str] = None) -> dict:
+    """Load (and cache) the stimulus manifest."""
+    global _MANIFEST
+    if _MANIFEST is not None and path is None:
+        return _MANIFEST
+    fp = path or MANIFEST_PATH
+    if not os.path.exists(fp):
+        raise FileNotFoundError(
+            f"no stimulus manifest at {fp} -- run: python scripts/make_stimuli.py")
+    with open(fp, encoding="utf-8") as fh:
+        m = json.load(fh)
+    if m.get("schema") != "gazepry.stimuli.v1":
+        raise ValueError(f"{fp} is not a gazepry.stimuli.v1 manifest")
+    if path is None:
+        _MANIFEST = m
+    return m
 
 
-def _make_brand_items() -> List[dict]:
-    return [{"id": d[0], "label": d[1], "kind": "brand", "tier": d[2],
-             "hue": (i * 47) % 360, "glyph": i % 6, "seed": 3001 + i * 53}
-            for i, d in enumerate(_BRANDS)]
+def sets(path: Optional[str] = None) -> Dict[str, dict]:
+    return load_manifest(path)["sets"]
 
 
-def _make_topic_items() -> List[dict]:
-    return [{"id": d[0], "label": d[1], "kind": "topic", "category": d[2],
-             "hue": (i * 31 + 200) % 360, "glyph": i % 6, "seed": 5003 + i * 71}
-            for i, d in enumerate(_TOPICS)]
+def uses_placeholders(experiment: str, path: Optional[str] = None) -> bool:
+    """True when a set still holds generated stand-ins rather than real assets.
 
+    E2/E3 measure NATURALLY acquired familiarity, so collecting against
+    placeholders yields a cohort's worth of unusable data.
+    """
+    s = sets(path).get(experiment)
+    return bool(s and any(i.get("placeholder") for i in s["items"]))
 
-SETS: Dict[str, dict] = {
-    "E1": {"id": "E1", "label": "Lab-installed familiarity",
-           "studyPhase": True, "items": _make_abstract_items(24)},
-    "E2": {"id": "E2", "label": "Real-world service familiarity",
-           "studyPhase": False, "selfReportLabels": True, "items": _make_brand_items()},
-    "E3": {"id": "E3", "label": "Sensitive-topic exposure",
-           "studyPhase": False, "selfReportLabels": True, "items": _make_topic_items()},
-}
 
 N_GROUPS = 4
 GEOM = {"minTileW": 400, "minTileH": 300, "minGap": 250, "edgeMargin": 40}
@@ -140,7 +134,7 @@ def build_trials(participant: str, experiment: str = "E1", array_n: int = 4,
     """Rebuild one participant's counterbalanced trial plan. See the JS for the
     design rationale (§6.4): one familiar-role probe per trial among
     ``array_n - 1`` unfamiliar-role irrelevants, slot order randomised."""
-    s = SETS.get(experiment)
+    s = sets().get(experiment)
     if not s:
         raise ValueError("unknown experiment: " + str(experiment))
     array_n = 2 if array_n == 2 else 4

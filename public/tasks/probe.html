@@ -13,7 +13,7 @@
     #stage.on { display: block; }
     .ptile { position: absolute; border-radius: 14px; overflow: hidden;
       border: 1px solid var(--gp-border); background: #12151a; }
-    .ptile svg { width: 100%; height: 100%; display: block; }
+    .ptile img { width: 100%; height: 100%; display: block; object-fit: cover; }
     .ptile .plabel { position: absolute; left: 0; right: 0; bottom: 0;
       text-align: center; font: 600 20px/2.2 system-ui, sans-serif;
       color: #e8ecf1; background: rgba(0,0,0,.45); }
@@ -31,6 +31,8 @@
       font: 500 13px system-ui, sans-serif; z-index: 5; }
     #setup { max-width: 760px; margin: 0 auto; padding: 24px 24px 120px; }
     #geomwarn { color: #ffb4b4; font-weight: 600; }
+    .bad { color: #ffb4b4; font-weight: 600; }
+    .good { color: #8ce8a8; }
     label.f { display: block; margin: 10px 0 4px; color: var(--gp-muted); font-size: 13px; }
   </style>
 </head>
@@ -83,6 +85,8 @@
       <input id="ntrials" type="number" value="40" min="4" max="120" />
 
       <p id="geomline" class="gp-note"></p>
+      <p id="stimline" class="gp-note"></p>
+      <p id="stimwarn" class="bad"></p>
       <p id="geomwarn"></p>
       <div class="gp-row">
         <button class="gp-btn" type="button" id="begin">Begin</button>
@@ -122,43 +126,76 @@
           " · " + (t ? t.label : GazePry.identity.tracker);
       }
       el("arrayn").onchange = showGeom;
+      el("exp").onchange = showStimulusState;
       showGeom();
       el("begin").onclick = begin;
+      // The item table lives in the stimulus manifest, so nothing can be built
+      // until it has loaded.
+      el("begin").disabled = true;
+      P.loadStimuli("../stimuli/manifest.json").then(function () {
+        showGeom();
+        showStimulusState();
+      }).catch(function (e) {
+        el("geomwarn").textContent =
+          "Stimuli failed to load (" + e.message + "). Run: python scripts/make_stimuli.py";
+        el("begin").disabled = true;
+      });
     });
+
+    // E2/E3 measure NATURALLY acquired familiarity, so running them against
+    // generated stand-ins collects a whole cohort of unusable data. Block it
+    // rather than warn: by the time anyone reads the warning it is too late.
+    function showStimulusState() {
+      var exp = el("exp").value;
+      var line = el("stimline");
+      if (!P.STIMULI) { line.textContent = "Loading stimuli…"; return; }
+      var set = P.SETS[exp];
+      var ph = P.usesPlaceholders(exp);
+      line.innerHTML = set.items.length + " real image files for " + exp +
+        (ph ? ' — <b class="bad">PLACEHOLDERS</b>' : ' — <b class="good">real assets</b>');
+      el("stimwarn").textContent = ph
+        ? exp + " is still using generated placeholder images. It measures familiarity " +
+          "the participant brought with them, so placeholders make the data meaningless. " +
+          "Install real assets (see public/stimuli/README.md) before collecting " + exp + "."
+        : "";
+      var geomOk = P.layout(parseInt(el("arrayn").value, 10),
+        window.innerWidth, window.innerHeight).ok;
+      el("begin").disabled = !geomOk || ph;
+    }
 
     // Refuse to run outside the validated stimulus envelope (§6.2) rather than
     // collecting data at a geometry no published result covers.
     function showGeom() {
       var n = parseInt(el("arrayn").value, 10);
       var L = P.layout(n, window.innerWidth, window.innerHeight);
+      var ph = P.STIMULI ? P.usesPlaceholders(el("exp").value) : true;
       el("geomline").textContent =
         "Viewport " + window.innerWidth + "x" + window.innerHeight +
         " → tiles " + L.tileW + "x" + L.tileH + " px, gap " + L.gap + " px " +
         "(minimum " + P.GEOM.minTileW + "x" + P.GEOM.minTileH + ", gap " + P.GEOM.minGap + ").";
       el("geomwarn").textContent = L.ok ? "" :
         "Window too small for the validated geometry. Maximise the window (or use a larger display) before running — smaller tiles are outside the envelope of Van der Cruyssen et al. 2024.";
-      el("begin").disabled = !L.ok;
+      el("begin").disabled = !L.ok || ph;
       return L;
     }
 
-    function svgFor(item, w, h) {
-      // Procedural, CSP-safe, deterministic per item.
-      var rnd = P.mulberry32(item.seed);
-      var s = '<svg viewBox="0 0 200 150" preserveAspectRatio="none">';
-      s += '<rect width="200" height="150" fill="hsl(' + item.hue + ',32%,13%)"/>';
-      for (var k = 0; k < 7; k++) {
-        var cx = Math.floor(rnd() * 200), cy = Math.floor(rnd() * 150);
-        var rad = 10 + Math.floor(rnd() * 30);
-        var h2 = (item.hue + Math.floor(rnd() * 110)) % 360;
-        var op = (0.3 + rnd() * 0.55).toFixed(2);
-        if ((item.glyph + k) % 2)
-          s += '<circle cx="' + cx + '" cy="' + cy + '" r="' + rad + '" fill="hsl(' + h2 + ',70%,60%)" opacity="' + op + '"/>';
-        else
-          s += '<rect x="' + cx + '" y="' + cy + '" width="' + rad * 2 + '" height="' + rad + '" rx="4" fill="hsl(' + h2 + ',70%,60%)" opacity="' + op + '"/>';
-      }
-      s += "</svg>";
-      return s;
+    // Real image files from the stimulus manifest. Recognition memory is
+    // driven by visual detail, so the stimulus is a photograph/render, not a
+    // shape drawn at runtime.
+    function imgFor(item) {
+      var el = document.createElement("img");
+      el.src = "../stimuli/" + item.file;
+      el.alt = "";
+      el.draggable = false;
+      // A stimulus that fails to load would silently become a blank tile and
+      // quietly corrupt that trial, so make it loud instead.
+      el.onerror = function () {
+        missingAssets.push(item.file);
+        el.style.background = "repeating-linear-gradient(45deg,#511,#511 12px,#722 12px,#722 24px)";
+      };
+      return el;
     }
+    var missingAssets = [];
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
@@ -172,8 +209,13 @@
         d.className = "ptile";
         d.style.left = r.x + "px"; d.style.top = r.y + "px";
         d.style.width = r.w + "px"; d.style.height = r.h + "px";
-        d.innerHTML = svgFor(sl.item, r.w, r.h) +
-          (sl.item.label ? '<div class="plabel">' + sl.item.label + "</div>" : "");
+        d.appendChild(imgFor(sl.item));
+        if (sl.item.label) {
+          var lb = document.createElement("div");
+          lb.className = "plabel";
+          lb.textContent = sl.item.label;
+          d.appendChild(lb);
+        }
         stage.appendChild(d);
         aois.push({ slot: i, itemId: sl.itemId, familiar: sl.familiar,
           rect: { x: r.x, y: r.y, w: r.w, h: r.h } });
@@ -223,8 +265,13 @@
         d.style.left = Math.round((window.innerWidth - r.w) / 2) + "px";
         d.style.top = Math.round((window.innerHeight - r.h) / 2) + "px";
         d.style.width = r.w + "px"; d.style.height = r.h + "px";
-        d.innerHTML = svgFor(items[i], r.w, r.h) +
-          (items[i].label ? '<div class="plabel">' + items[i].label + "</div>" : "");
+        d.appendChild(imgFor(items[i]));
+        if (items[i].label) {
+          var lb = document.createElement("div");
+          lb.className = "plabel";
+          lb.textContent = items[i].label;
+          d.appendChild(lb);
+        }
         stage.appendChild(d);
         stage.classList.add("on");
         el("progress").textContent = "Familiarisation " + (i + 1) + " / " + items.length;
@@ -338,6 +385,11 @@
         res.session.nSamples + " gaze samples, " + res.session.nGaps + " gaps, in " +
         Math.round(res.session.durationMs / 1000) + " s. Clock anchored: " +
         (res.session.clockAnchored ? "yes" : "<b>NO — session unusable</b>") + ".</p>" +
+        (missingAssets.length
+          ? '<p class="bad">' + missingAssets.length + " stimulus image(s) failed to load (" +
+            missingAssets.slice(0, 4).join(", ") + "). Those trials showed a blank tile " +
+            "and must be discarded — re-run after fixing public/stimuli/.</p>"
+          : "") +
         '<p class="gp-note">' + via + "</p>" +
         (built.experiment === "E1" ? "" :
           '<p class="gp-note"><b>Now collect the post-hoc familiarity questionnaire</b> — ' +

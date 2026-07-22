@@ -40,8 +40,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from aoi_features import (  # noqa: E402
     FEATURE_NAMES, design_matrix, extract_session,
 )
+from labels import (  # noqa: E402
+    DEFAULT_THRESHOLD, apply_labels, class_balance, load_labels,
+)
 
 CHANCE = 0.5
+SELF_REPORT_EXPERIMENTS = ("E2", "E3")
 
 
 # ---- loading --------------------------------------------------------------
@@ -399,12 +403,40 @@ def bootstrap_ci(rows: List[dict], scores: np.ndarray, n_boot: int = 400,
 
 # ---- report ---------------------------------------------------------------
 def evaluate(sessions: List[dict], soft: bool = True, l2: float = 1.0,
-             seed: int = 0, n_boot: int = 400) -> dict:
+             seed: int = 0, n_boot: int = 400,
+             labels_dir: Optional[str] = None,
+             label_threshold: int = DEFAULT_THRESHOLD,
+             verbose: bool = False) -> dict:
     rows: List[dict] = []
     for s in sessions:
         rows.extend(extract_session(s, soft=soft))
     if not rows:
         return {"error": "no scorable AOI rows"}
+
+    # E2/E3 ground truth is the questionnaire, not the counterbalance role
+    # (labels.py explains why). Refuse rather than score the wrong label.
+    exps = {r.get("experiment") for r in rows}
+    needs_self_report = exps & set(SELF_REPORT_EXPERIMENTS)
+    label_report = None
+    if needs_self_report:
+        if not labels_dir:
+            return {"error": (
+                f"experiment(s) {sorted(needs_self_report)} need post-hoc "
+                f"questionnaire labels; pass --labels <dir>. Scoring these "
+                f"against the counterbalance role would measure a label the "
+                f"design never controlled.")}
+        labs = load_labels(labels_dir, verbose=verbose)
+        if not labs:
+            return {"error": f"no gazepry.labels.v1 records found in {labels_dir}"}
+        rows, label_report = apply_labels(rows, labs, threshold=label_threshold,
+                                          verbose=verbose)
+        if not rows:
+            return {"error": "no AOI rows survived self-report labelling "
+                             "(no questionnaire covers the captured sessions)"}
+        pos, neg = class_balance(rows)
+        if pos < 10 or neg < 10:
+            return {"error": f"self-report labels are too imbalanced to score "
+                             f"({pos} familiar / {neg} unfamiliar)"}
 
     # Segmentation health. If I-DT finds no fixations (which is what a lab-grade
     # dispersion threshold does to webcam-noise data), every fixation-derived
@@ -426,6 +458,8 @@ def evaluate(sessions: List[dict], soft: bool = True, l2: float = 1.0,
         "n_scored": int(valid.sum()),
         "n_items": len(set(items)),
         "fixations_per_trial": fix_per_trial,
+        "label_source": "self-report" if needs_self_report else "counterbalance",
+        "label_report": label_report,
     }
     res["auc_per_aoi"] = auc(scores[valid], y[valid])
     res["auc_ci"] = bootstrap_ci(rows, scores, n_boot=n_boot, seed=seed)
@@ -460,7 +494,7 @@ def evaluate(sessions: List[dict], soft: bool = True, l2: float = 1.0,
 
 
 def rq0_verdict(res: dict) -> Tuple[bool, List[str]]:
-    """Apply the §5 RQ0 decision rule. Returns (passed, reasons)."""
+    """Apply the section-5 RQ0 decision rule. Returns (passed, reasons)."""
     reasons = []
     ok = True
     lo, hi = res.get("auc_ci", (float("nan"), float("nan")))
@@ -485,6 +519,11 @@ def report(res: dict, plot: Optional[str] = None) -> None:
         return
     print(f"sessions={res['n_sessions']}  participants={res['n_participants']}  "
           f"items={res['n_items']}  AOI rows={res['n_rows']} (scored {res['n_scored']})")
+    src = res.get("label_source", "counterbalance")
+    print(f"labels: {src}"
+          + (f"  (threshold >= {res['label_report']['threshold']}, "
+             f"{res['label_report']['relabelled_vs_counterbalance']} rows differ "
+             f"from the counterbalance role)" if res.get("label_report") else ""))
     fpt = res.get("fixations_per_trial", 0.0)
     print(f"segmentation: {fpt:.2f} I-DT fixations per trial")
     if fpt < 1.0:
@@ -531,7 +570,7 @@ def report(res: dict, plot: Optional[str] = None) -> None:
             matplotlib.use("Agg")
             import matplotlib.pyplot as plt
         except ImportError:
-            print(f"\n  (matplotlib not installed — skipping {plot})")
+            print(f"\n  (matplotlib not installed - skipping {plot})")
             return
         ks = sorted(res["auc_vs_k"])
         vs = [res["auc_vs_k"][k] for k in ks]
@@ -554,6 +593,11 @@ def main(argv=None) -> int:
     ap.add_argument("--experiment", choices=["E1", "E2", "E3"], help="restrict to one experiment")
     ap.add_argument("--tracker", help="restrict to one tracker family")
     ap.add_argument("--awareness", choices=["naive", "countermeasure"])
+    ap.add_argument("--labels", help="directory of questionnaire responses "
+                                     "(required for E2/E3)")
+    ap.add_argument("--label-threshold", type=int, default=DEFAULT_THRESHOLD,
+                    help="ordinal cut for 'familiar' on the 0-3 self-report scale "
+                         f"(default {DEFAULT_THRESHOLD} = has genuine prior exposure)")
     ap.add_argument("--hard-aoi", action="store_true",
                     help="hard nearest-AOI assignment instead of soft (the §7.1 contrast)")
     ap.add_argument("--l2", type=float, default=1.0)
@@ -570,7 +614,11 @@ def main(argv=None) -> int:
     print(f"loaded {len(sessions)} probe session(s) from {a.data}"
           f"{' [' + a.experiment + ']' if a.experiment else ''}")
     print(f"AOI assignment: {'hard' if a.hard_aoi else 'soft'}\n")
-    res = evaluate(sessions, soft=not a.hard_aoi, l2=a.l2, seed=a.seed, n_boot=a.boot)
+    res = evaluate(sessions, soft=not a.hard_aoi, l2=a.l2, seed=a.seed, n_boot=a.boot,
+                   labels_dir=a.labels, label_threshold=a.label_threshold, verbose=True)
+    if "error" in res:
+        print("ERROR:", res["error"])
+        return 1
     report(res, plot=a.plot)
     return 0
 

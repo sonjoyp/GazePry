@@ -260,7 +260,7 @@ def extract_trial(session: dict, trial: dict, soft: bool = True,
 
 
 def relativise(rows: List[dict]) -> List[dict]:
-    """Express each AOI's features relative to its own trial's AOI mean (§7.2).
+    """Express each AOI's features relative to its own trial's AOI mean (section 7.2).
 
     Additive for features that are already proportions or counts; the point is
     that a constant offset shared by every AOI in a trial (sensor drift, a

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>D7 collection console — GazePry</title>
+  <link rel="stylesheet" href="tracker.css" />
+  <style>
+    #wrap { max-width: 1150px; margin: 0 auto; padding: 20px 20px 80px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+    th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--gp-border); }
+    th { color: var(--gp-muted); font-weight: 600; white-space: nowrap; }
+    tr.bad { background: rgba(255, 90, 90, .10); }
+    tr.warnrow { background: rgba(255, 200, 80, .08); }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 600; }
+    .ok { background: #163d24; color: #8ce8a8; }
+    .bad2 { background: #4a1c1c; color: #ffb4b4; }
+    .warn2 { background: #4a3a12; color: #ffd479; }
+    .muted { color: var(--gp-muted); }
+    .cards { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+    .stat { border: 1px solid var(--gp-border); border-radius: 12px; padding: 12px 16px;
+      background: #12151a; min-width: 130px; }
+    .stat b { display: block; font-size: 26px; margin-bottom: 2px; }
+    .why { font-size: 12px; color: #ffb4b4; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+    .cell { border: 1px solid var(--gp-border); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+  </style>
+</head>
+<body class="gp-body">
+  <div id="wrap">
+    <h1>D7 collection console</h1>
+    <p class="gp-note">
+      Live view of recognition-probe sessions. <b>Check a participant's row
+      before they leave the room</b> — an unanchored or gap-heavy session can be
+      re-run in two minutes while they are still sitting there, and not at all
+      afterwards.
+    </p>
+
+    <div class="gp-row">
+      <button class="gp-btn" type="button" id="refresh">Refresh</button>
+      <label class="gp-note"><input type="checkbox" id="auto" checked /> auto-refresh (5 s)</label>
+      <a class="gp-btn secondary" href="index.html">Task hub</a>
+      <a class="gp-btn secondary" href="questionnaire.html">Questionnaire</a>
+      <span class="gp-note" id="updated"></span>
+    </div>
+
+    <div class="cards" id="stats"></div>
+
+    <h2>Design cells filled</h2>
+    <p class="gp-note">Usable sessions only, counted per (experiment x array x cover task x awareness).</p>
+    <div class="grid" id="cells"></div>
+
+    <h2>Sessions</h2>
+    <div id="tablebox"></div>
+  </div>
+
+  <script>
+  (function () {
+    "use strict";
+    var el = function (id) { return document.getElementById(id); };
+    var timer = null;
+
+    function pill(cls, text) { return '<span class="pill ' + cls + '">' + text + "</span>"; }
+
+    async function load() {
+      var box = el("tablebox");
+      try {
+        var r = await fetch("/probe-status");
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        var j = await r.json();
+        render(j);
+        el("updated").textContent = "updated " + new Date().toLocaleTimeString();
+      } catch (e) {
+        box.innerHTML = '<p class="why">Cannot reach the server: ' + e.message +
+          ". Is <code>node server.js</code> running?</p>";
+      }
+    }
+
+    function render(j) {
+      var s = j.sessions || [];
+      var usable = s.filter(function (x) { return x.usable; });
+      var awaiting = s.filter(function (x) { return x.usable && x.needsLabels && !x.hasLabels; });
+      var broken = s.filter(function (x) { return !x.usable; });
+
+      el("stats").innerHTML =
+        '<div class="stat"><b>' + j.participants.length + "</b><span class=muted>participants</span></div>" +
+        '<div class="stat"><b>' + usable.length + "</b><span class=muted>usable sessions</span></div>" +
+        '<div class="stat"><b>' + broken.length + "</b><span class=muted>need a re-run</span></div>" +
+        '<div class="stat"><b>' + awaiting.length + "</b><span class=muted>awaiting questionnaire</span></div>";
+
+      // Design-cell coverage. The pilot target is N>=12 for E1; the full study
+      // wants ~40. Showing counts per cell stops a cohort quietly ending up
+      // lopsided across cover task or awareness condition.
+      var cells = {};
+      usable.forEach(function (x) {
+        var k = [x.experiment, x.arrayN + " tiles", x.coverTask, x.awareness].join(" · ");
+        cells[k] = (cells[k] || 0) + 1;
+      });
+      var keys = Object.keys(cells).sort();
+      el("cells").innerHTML = keys.length
+        ? keys.map(function (k) {
+            return '<div class="cell"><b>' + cells[k] + "</b> &nbsp;" + k + "</div>";
+          }).join("")
+        : '<p class="gp-note">No usable sessions yet.</p>';
+
+      if (!s.length) {
+        el("tablebox").innerHTML = '<p class="gp-note">No probe sessions recorded yet.</p>';
+        return;
+      }
+      var rows = s.map(function (x) {
+        var cls = !x.usable ? "bad" : (x.needsLabels && !x.hasLabels ? "warnrow" : "");
+        var status = !x.usable ? pill("bad2", "RE-RUN")
+          : (x.needsLabels && !x.hasLabels ? pill("warn2", "needs questionnaire") : pill("ok", "usable"));
+        var gapPct = x.nSamples ? Math.round((x.nGaps / x.nSamples) * 100) : 0;
+        return "<tr class='" + cls + "'>" +
+          "<td><b>" + x.participant + "</b></td>" +
+          "<td>" + x.session + "</td>" +
+          "<td>" + (x.experiment || "?") + "</td>" +
+          "<td>" + (x.arrayN || "?") + "</td>" +
+          "<td>" + (x.coverTask || "?") + "</td>" +
+          "<td>" + (x.awareness || "?") + "</td>" +
+          "<td>" + (x.delayCondition || "–") + "</td>" +
+          "<td>" + (x.tracker || "?") + "</td>" +
+          "<td>" + x.nTrials + "</td>" +
+          "<td>" + x.nSamples + "</td>" +
+          "<td>" + gapPct + "%</td>" +
+          "<td>" + status +
+            (x.problems.length ? '<div class="why">' + x.problems.join("; ") + "</div>" : "") +
+          "</td></tr>";
+      }).join("");
+      el("tablebox").innerHTML =
+        "<table><thead><tr>" +
+        ["Participant", "Sess", "Exp", "Tiles", "Cover", "Awareness", "Delay",
+         "Tracker", "Trials", "Samples", "Gaps", "Status"]
+          .map(function (h) { return "<th>" + h + "</th>"; }).join("") +
+        "</tr></thead><tbody>" + rows + "</tbody></table>";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      el("refresh").onclick = load;
+      el("auto").onchange = function () {
+        if (timer) { clearInterval(timer); timer = null; }
+        if (el("auto").checked) timer = setInterval(load, 5000);
+      };
+      timer = setInterval(load, 5000);
+      load();
+    });
+  })();
+  </script>
+</body>
+</html>

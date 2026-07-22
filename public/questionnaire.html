@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Post-session questionnaire — GazePry D7</title>
+  <link rel="stylesheet" href="tracker.css" />
+  <style>
+    #wrap { max-width: 820px; margin: 0 auto; padding: 24px 24px 140px; }
+    .qitem { border: 1px solid var(--gp-border); border-radius: 12px;
+      padding: 14px 16px; margin: 10px 0; background: #12151a; }
+    .qitem h3 { margin: 0 0 10px; font-size: 17px; }
+    .scale { display: flex; gap: 8px; flex-wrap: wrap; }
+    .scale label { display: flex; align-items: center; gap: 6px; padding: 7px 11px;
+      border: 1px solid var(--gp-border); border-radius: 999px; cursor: pointer;
+      font-size: 14px; color: var(--gp-muted); }
+    .scale label:hover { border-color: #4c8dff; }
+    .scale input:checked + span { color: #e8ecf1; font-weight: 600; }
+    .qthumb { float: right; width: 110px; height: 82px; object-fit: cover;
+      border-radius: 8px; border: 1px solid var(--gp-border); margin-left: 12px; }
+    #bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 24px;
+      background: #0b0d10; border-top: 1px solid var(--gp-border);
+      display: flex; gap: 14px; align-items: center; }
+    label.f { display: block; margin: 10px 0 4px; color: var(--gp-muted); font-size: 13px; }
+    .warn { color: #ffd479; }
+    .err { color: #ffb4b4; font-weight: 600; }
+  </style>
+</head>
+<body class="gp-body">
+  <div id="wrap">
+    <div class="gp-card" id="setup">
+      <h2>Post-session questionnaire</h2>
+      <p class="gp-note">
+        For experiments <b>E2</b> and <b>E3</b> the familiarity labels come from
+        the participant, not from the task page. Run this <b>after</b> the
+        recognition probe, never before: asking first tells the participant what
+        is being measured and contaminates the gaze they have not yet given.
+      </p>
+      <p class="gp-note warn" id="orderwarn"></p>
+
+      <label class="f" for="pid">Participant</label>
+      <input id="pid" placeholder="P01" />
+
+      <label class="f" for="sess">Session</label>
+      <input id="sess" value="S1" />
+
+      <label class="f" for="exp">Experiment</label>
+      <select id="exp">
+        <option value="E2">E2 — real-world service familiarity</option>
+        <option value="E3">E3 — sensitive-topic exposure</option>
+      </select>
+
+      <p class="err" id="setuperr"></p>
+      <div class="gp-row">
+        <button class="gp-btn" type="button" id="load">Load questionnaire</button>
+        <a class="gp-btn" href="index.html">&larr; Back to hub</a>
+      </div>
+    </div>
+
+    <div id="items"></div>
+  </div>
+
+  <div id="bar" style="display:none">
+    <span class="gp-note" id="progress"></span>
+    <button class="gp-btn" type="button" id="submit">Submit responses</button>
+    <span class="gp-note" id="submitmsg"></span>
+  </div>
+
+  <script src="gazepry-tracker.js"></script>
+  <script src="probe-protocol.js"></script>
+  <script>
+  (function () {
+    "use strict";
+    var P = ProbeProtocol;
+    var el = function (id) { return document.getElementById(id); };
+
+    // Ordinal scales. The RAW ordinal is stored, never just the binary — the
+    // familiar/unfamiliar cut is an analysis decision (recognition.py
+    // --label-threshold), and baking it in here would make it unrevisable.
+    var SCALES = {
+      E2: {
+        question: "How would you describe your use of this service?",
+        options: [
+          [0, "Never heard of it"],
+          [1, "Heard of it, never used it"],
+          [2, "Used it occasionally"],
+          [3, "Use it regularly"],
+        ],
+      },
+      E3: {
+        question: "Before today, had you read about or looked into this topic?",
+        options: [
+          [0, "Never"],
+          [1, "Once or twice"],
+          [2, "Several times"],
+          [3, "Regularly"],
+        ],
+      },
+    };
+
+    var state = { items: [], responses: {}, exp: null };
+
+    document.addEventListener("DOMContentLoaded", function () {
+      // Pre-fill from the identity this browser last used, if any.
+      try {
+        var id = GazePry.identity || {};
+        if (id.participant) el("pid").value = id.participant;
+        if (id.session) el("sess").value = id.session;
+      } catch (e) {}
+      el("load").onclick = load;
+      el("submit").onclick = submit;
+    });
+
+    // Refuse to run before the probe has been captured for this cell. The
+    // ordering is not advisory: a questionnaire answered first tells the
+    // participant exactly what the task is about.
+    async function probeExists(pid, sess, exp) {
+      try {
+        var r = await fetch((GazePry.config.server || "") +
+          "/probe-status?participant=" + encodeURIComponent(pid) +
+          "&session=" + encodeURIComponent(sess));
+        if (!r.ok) return null;         // server unreachable: cannot verify
+        var j = await r.json();
+        return (j.sessions || []).some(function (s) { return s.experiment === exp; });
+      } catch (e) { return null; }
+    }
+
+    async function load() {
+      var pid = el("pid").value.trim();
+      var sess = el("sess").value.trim();
+      var exp = el("exp").value;
+      el("setuperr").textContent = "";
+      if (!pid || !sess) { el("setuperr").textContent = "Participant and session are required."; return; }
+
+      var has = await probeExists(pid, sess, exp);
+      if (has === false) {
+        el("setuperr").textContent =
+          "No " + exp + " probe session found for " + pid + " / " + sess + ". " +
+          "Run the recognition probe FIRST — answering this questionnaire beforehand " +
+          "tells the participant what is being measured.";
+        return;
+      }
+      if (has === null) {
+        el("orderwarn").textContent =
+          "Could not reach the server to confirm the probe ran first. Proceeding — " +
+          "make sure the probe was captured before this questionnaire.";
+      }
+
+      state.exp = exp;
+      try {
+        await P.loadStimuli("stimuli/manifest.json");
+      } catch (e) {
+        el("setuperr").textContent = "Stimuli failed to load: " + e.message;
+        return;
+      }
+      state.items = P.SETS[exp].items;
+      state.responses = {};
+      render();
+    }
+
+    function render() {
+      var scale = SCALES[state.exp];
+      var box = el("items");
+      box.innerHTML = "";
+      var head = document.createElement("p");
+      head.className = "gp-note";
+      head.textContent = scale.question;
+      box.appendChild(head);
+
+      state.items.forEach(function (item) {
+        var d = document.createElement("div");
+        d.className = "qitem";
+        // Show the SAME image the participant saw in the probe. Asking about a
+        // bare label would test whether they recognise the word, not the
+        // stimulus the gaze was recorded against.
+        var h3 = document.createElement("h3");
+        var thumb = document.createElement("img");
+        thumb.className = "qthumb";
+        thumb.src = "stimuli/" + item.file;
+        thumb.alt = "";
+        h3.textContent = item.label || item.id;
+        h3.appendChild(thumb);
+        d.appendChild(h3);
+        var s = document.createElement("div");
+        s.className = "scale";
+        scale.options.forEach(function (o) {
+          var lab = document.createElement("label");
+          var input = document.createElement("input");
+          input.type = "radio";
+          input.name = "q_" + item.id;
+          input.value = o[0];
+          input.onchange = function () {
+            state.responses[item.id] = o[0];
+            updateProgress();
+          };
+          var span = document.createElement("span");
+          span.textContent = o[1];
+          lab.appendChild(input);
+          lab.appendChild(span);
+          s.appendChild(lab);
+        });
+        d.appendChild(s);
+        box.appendChild(d);
+      });
+
+      el("setup").style.display = "none";
+      el("bar").style.display = "flex";
+      updateProgress();
+    }
+
+    function updateProgress() {
+      var n = Object.keys(state.responses).length;
+      el("progress").textContent = n + " / " + state.items.length + " answered";
+      el("submit").disabled = n < state.items.length;
+    }
+
+    async function submit() {
+      var payload = {
+        schema: "gazepry.labels.v1",
+        participant: el("pid").value.trim(),
+        session: el("sess").value.trim(),
+        experiment: state.exp,
+        collectedAt: Date.now(),
+        scale: SCALES[state.exp].options.map(function (o) {
+          return { value: o[0], label: o[1] };
+        }),
+        // Raw ordinals only. No derived boolean here on purpose.
+        items: state.items.map(function (it) {
+          return { itemId: it.id, response: state.responses[it.id] };
+        }),
+      };
+      el("submitmsg").textContent = "Saving…";
+      try {
+        var r = await fetch((GazePry.config.server || "") + "/labels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        var j = await r.json();
+        el("submitmsg").textContent = "Saved: " + j.stored;
+        el("submit").disabled = true;
+      } catch (e) {
+        // Never lose a response: fall back to a local download, same as the
+        // gaze harness does when the server is down.
+        var blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = [payload.participant, payload.session, payload.experiment,
+          "labels", payload.collectedAt].join("_") + ".json";
+        a.click();
+        el("submitmsg").textContent =
+          "Server unavailable — downloaded the file. Move it into labels/.";
+      }
+    }
+  })();
+  </script>
+</body>
+</html>

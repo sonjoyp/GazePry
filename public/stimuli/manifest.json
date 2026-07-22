@@ -1,0 +1,490 @@
+{
+  "schema": "gazepry.stimuli.v1",
+  "generatedBy": "scripts/make_stimuli.py",
+  "imageSize": {
+    "w": 800,
+    "h": 600
+  },
+  "minSize": {
+    "w": 600,
+    "h": 450
+  },
+  "sets": {
+    "E1": {
+      "id": "E1",
+      "label": "Lab-installed familiarity",
+      "studyPhase": true,
+      "selfReportLabels": false,
+      "minPairDistance": 34.14,
+      "note": "Julia-set fractals: richly detailed but genuinely novel, so familiarity is created only by the study phase. Every pair is checked to be visually distinguishable.",
+      "items": [
+        {
+          "id": "abs00",
+          "label": "",
+          "file": "e1/abs00.png",
+          "kind": "fractal",
+          "seed": 1046,
+          "placeholder": false
+        },
+        {
+          "id": "abs01",
+          "label": "",
+          "file": "e1/abs01.png",
+          "kind": "fractal",
+          "seed": 1083,
+          "placeholder": false
+        },
+        {
+          "id": "abs02",
+          "label": "",
+          "file": "e1/abs02.png",
+          "kind": "fractal",
+          "seed": 1120,
+          "placeholder": false
+        },
+        {
+          "id": "abs03",
+          "label": "",
+          "file": "e1/abs03.png",
+          "kind": "fractal",
+          "seed": 1157,
+          "placeholder": false
+        },
+        {
+          "id": "abs04",
+          "label": "",
+          "file": "e1/abs04.png",
+          "kind": "fractal",
+          "seed": 1194,
+          "placeholder": false
+        },
+        {
+          "id": "abs05",
+          "label": "",
+          "file": "e1/abs05.png",
+          "kind": "fractal",
+          "seed": 1231,
+          "placeholder": false
+        },
+        {
+          "id": "abs06",
+          "label": "",
+          "file": "e1/abs06.png",
+          "kind": "fractal",
+          "seed": 1268,
+          "placeholder": false
+        },
+        {
+          "id": "abs07",
+          "label": "",
+          "file": "e1/abs07.png",
+          "kind": "fractal",
+          "seed": 1342,
+          "placeholder": false
+        },
+        {
+          "id": "abs08",
+          "label": "",
+          "file": "e1/abs08.png",
+          "kind": "fractal",
+          "seed": 1379,
+          "placeholder": false
+        },
+        {
+          "id": "abs09",
+          "label": "",
+          "file": "e1/abs09.png",
+          "kind": "fractal",
+          "seed": 1416,
+          "placeholder": false
+        },
+        {
+          "id": "abs10",
+          "label": "",
+          "file": "e1/abs10.png",
+          "kind": "fractal",
+          "seed": 1453,
+          "placeholder": false
+        },
+        {
+          "id": "abs11",
+          "label": "",
+          "file": "e1/abs11.png",
+          "kind": "fractal",
+          "seed": 1527,
+          "placeholder": false
+        },
+        {
+          "id": "abs12",
+          "label": "",
+          "file": "e1/abs12.png",
+          "kind": "fractal",
+          "seed": 1564,
+          "placeholder": false
+        },
+        {
+          "id": "abs13",
+          "label": "",
+          "file": "e1/abs13.png",
+          "kind": "fractal",
+          "seed": 1601,
+          "placeholder": false
+        },
+        {
+          "id": "abs14",
+          "label": "",
+          "file": "e1/abs14.png",
+          "kind": "fractal",
+          "seed": 1638,
+          "placeholder": false
+        },
+        {
+          "id": "abs15",
+          "label": "",
+          "file": "e1/abs15.png",
+          "kind": "fractal",
+          "seed": 1675,
+          "placeholder": false
+        },
+        {
+          "id": "abs16",
+          "label": "",
+          "file": "e1/abs16.png",
+          "kind": "fractal",
+          "seed": 1712,
+          "placeholder": false
+        },
+        {
+          "id": "abs17",
+          "label": "",
+          "file": "e1/abs17.png",
+          "kind": "fractal",
+          "seed": 1749,
+          "placeholder": false
+        },
+        {
+          "id": "abs18",
+          "label": "",
+          "file": "e1/abs18.png",
+          "kind": "fractal",
+          "seed": 1786,
+          "placeholder": false
+        },
+        {
+          "id": "abs19",
+          "label": "",
+          "file": "e1/abs19.png",
+          "kind": "fractal",
+          "seed": 1823,
+          "placeholder": false
+        },
+        {
+          "id": "abs20",
+          "label": "",
+          "file": "e1/abs20.png",
+          "kind": "fractal",
+          "seed": 1860,
+          "placeholder": false
+        },
+        {
+          "id": "abs21",
+          "label": "",
+          "file": "e1/abs21.png",
+          "kind": "fractal",
+          "seed": 1897,
+          "placeholder": false
+        },
+        {
+          "id": "abs22",
+          "label": "",
+          "file": "e1/abs22.png",
+          "kind": "fractal",
+          "seed": 1934,
+          "placeholder": false
+        },
+        {
+          "id": "abs23",
+          "label": "",
+          "file": "e1/abs23.png",
+          "kind": "fractal",
+          "seed": 1971,
+          "placeholder": false
+        }
+      ]
+    },
+    "E2": {
+      "id": "E2",
+      "label": "Real-world service familiarity",
+      "studyPhase": false,
+      "selfReportLabels": true,
+      "note": "PLACEHOLDERS. Replace with real logos or homepage screenshots before collecting E2 -- see public/stimuli/README.md.",
+      "items": [
+        {
+          "id": "mail",
+          "label": "Mailbox",
+          "file": "e2/mail.png",
+          "kind": "brand",
+          "tier": "high",
+          "placeholder": true
+        },
+        {
+          "id": "vid",
+          "label": "Streamline",
+          "file": "e2/vid.png",
+          "kind": "brand",
+          "tier": "high",
+          "placeholder": true
+        },
+        {
+          "id": "shop",
+          "label": "Marketplace",
+          "file": "e2/shop.png",
+          "kind": "brand",
+          "tier": "high",
+          "placeholder": true
+        },
+        {
+          "id": "soc",
+          "label": "Circle",
+          "file": "e2/soc.png",
+          "kind": "brand",
+          "tier": "high",
+          "placeholder": true
+        },
+        {
+          "id": "map",
+          "label": "Wayfind",
+          "file": "e2/map.png",
+          "kind": "brand",
+          "tier": "high",
+          "placeholder": true
+        },
+        {
+          "id": "news",
+          "label": "Dispatch",
+          "file": "e2/news.png",
+          "kind": "brand",
+          "tier": "medium",
+          "placeholder": true
+        },
+        {
+          "id": "bank",
+          "label": "Ledger",
+          "file": "e2/bank.png",
+          "kind": "brand",
+          "tier": "medium",
+          "placeholder": true
+        },
+        {
+          "id": "fit",
+          "label": "Stride",
+          "file": "e2/fit.png",
+          "kind": "brand",
+          "tier": "medium",
+          "placeholder": true
+        },
+        {
+          "id": "code",
+          "label": "Forge",
+          "file": "e2/code.png",
+          "kind": "brand",
+          "tier": "medium",
+          "placeholder": true
+        },
+        {
+          "id": "note",
+          "label": "Sheaf",
+          "file": "e2/note.png",
+          "kind": "brand",
+          "tier": "medium",
+          "placeholder": true
+        },
+        {
+          "id": "trav",
+          "label": "Compass",
+          "file": "e2/trav.png",
+          "kind": "brand",
+          "tier": "low",
+          "placeholder": true
+        },
+        {
+          "id": "food",
+          "label": "Larder",
+          "file": "e2/food.png",
+          "kind": "brand",
+          "tier": "low",
+          "placeholder": true
+        },
+        {
+          "id": "game",
+          "label": "Arcade",
+          "file": "e2/game.png",
+          "kind": "brand",
+          "tier": "low",
+          "placeholder": true
+        },
+        {
+          "id": "learn",
+          "label": "Tutor",
+          "file": "e2/learn.png",
+          "kind": "brand",
+          "tier": "low",
+          "placeholder": true
+        },
+        {
+          "id": "photo",
+          "label": "Album",
+          "file": "e2/photo.png",
+          "kind": "brand",
+          "tier": "low",
+          "placeholder": true
+        },
+        {
+          "id": "music",
+          "label": "Chord",
+          "file": "e2/music.png",
+          "kind": "brand",
+          "tier": "low",
+          "placeholder": true
+        }
+      ]
+    },
+    "E3": {
+      "id": "E3",
+      "label": "Sensitive-topic exposure",
+      "studyPhase": false,
+      "selfReportLabels": true,
+      "note": "PLACEHOLDERS. Replace with real topic/article cards before collecting E3 -- see public/stimuli/README.md.",
+      "items": [
+        {
+          "id": "t_sleep",
+          "label": "Sleep problems",
+          "file": "e3/t_sleep.png",
+          "kind": "topic",
+          "category": "health",
+          "placeholder": true
+        },
+        {
+          "id": "t_diab",
+          "label": "Blood sugar",
+          "file": "e3/t_diab.png",
+          "kind": "topic",
+          "category": "health",
+          "placeholder": true
+        },
+        {
+          "id": "t_ment",
+          "label": "Therapy options",
+          "file": "e3/t_ment.png",
+          "kind": "topic",
+          "category": "health",
+          "placeholder": true
+        },
+        {
+          "id": "t_derm",
+          "label": "Skin conditions",
+          "file": "e3/t_derm.png",
+          "kind": "topic",
+          "category": "health",
+          "placeholder": true
+        },
+        {
+          "id": "t_debt",
+          "label": "Debt consolidation",
+          "file": "e3/t_debt.png",
+          "kind": "topic",
+          "category": "finance",
+          "placeholder": true
+        },
+        {
+          "id": "t_mort",
+          "label": "Mortgage rates",
+          "file": "e3/t_mort.png",
+          "kind": "topic",
+          "category": "finance",
+          "placeholder": true
+        },
+        {
+          "id": "t_pens",
+          "label": "Retirement planning",
+          "file": "e3/t_pens.png",
+          "kind": "topic",
+          "category": "finance",
+          "placeholder": true
+        },
+        {
+          "id": "t_tax",
+          "label": "Tax deductions",
+          "file": "e3/t_tax.png",
+          "kind": "topic",
+          "category": "finance",
+          "placeholder": true
+        },
+        {
+          "id": "t_tenc",
+          "label": "Tenant rights",
+          "file": "e3/t_tenc.png",
+          "kind": "topic",
+          "category": "legal",
+          "placeholder": true
+        },
+        {
+          "id": "t_will",
+          "label": "Making a will",
+          "file": "e3/t_will.png",
+          "kind": "topic",
+          "category": "legal",
+          "placeholder": true
+        },
+        {
+          "id": "t_emp",
+          "label": "Employment disputes",
+          "file": "e3/t_emp.png",
+          "kind": "topic",
+          "category": "legal",
+          "placeholder": true
+        },
+        {
+          "id": "t_imm",
+          "label": "Visa paperwork",
+          "file": "e3/t_imm.png",
+          "kind": "topic",
+          "category": "legal",
+          "placeholder": true
+        },
+        {
+          "id": "t_vote",
+          "label": "Voter registration",
+          "file": "e3/t_vote.png",
+          "kind": "topic",
+          "category": "civic",
+          "placeholder": true
+        },
+        {
+          "id": "t_coun",
+          "label": "Local council",
+          "file": "e3/t_coun.png",
+          "kind": "topic",
+          "category": "civic",
+          "placeholder": true
+        },
+        {
+          "id": "t_recy",
+          "label": "Recycling rules",
+          "file": "e3/t_recy.png",
+          "kind": "topic",
+          "category": "civic",
+          "placeholder": true
+        },
+        {
+          "id": "t_perm",
+          "label": "Building permits",
+          "file": "e3/t_perm.png",
+          "kind": "topic",
+          "category": "civic",
+          "placeholder": true
+        }
+      ]
+    }
+  }
+}

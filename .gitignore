@@ -1,8 +1,18 @@
 *.map
 
-# Collected session data stays local (never commit participant gaze)
-#data/*.json
-#!data/.gitkeep
+# Collected session data stays local (never commit participant gaze).
+# Re-enabled 2026-07-22 before D7 collection: with these commented out, every
+# session captured lands in a commit. Files already tracked stay tracked until
+# they are explicitly untracked (see D7_COLLECTION_RUNSHEET.md, "Before you
+# start") — .gitignore only governs UNtracked paths.
+data/*.json
+!data/.gitkeep
+
+# Post-hoc questionnaire labels: service usage and topic exposure are exactly
+# the data the D7 attack extracts. Never commit them, and keep them out of the
+# gaze directory so a careless `git add data/` cannot sweep them in.
+labels/
+!labels/.gitkeep
 
 # Synthetic verification output is regenerable (python analysis/simulate.py)
 #data_sim/
@@ -10,6 +20,16 @@
 # D7 synthetic probe output is regenerable (npm run d7:verify)
 data_probe_sim/
 data_probe_null/
+
+# D7 stimuli. E1 is generated here and reproducible from seeds, so it ships.
+# E2/E3 hold real third-party logos and screenshots once installed — someone
+# else's trademarked/copyrighted material, which a GPLv3 repo intended for
+# public release must not vendor. The manifest (your design) is committed; the
+# images are not. See public/stimuli/README.md.
+public/stimuli/e2/*
+public/stimuli/e3/*
+!public/stimuli/e2/.gitkeep
+!public/stimuli/e3/.gitkeep
 
 # Node
 node_modules/

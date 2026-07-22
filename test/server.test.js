@@ -20,6 +20,7 @@ const BASE = `http://localhost:${PORT}`;
 
 let child;
 let dataDir;
+let labelsDir;
 
 function fixations(spots) {
   let t = 0;
@@ -53,7 +54,9 @@ async function getJson(pathname) {
 
 test.before(async () => {
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "gp-server-"));
-  child = spawn("node", [SERVER, "--port", String(PORT), "--data", dataDir], { stdio: "ignore" });
+  labelsDir = fs.mkdtempSync(path.join(os.tmpdir(), "gp-labels-"));
+  child = spawn("node", [SERVER, "--port", String(PORT), "--data", dataDir,
+    "--labels", labelsDir], { stdio: "ignore" });
   // wait for readiness
   const deadline = Date.now() + 8000;
   for (;;) {
@@ -66,6 +69,7 @@ test.before(async () => {
 test.after(() => {
   if (child) child.kill();
   if (dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
+  if (labelsDir) fs.rmSync(labelsDir, { recursive: true, force: true });
 });
 
 test("POST /ingest stores a file whose name carries the tracker family", async () => {
@@ -159,6 +163,82 @@ test("D7 probe sessions are ingested but kept OUT of the re-ID gallery", async (
 
   const id = await post("/identify", { samples: streamA, screen: SCREEN, tracker: "webgazer" });
   assert.ok(!id.json.galleryParticipants.includes("PX9"), "probe entry became identifiable");
+});
+
+test("POST /labels stores questionnaire responses OUTSIDE the gaze data dir", async () => {
+  // Service usage and topic exposure are exactly what the D7 attack extracts,
+  // so they are the most sensitive artefact the study holds. They must not land
+  // in data/, where a bulk copy or `git add data/` would sweep them along.
+  const rec = {
+    schema: "gazepry.labels.v1", participant: "P42", session: "S1", experiment: "E2",
+    collectedAt: Date.now(),
+    items: [{ itemId: "mail", response: 3 }, { itemId: "vid", response: 0 }],
+  };
+  const r = await post("/labels", rec);
+  assert.equal(r.status, 200);
+  assert.equal(r.json.answered, 2);
+  assert.ok(!fs.existsSync(path.join(dataDir, r.json.stored)), "labels leaked into the gaze dir");
+  assert.ok(fs.existsSync(path.join(labelsDir, r.json.stored)));
+});
+
+test("POST /labels rejects an empty or malformed response set", async () => {
+  const base = { schema: "gazepry.labels.v1", participant: "P43", session: "S1", experiment: "E2" };
+  assert.equal((await post("/labels", base)).status, 400, "missing items");
+  assert.equal((await post("/labels", { ...base, items: [] })).status, 400, "no items");
+  assert.equal((await post("/labels", { ...base, items: [{ itemId: "mail" }] })).status, 400,
+    "an all-unanswered questionnaire must not be accepted as data");
+});
+
+test("GET /probe-status reports trials, quality flags and questionnaire state", async () => {
+  const mkProbe = (participant, experiment, over) => ({
+    schema: "gazepry.probe.v1", participant, session: "S1", task: "probe",
+    tracker: "webgazer-3.5.3", trackerFamily: "webgazer",
+    experiment, arrayN: 4, coverTask: "memory-adjacent", awareness: "naive",
+    counterbalanceGroup: 1, startedAt: Date.now(), screen: SCREEN,
+    clockAnchored: true, nTrials: 2, nSamples: 400, nGaps: 10,
+    trials: [{ index: 0, onsetT: 0, offsetT: 4000, aois: [] },
+             { index: 1, onsetT: 5000, offsetT: 9000, aois: [] }],
+    samples: streamA,
+    ...over,
+  });
+
+  await post("/ingest", mkProbe("PQ1", "E1"));                              // clean
+  await post("/ingest", mkProbe("PQ2", "E1", { clockAnchored: false }));    // unscorable
+  await post("/ingest", mkProbe("PQ3", "E1", { nSamples: 60 }));            // starved
+  await post("/ingest", mkProbe("PQ4", "E1", { nSamples: 400, nGaps: 300 })); // face lost
+  await post("/ingest", mkProbe("PQ5", "E2"));                             // needs labels
+
+  const s = await getJson("/probe-status");
+  assert.equal(s.status, 200);
+  const by = Object.fromEntries(s.json.sessions.map((x) => [x.participant, x]));
+
+  assert.equal(by.PQ1.usable, true);
+  assert.deepEqual(by.PQ1.problems, []);
+  assert.equal(by.PQ1.nTrials, 2);
+
+  assert.equal(by.PQ2.usable, false);
+  assert.match(by.PQ2.problems.join(" "), /clock anchor/);
+  assert.equal(by.PQ3.usable, false, "60 samples over 2 trials is starved");
+  assert.equal(by.PQ4.usable, false, "75% gaps must be flagged");
+
+  // E2 needs a questionnaire; E1 does not.
+  assert.equal(by.PQ5.needsLabels, true);
+  assert.equal(by.PQ5.hasLabels, false);
+  assert.equal(by.PQ1.needsLabels, false);
+
+  await post("/labels", {
+    schema: "gazepry.labels.v1", participant: "PQ5", session: "S1", experiment: "E2",
+    collectedAt: Date.now(), items: [{ itemId: "mail", response: 2 }],
+  });
+  const s2 = await getJson("/probe-status?participant=PQ5");
+  assert.equal(s2.json.sessions.length, 1, "participant filter applies");
+  assert.equal(s2.json.sessions[0].hasLabels, true, "questionnaire not picked up");
+});
+
+test("/probe-status never exposes raw gaze samples", async () => {
+  const s = await getJson("/probe-status");
+  const body = JSON.stringify(s.json);
+  assert.ok(!body.includes("\"samples\""), "the console payload must stay metadata-only");
 });
 
 test("GET / serves the hub and path traversal is blocked", async () => {

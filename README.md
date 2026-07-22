@@ -297,7 +297,38 @@ Sessions are written as `gazepry.probe.v1` records carrying a `trials[]` array
 the D4 re-ID gallery**, because a whole-session dynamics vector over
 adversary-driven 4 s trials describes the trial structure, not the person.
 
-Three things the page enforces rather than assumes:
+### Stimuli
+
+The task shows **real image files** from `public/stimuli/`, described by a
+manifest that both the browser and the Python analysis read, so the item table
+cannot drift between them.
+
+```bash
+npm run d7:stimuli         # generate the packs
+npm run d7:stimuli:check   # validate: files present, big enough, ids unique
+```
+
+**E1** ships 24 Julia-set fractals. It is abstract on purpose: E1's validity
+depends on the participant having **no prior exposure**, so photographs of real
+things would smuggle in uncontrolled familiarity that counterbalancing cannot
+remove. The generator histogram-equalises escape time and colours the interior
+by an orbit trap (the naive mapping gives a dark image with a thin bright rim
+and little to recognise), and resamples candidates until **every pair differs by
+at least 22 mean absolute RGB levels** — a "novel" tile that resembles a studied
+one contaminates the contrast irreparably.
+
+**E2 and E3** ship placeholders and need real logos, screenshots, or topic
+cards, because they measure familiarity the participant already had. The task
+page **disables Begin** while a set contains placeholders rather than warning,
+since a cohort collected against stand-ins cannot be salvaged. Third-party
+images are gitignored — this repo is GPLv3 and cannot relicense someone else's
+trademarks. See [`public/stimuli/README.md`](public/stimuli/README.md).
+
+Four things the page enforces rather than assumes:
+
+- **It refuses to run E2/E3 on placeholder stimuli**, and flags any image that
+  fails to load on the completion card so a blank-tile trial is never scored as
+  real data.
 
 - **It refuses to run in a small window.** Tiles must be ≥400×300 px with ≥250 px
   gaps — the geometry Van der Cruyssen et al. 2024 actually validated on

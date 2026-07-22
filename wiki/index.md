@@ -17,6 +17,9 @@ layer over them. Conventions and workflows live in [[SCHEMA]].
 - [[d2-reading-search-intent-direction]] — the **Direction 2** blueprint
   (*"No Clicks, No Privacy"*): reading/search-intent leakage via webcam gaze +
   permission-free [[cursor-tracking]]; own bibliography (groups G/B/A/Q/R).
+- [[d7-recognition-knowledge-direction]] — the **Direction 7** blueprint
+  (*"The Recognition Oracle"*): extracting what a visitor has **seen before** from
+  an adversary-chosen tile array; own bibliography (groups M/C/W/P).
 - [[readme]] — repo front door **and** harness manual: quick start, pluggable
   trackers, tests, rig/cross-origin recipes.
 - [[information-leakage-report]] — threat-model survey (frozen in `raw/`; now
@@ -93,6 +96,18 @@ cited author-year — not in plan §21; doc-local labels G/B/A/Q/R)* —
 [[williams-2016-good-abandonment]] [A2], [[jones-2007-query-log-privacy]] [Q1],
 [[gervais-2014-web-search-privacy]] [Q2].
 
+**Memory, recognition & the ocular CIT (Direction 7)** *(added 2026-07-22; cited
+author-year — not in plan §21; doc-local labels M/C/W/P)* —
+[[althoff-1999-eye-movement-memory-effect]] [M1],
+[[hannula-2010-worth-a-glance]] [M2], [[shimojo-2003-gaze-cascade]] [M3],
+[[schwedes-2012-revealing-glance]] [C1],
+[[nahari-2019-concealed-familiarity]] [C2],
+[[millen-2019-concealed-face-recognition]] [C3],
+[[rosenzweig-2020-mock-terror]] [C4] (IR ceiling — microsaccades, not
+webcam-reachable), [[zangrossi-2024-aiat-eye-movements]] [C5],
+[[et-privacy-decade-review-2025]] [P1] (**⚠ authors unverified**).
+[[van-der-cruyssen-2024-validation]] [W1] doubles as D7's feasibility anchor.
+
 ## Entities (`entities/`)
 
 **Trackers** *(five arms — see [[ceiling-vs-commodity]])*
@@ -131,7 +146,8 @@ cited author-year — not in plan §21; doc-local labels G/B/A/Q/R)* —
 **Threat model & framing**
 - [[drive-by-web-adversary]] — the weak-but-realistic in-browser adversary.
 - [[two-regimes-of-leakage]] — content-dependent vs content-independent.
-- [[leakage-vectors-d1-d6]] — the six vectors, mapped to the two regimes.
+- [[leakage-vectors-d1-d6]] — the vectors D1–D7, mapped to the two regimes
+  (D7 appended 2026-07-22).
 - [[same-origin-policy]] — why the cross-site threat is re-ID, not peeking.
 - [[hardware-grounded-fingerprint]] — why gaze bypasses script-layer defenses.
 - [[enabling-conditions]] — camera-consent gap, covert calibration, embedding.
@@ -155,6 +171,14 @@ cited author-year — not in plan §21; doc-local labels G/B/A/Q/R)* —
 - [[cursor-tracking]] — permission-free mouse-cursor tracking as a Web-scale gaze
   proxy; the D2 floor to webcam gaze's ceiling.
 
+**The recognition thesis (Direction 7)**
+- [[recognition-knowledge-leakage]] — reading what the visitor has **seen before**
+  from an adversary-chosen tile array (vector D7); *"The Recognition Oracle."*
+- [[eye-movement-memory-effect]] — the involuntary mechanism: prior exposure
+  changes how a stimulus is sampled, within the first five fixations.
+- [[ocular-concealed-information-test]] — the forensic instrument D7 repurposes,
+  and why the covert web setting is **easier** than the interrogation room.
+
 **Method, evaluation & defense**
 - [[reid-confound-controls]] — the calibration/session-artifact confound and the
   control battery that separates *person* from *apparatus* (the #1 reviewer trap).
@@ -175,6 +199,15 @@ cited author-year — not in plan §21; doc-local labels G/B/A/Q/R)* —
 - [[cross-origin-collector]] — the literal cross-origin linkage demo.
 - [[gaze-perturbation-defense]] — the optional RQ5 defense.
 - [[related-work-direction-1]] — positioning and the gap being filled.
+
+## Notes (`notes/`)
+
+*Dated research notes: session findings, decisions and their rationale, dead ends.
+Newest first.*
+
+- [[2026-07-22-d7-recognition-direction]] — why **D7 recognition leakage** was
+  chosen as the non-biometric direction over D1/D3/D5, the ocular-CIT evidence
+  base, the confound that D7 cancels and D4 cannot, and the scoop risk.
 
 ---
 

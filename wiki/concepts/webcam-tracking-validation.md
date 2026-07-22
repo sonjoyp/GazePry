@@ -28,7 +28,11 @@ cite them **author-year** as supporting context, not by bracket number.
 - **Van der Cruyssen et al. 2024** ([[van-der-cruyssen-2024-validation]]) —
   replicates three classic effects with WebGazer.js; effect sizes shrink
   20–27%; verdict: fine for ≤4 large AOIs. Bounds what content-*dependent* AOI
-  reading can expect.
+  reading can expect. One of the three is the **novelty preference** (n = 45),
+  i.e. the [[eye-movement-memory-effect]] itself — so this paper is not only a
+  general accuracy datum but the **direct feasibility evidence** for
+  [[recognition-knowledge-leakage]] (D7), along with its working stimulus
+  geometry (472 × 331 px images, 295 px apart).
 - **Kaduk et al. 2024** ([[kaduk-2024-webcam-vs-eyelink]]) — the strongest
   point: a webcam system (Labvanced) **simultaneously** vs EyeLink 1000 hits
   **1.4° accuracy / 1.1° precision**, only ≈0.5° worse, ~90% raw-sample
@@ -42,9 +46,14 @@ cite them **author-year** as supporting context, not by bracket number.
 - [[webgazer]] — the tracker all four studies validate.
 - [[ceiling-vs-commodity]] — why even a degraded webcam channel is a threat.
 - [[gaze-estimation]] — the capability class being validated.
+- [[recognition-knowledge-leakage]] — D7 depends on this literature twice over:
+  for the coarse-AOI bound, and because one validated effect *is* its attack
+  signal.
 - Caveat: these validate *pointing accuracy*; GazePry's re-ID threat is
   content-*independent* and does not need pointing precision, so this is a
-  floor, not the mechanism.
+  floor, not the mechanism. D7 sits in between — it needs coarse pointing (which
+  tile) plus **fixation timing**, and the timing half is what
+  [[thilderkvist-2024-limitations]]'s I-DT contribution addresses.
 
 ## Mentions in sources
 

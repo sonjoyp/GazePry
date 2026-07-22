@@ -425,3 +425,103 @@ cursor feature set, the datasets' licensing); (2) verify the [A2] Williams DOI a
 [Q2] Gervais author list against the ACM DL; (3) if D2 advances, **merge G/B/A/Q/R
 into plan §21** as new shared-bib numbers ([55]–…), then re-sync the wiki (the
 [50]–[54] flow). Prior open items unchanged.
+
+## [2026-07-22] ingest + note | Direction D7 — recognition & concealed-knowledge leakage
+
+**Trigger.** User asked for a **non-biometric** gaze-leakage direction on the webcam
+harness that is practical and publishable, and asked that any new papers be ingested
+and a note filed.
+
+**Outcome: a new vector, D7.** `GazePry_D7_Recognition_Knowledge_Direction.md`
+(*"The Recognition Oracle"*) — a first-party page renders an adversary-chosen tile
+array and reads **which items the visitor has seen before** from dwell asymmetry and
+fixation timing. The payload is **memory contents**: not a biometric
+([[gaze-re-identification]], D4), not present-tense intent
+([[reading-search-intent-leakage]], D2), not a demographic attribute (D5). D7 is
+**appended to** [[leakage-vectors-d1-d6]] (the report defines only D1–D6) and is the
+project's **third** developed direction, alongside D4 and D2. Tense is the taxonomy:
+D4 = who you are, D2 = what you are doing now, D7 = what you already knew.
+
+**Why D7 over the other non-biometric options.** D1 is ruled out by
+[[thilderkvist-2024-limitations]] (sub-degree pointing on packed AOIs) and is already
+owned by [[eyetell]] / [[gazerevealer]]; D3 is largely done by
+[[hutt-2024-mind-wandering]] [22]; D5 is derivative of
+[[alsakar-2025-handheld-privacy]] [10] and needs large N. The decisive argument is
+methodological: **D7 structurally cancels the confound that gates D4**
+([[reid-confound-controls]], [[pilot-empirical-status]]) because the effect is a
+within-participant, within-trial contrast **between AOIs on the same screen**, with
+item-level counterbalancing making saliency and position orthogonal to the contrast.
+N ≈ 40 in one session, versus D4's N ≥ 50 with ≥1-week separation.
+
+**New paper source pages (9).** Retrieved and bibliographically **verified via web
+lookup 2026-07-22** (authors/venue/volume/DOI); each page is grounded in **publisher
+metadata or PMC full text, not a full-PDF read** (flagged on every page — a deep-read
+pass is the follow-up, D7 §12 step 2). Cited **author-year** per the SCHEMA trap (not
+in plan §21); the doc-local labels **M/C/W/P** are *not* shared numbering:
+- *Mechanism (M):* [[althoff-1999-eye-movement-memory-effect]] [M1] (effect within
+  the first five fixations), [[hannula-2010-worth-a-glance]] [M2] (no conscious
+  recollection required), [[shimojo-2003-gaze-cascade]] [M3] (gaze cascade; a
+  possible preference-probe variant).
+- *Ocular CIT (C):* [[schwedes-2012-revealing-glance]] [C1] (fixation duration
+  reveals memory regardless of intent; 65% of relevant trials),
+  [[nahari-2019-concealed-familiarity]] [C2] (n=61, four-face arrays; task demands
+  decide suppressibility), [[millen-2019-concealed-face-recognition]] [C3] (AUC
+  0.67–0.87; fixation duration **strengthens** under countermeasures, d 0.66→0.91,
+  while the spatial signal collapses, d 1.40→−0.12),
+  [[rosenzweig-2020-mock-terror]] [C4] (88%/AUC 0.84 — **an IR ceiling via
+  microsaccades at RSVP rates, not webcam-reachable**),
+  [[zangrossi-2024-aiat-eye-movements]] [C5] (75% from the eye measure alone on
+  week-old memories).
+- *Privacy (P):* [[et-privacy-decade-review-2025]] [P1] — **⚠ AUTHOR LIST
+  UNVERIFIED**, ACM DL returned 403; page is a flagged placeholder and the D7 §3 gap
+  claim must not rest on it.
+
+**Source page deepened (1).** [[van-der-cruyssen-2024-validation]] — promoted from a
+general accuracy datum to **D7's feasibility keystone**. Full verified citation added
+(*Behavior Research Methods* 56(5), 4836–4849, 2024, doi 10.3758/s13428-023-02221-2,
+seven authors), plus the fact that one of its three replicated effects **is** the
+recognition signal (novelty preference, n=45, effect sizes shrinking 20–27%) and its
+working stimulus geometry (472 × 331 px, 295 px apart), which now pins D7 §6.2. Also
+recorded: the author overlap with [C2] (Ben-Shakhar, Pertzov) plus Verschuere — the
+**scoop risk** in D7 §10.
+
+**New concepts (3):** [[recognition-knowledge-leakage]] (the D7 direction — the
+interventional/adversary-chosen distinction, the covert-vs-forensic inversion, the
+structural confound cancellation), [[eye-movement-memory-effect]] (the involuntary
+mechanism, including the **sign/window instability** hazard), and
+[[ocular-concealed-information-test]] (the instrument, its performance scale, and why
+countermeasures — its binding limitation — do not apply on the open web).
+
+**Bidirectional links added** to [[leakage-vectors-d1-d6]] (D7 row, the "why a new
+row" rationale, the tense framing, codebase status, Related),
+[[webcam-tracking-validation]] (the novelty-preference replication is D7's direct
+feasibility evidence), [[thilderkvist-2024-limitations]] (D7 takes *both* halves — the
+I-DT algorithm becomes a hard requirement, the accuracy verdict caps AOI granularity),
+and [[task-suite]] (a **sixth** task page: the trial-structured, adversary-designed
+probe array). [[index]] updated with the new source doc, a "Memory, recognition & the
+ocular CIT (Direction 7)" paper group, a "recognition thesis (Direction 7)" concept
+block, and a new **Notes** section.
+
+**Correction recorded.** [C3] Millen & Hancock was initially attributed in session to
+*Scientific Reports*; it is *Cognitive Research: Principles and Implications* 4(23),
+doi 10.1186/s41235-019-0169-0. Note [C2] and [C3] share journal and volume with
+adjacent DOIs (0162-7 / 0169-0) — an easy pair to confuse. Logged on the page and in
+D7 §11.
+
+**Citation-convention decision (SCHEMA-compliant).** The 10 papers are **not** added
+to the canonical plan §21 numbering; that merge is deferred to after the E1 pilot (D7
+§12 step 7), mirroring both the [50]–[54] flow and the D2 doc's identical deferral.
+Until then the wiki cites them author-year.
+
+**Note filed.** `notes/2026-07-22-d7-recognition-direction.md` — the decision record:
+options weighed, evidence gathered, the confound argument, the four risks, and the
+next action.
+
+**Open for a human / next passes:** (1) verify **[C6]** Lancry-Dayan 2018, **[C7]**
+Van der Cruyssen 2024 CIT-leakage, **[P1]** the decade privacy review, and **[W5]** the
+Collabra five-paradigm replication — [C7] and [P1] change how D7 §3 and §10 are
+written; (2) deep-read [C1]–[C5] for effect directions, scoring windows, and
+per-measure AUCs before pre-registration; (3) build the probe-array page + I-DT
+detector, then run E1 at N ≈ 12 asking only *does RQ0 clear?*; (4) the D4 §20 step 8
+data-hygiene blocker (29 participant sessions tracked in git) must be resolved before
+any D7 collection. Prior open items unchanged.

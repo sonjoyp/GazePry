@@ -36,6 +36,12 @@ HTML mirror, `S0950584924001071.html`, was in `raw/` but deleted in commit
 - [[webcam-tracking-validation]] — the counterweight to the optimistic studies.
 - [[gaze-feature-extraction]] — low-frequency fixation detection challenge.
 - [[leakage-vectors-d1-d6]] — bounds D2 (fine reading) on a webcam.
+- [[recognition-knowledge-leakage]] — D7 takes **both** halves of this paper: the
+  dispersion-threshold (I-DT) algorithm becomes a hard requirement (D7's
+  load-bearing feature is fixation *duration*, so segmentation must be right at
+  ~30 Hz), while the accuracy verdict is why D7 designs to whole-tile AOIs and
+  explicitly disclaims the within-face AOIs that carried
+  [[millen-2019-concealed-face-recognition]]'s best AUC.
 
 ## Mentions in sources
 

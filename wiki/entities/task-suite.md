@@ -32,6 +32,12 @@ headline. Implemented as `public/tasks/*.html` in the [[capture-harness]].
   headline surface (strongest cursor–gaze alignment); it needs click-required vs
   **zero-click/good-abandonment** SERP variants and a first-class
   [[cursor-tracking|cursor]] (move/hover/scroll) log, not just calibration clicks.
+- [[recognition-knowledge-leakage]] — the D7 direction adds a **sixth** task page,
+  a *recognition-probe array* (`public/tasks/probe.html`): 2–4 tiles of ≥ 400 ×
+  300 px, ≥ 250 px apart, 4000 ms free viewing per trial, with the AOI rectangles
+  logged alongside the gaze stream. Unlike the five existing tasks it is
+  **trial-structured and adversary-designed** rather than a naturalistic "site,"
+  and its cover task (low-demand vs memory-adjacent) is a manipulated factor.
 
 ## Mentions in sources
 

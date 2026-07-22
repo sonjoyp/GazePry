@@ -525,3 +525,49 @@ per-measure AUCs before pre-registration; (3) build the probe-array page + I-DT
 detector, then run E1 at N ≈ 12 asking only *does RQ0 clear?*; (4) the D4 §20 step 8
 data-hygiene blocker (29 participant sessions tracked in git) must be resolved before
 any D7 collection. Prior open items unchanged.
+
+---
+
+## [2026-07-22] note | Building the D7 probe: four things the design document did not anticipate
+
+**Filed** `notes/2026-07-22-d7-instrumentation-findings.md`, the follow-on to
+[[2026-07-22-d7-recognition-direction]]. That note recorded the *decision*; this one
+records what building the collection and analysis pipeline changed about it. Four
+findings, each of which would otherwise have produced a plausible-looking number that
+meant nothing:
+
+1. **The lab I-DT threshold does not transfer.** At webcam noise a 0.045-diagonal
+   dispersion window segments **zero** fixations, flattening every fixation feature to
+   a constant — which scores AUC 0.500, so the pipeline reports "no effect" rather
+   than "the segmenter did not run". Now 0.10 diagonals with 5-sample smoothing, plus
+   a *fixations per trial* diagnostic. Refines [[thilderkvist-2024-limitations]]: the
+   I-DT *algorithm* is required, but its parameters are sensor-specific.
+2. **LOPO folds break the saliency control.** The RQ0 baseline read 0.101, which looks
+   like broken counterbalancing; it is the held-out participant's group being
+   under-represented by one, with consistent sign across folds. Group-balancing the
+   training folds moved it to 0.488. A below-chance control is fold structure, not a
+   broken design.
+3. **The RQ0 gate was verified by sabotage.** With counterbalancing deliberately
+   flattened, the headline reads **AUC 0.935** off item identity alone while the
+   saliency control hits 1.000 and RQ0 FAILs. The gate catches exactly what it exists
+   for. Null data (0.525, FAIL) and effect data (0.918, PASS) behave correctly.
+4. **E1 stimuli were near-duplicates, and the check could not see it.** Minimum
+   pairwise difference 1.3; the distinctiveness test compared *greyscale* thumbnails,
+   passing pairs that differed only in hue. Colour comparison and a ≥ 22 rejection
+   threshold give 34.14, recorded in the manifest.
+
+**Concept page updated.** [[recognition-knowledge-leakage]] gains an *Instrumentation
+constraints* section and its status moves from "proposal only" to "instrumented, not
+yet run" — the pipeline exists and passes its nulls, but **no human D7 data has been
+collected** and every number above is synthetic.
+
+**Verification:** `npm test` 147 pass / 0 fail (71 JS + 76 Python); `npm run
+d7:verify` effect PASS + null FAIL as designed; `npm run d7:stimuli:check` 3 sets,
+56 items, all present. JS↔Python parity asserted by three tests.
+
+**Open for a human / next passes:** (1) the data-hygiene blocker is now **44** tracked
+participant sessions and is the one thing gating collection — untracking is a git-index
+operation, a history scrub is a separate destructive decision; (2) real E2/E3 assets
+are not installed, so only E1 can be run; (3) the four unverified citations from the
+prior note are unchanged; (4) run the E1 pilot at N ≈ 12 asking only *does RQ0 clear on
+real eyes?*. Prior open items otherwise unchanged.

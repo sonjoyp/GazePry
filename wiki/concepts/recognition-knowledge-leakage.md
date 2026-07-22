@@ -61,8 +61,30 @@ extraction attack, resting on the [[eye-movement-memory-effect]].
 - **RQ0 is the gate:** the classifier must beat a **saliency-and-position-only**
   baseline and collapse under a **shuffled familiarity-label null** — the D7
   analogue of [[reid-confound-controls]] and of D2's saliency-prior gate.
-- **Status: proposal only** — no D7 result exists; H0–H5 are pre-registered
-  predictions ([[pilot-empirical-status]]).
+- **Status: instrumented, not yet run** — the collection and analysis pipeline
+  exists and passes its nulls on synthetic data, but **no human D7 data has been
+  collected**; H0–H5 remain pre-registered predictions
+  ([[pilot-empirical-status]]).
+
+## Instrumentation constraints (from building it)
+
+Established while implementing the pipeline; see
+[[2026-07-22-d7-instrumentation-findings]] for the evidence.
+
+- **I-DT threshold is sensor-dependent, not inherited.** The lab-standard
+  0.045-diagonal dispersion window segments **zero** fixations at webcam noise,
+  silently flattening every fixation feature to AUC 0.500. D7 runs at 0.10
+  diagonals with 5-sample smoothing, and treats *fixations per trial* as a gate
+  to read on every run.
+- **The RQ0 saliency baseline has been shown to bite.** With counterbalancing
+  deliberately broken, the pipeline reports headline **AUC 0.935** from item
+  identity alone while the saliency control goes to 1.000 and RQ0 fails.
+- **E1 stimuli must be checked for mutual distinctiveness, in colour.** A
+  "novel" tile resembling a studied one contaminates the familiarity contrast
+  irrecoverably, and a greyscale similarity check does not see it.
+- **Counterbalance group is derived from the participant number**, so IDs must
+  be assigned sequentially; hashed IDs give uneven groups and item identity
+  starts leaking into familiarity.
 
 ## Related
 

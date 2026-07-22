@@ -231,8 +231,10 @@ def distinct_julias(n: int, base_seed: int, min_diff: float = 22.0,
     In a recognition study that is not cosmetic: if a 'novel' tile looks like
     one the participant studied, the familiarity contrast is contaminated in a
     way no counterbalancing can undo. Candidates are therefore rejected until
-    every pair differs by at least ``min_diff`` mean absolute grey level, and
-    the achieved minimum is reported rather than assumed.
+    every pair differs by at least ``min_diff`` mean absolute RGB level, and
+    the achieved minimum is reported rather than assumed. The comparison is
+    made in colour on purpose: an earlier greyscale check passed pairs that
+    shared structure and differed only in hue.
     """
     kept: List[np.ndarray] = []
     thumbs: List[np.ndarray] = []

@@ -205,6 +205,10 @@ webcam-reachable), [[zangrossi-2024-aiat-eye-movements]] [C5],
 *Dated research notes: session findings, decisions and their rationale, dead ends.
 Newest first.*
 
+- [[2026-07-22-d7-instrumentation-findings]] — four things building the D7 probe
+  exposed: the lab I-DT threshold finds **zero** fixations on webcam noise, LOPO
+  folds break the saliency control, the RQ0 gate verified by sabotage
+  (AUC 0.935 from item identity alone), and near-duplicate E1 stimuli.
 - [[2026-07-22-d7-recognition-direction]] — why **D7 recognition leakage** was
   chosen as the non-biometric direction over D1/D3/D5, the ocular-CIT evidence
   base, the confound that D7 cancels and D4 cannot, and the scoop risk.

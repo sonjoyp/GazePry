@@ -343,6 +343,15 @@ The task page **refuses to run** below this geometry rather than silently
 shrinking the tiles, because data collected outside the validated envelope is not
 comparable to anything published.
 
+**Tile shape is part of the geometry, not a detail of styling.** The tile is held
+at the 4:3 aspect of the stimulus canvas and grown only until it hits the
+limiting dimension; surplus viewport becomes outer margin, never a wider gap. A
+tile of some other shape can only be filled by cropping the stimulus, and a
+centre crop of a portrait photograph removes the face — the participant then
+free-views a collar for 4000 ms and the trial scores as an ordinary null. Off-4:3
+images are letterboxed inside the tile, and the drawn rectangle is recorded per
+trial (`aois[].imageRect`) alongside the AOI rectangle itself.
+
 ### 6.3 Trial structure
 
 ```

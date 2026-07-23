@@ -486,6 +486,22 @@ class TestProbeProtocol(unittest.TestCase):
         self.assertTrue(probe_protocol.layout(4, 1920, 1080)["ok"])
         self.assertFalse(probe_protocol.layout(4, 1024, 640)["ok"])
 
+    def test_tiles_hold_the_stimulus_aspect(self):
+        """Tiles used to stretch to fill the viewport, so the task page had to
+        crop every off-aspect stimulus -- which removed the faces from the E2
+        portraits altogether."""
+        for n, vw, vh in ((4, 1920, 1080), (4, 1907, 984), (2, 1920, 1080),
+                          (4, 2560, 1440), (2, 1366, 768)):
+            L = probe_protocol.layout(n, vw, vh)
+            self.assertAlmostEqual(L["tileW"] / L["tileH"],
+                                   probe_protocol.GEOM["tileAspect"], delta=0.02,
+                                   msg=f"{n}@{vw}x{vh} tile is not 4:3")
+            last = L["rects"][-1]
+            self.assertLessEqual(last["x"] + last["w"],
+                                 vw - probe_protocol.GEOM["edgeMargin"] + 1)
+            self.assertLessEqual(last["y"] + last["h"],
+                                 vh - probe_protocol.GEOM["edgeMargin"] + 1)
+
 
 class TestProbeProtocolParity(unittest.TestCase):
     """The browser protocol and the Python port must build the SAME design.
@@ -510,6 +526,17 @@ class TestProbeProtocolParity(unittest.TestCase):
                 self.assertEqual(jt["probeItemId"], pt["probeItemId"])
                 self.assertEqual(jt["slots"],
                                  [[s["itemId"], s["familiar"]] for s in pt["slots"]])
+
+    @unittest.skipUnless(shutil.which("node"), "node not available")
+    def test_js_python_layouts_agree(self):
+        """AOI rectangles have to match to the pixel: the analysis scores gaze
+        against rectangles it rebuilds here, not against ones it was handed."""
+        for n, vw, vh in ((4, 1920, 1080), (4, 1907, 984), (2, 1366, 768),
+                          (4, 2560, 1440), (4, 1024, 640)):
+            out = subprocess.check_output(
+                ["node", PROBE_PLAN_CLI, "--layout", str(n), str(vw), str(vh)], text=True)
+            self.assertEqual(json.loads(out), probe_protocol.layout(n, vw, vh),
+                             f"layout differs for {n}@{vw}x{vh}")
 
 
 class TestAOIFeatures(unittest.TestCase):

@@ -240,7 +240,19 @@
   // the <=4-AOI webcam bound. Tiles shrink to fit a small viewport but never
   // below MIN_TILE — a smaller tile is outside the validated envelope, so the
   // page refuses to run rather than silently collecting unusable data.
-  var GEOM = { minTileW: 400, minTileH: 300, minGap: 250, edgeMargin: 40 };
+  //
+  // tileAspect holds the tile at the aspect ratio of the stimulus canvas: every
+  // generated item is 800x600 and every fetched logo is composited onto a 4:3
+  // canvas (scripts/make_stimuli.py, scripts/fetch_stimuli.py), and MIN_TILE is
+  // itself 4:3. Without this the tile stretched to whatever was left of the
+  // viewport — 788x327 on a 1907x984 window — and object-fit had to either crop
+  // the stimulus to a letterbox strip (which silently cut the faces out of the
+  // E2 portraits) or shrink it into a sliver. Holding 4:3 also lands the tile
+  // near the 472x331 of the replication instead of drifting away from it; the
+  // surplus space becomes outer margin, never a wider gap, because the gap is
+  // the separation the published geometry pinned.
+  var GEOM = { minTileW: 400, minTileH: 300, minGap: 250, edgeMargin: 40,
+    tileAspect: 4 / 3 };
 
   function layout(arrayN, vw, vh) {
     var cols = arrayN === 2 ? 2 : 2;
@@ -248,8 +260,8 @@
     var gap = GEOM.minGap;
     var availW = vw - 2 * GEOM.edgeMargin - (cols - 1) * gap;
     var availH = vh - 2 * GEOM.edgeMargin - (rows - 1) * gap;
-    var tw = Math.floor(availW / cols);
-    var th = Math.floor(availH / rows);
+    var tw = Math.floor(Math.min(availW / cols, (availH / rows) * GEOM.tileAspect));
+    var th = Math.floor(tw / GEOM.tileAspect);
     var ok = tw >= GEOM.minTileW && th >= GEOM.minTileH;
     var totalW = cols * tw + (cols - 1) * gap;
     var totalH = rows * th + (rows - 1) * gap;

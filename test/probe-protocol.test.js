@@ -167,6 +167,24 @@ test("layout honours the validated geometry and flags undersized viewports", () 
   assert.equal(small.ok, false, "a small viewport must be refused, not silently shrunk");
 });
 
+// Regression: tiles used to stretch to whatever was left of the viewport (788x327
+// on a 1907x984 window), and object-fit then cropped every off-aspect stimulus to
+// a letterbox strip — which cut the faces out of the E2 portraits entirely.
+test("tiles hold the 4:3 stimulus aspect and stay inside the viewport", () => {
+  for (const [n, vw, vh] of [[4, 1920, 1080], [4, 1907, 984], [2, 1920, 1080],
+    [4, 2560, 1440], [2, 1366, 768]]) {
+    const L = P.layout(n, vw, vh);
+    assert.ok(Math.abs(L.tileW / L.tileH - P.GEOM.tileAspect) < 0.02,
+      `${n}@${vw}x${vh}: tile ${L.tileW}x${L.tileH} is not 4:3`);
+    const last = L.rects[L.rects.length - 1];
+    assert.ok(L.rects[0].x >= P.GEOM.edgeMargin - 1, "left edge margin");
+    assert.ok(L.rects[0].y >= P.GEOM.edgeMargin - 1, "top edge margin");
+    assert.ok(last.x + last.w <= vw - P.GEOM.edgeMargin + 1, "array overflows width");
+    assert.ok(last.y + last.h <= vh - P.GEOM.edgeMargin + 1, "array overflows height");
+    assert.equal(L.gap, P.GEOM.minGap, "gap is the pinned separation, not slack space");
+  }
+});
+
 test("stimulus sets are big enough for a 4-tile array and have unique ids", () => {
   for (const expId of ["E1", "E2", "E3"]) {
     const items = P.SETS[expId].items;

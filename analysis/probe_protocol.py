@@ -16,6 +16,7 @@ signed or unsigned. So uint32 arithmetic here reproduces int32 arithmetic there.
 from __future__ import annotations
 
 import json
+import math
 import os
 import re
 from typing import Dict, List, Optional
@@ -108,7 +109,8 @@ def uses_placeholders(experiment: str, path: Optional[str] = None) -> bool:
 
 
 N_GROUPS = 4
-GEOM = {"minTileW": 400, "minTileH": 300, "minGap": 250, "edgeMargin": 40}
+GEOM = {"minTileW": 400, "minTileH": 300, "minGap": 250, "edgeMargin": 40,
+        "tileAspect": 4 / 3}
 TIMING = {"fixationMs": 500, "arrayMs": 4000, "blankMs": 300}
 
 
@@ -181,18 +183,35 @@ def build_trials(participant: str, experiment: str = "E1", array_n: int = 4,
             "counterbalanceGroup": group, "nTrials": n_trials, "trials": trials}
 
 
+def _js_round(v: float) -> int:
+    """JavaScript's Math.round: halfway cases go up, always.
+
+    Python's round() is banker's rounding, so a viewport that centres the array
+    on a half pixel (1907 wide, say) put the analysis's rectangles one pixel off
+    the ones the participant actually saw."""
+    return int(math.floor(v + 0.5))
+
+
 def layout(array_n: int, vw: int, vh: int) -> dict:
+    """Tile rectangles for one array. Mirrors ProbeProtocol.layout().
+
+    The tile is held at ``tileAspect`` (the 4:3 stimulus canvas) rather than
+    stretched to fill the viewport: a tile of a different shape can only be
+    filled by cropping the stimulus, which is how the E2 face portraits ended up
+    showing everything below the chin. Surplus space goes to the outer margin,
+    not to the gap, which stays at the separation §6.2 pinned."""
     cols = 2
     rows = 1 if array_n == 2 else 2
     gap = GEOM["minGap"]
     avail_w = vw - 2 * GEOM["edgeMargin"] - (cols - 1) * gap
     avail_h = vh - 2 * GEOM["edgeMargin"] - (rows - 1) * gap
-    tw, th = int(avail_w // cols), int(avail_h // rows)
+    tw = int(math.floor(min(avail_w / cols, (avail_h / rows) * GEOM["tileAspect"])))
+    th = int(math.floor(tw / GEOM["tileAspect"]))
     ok = tw >= GEOM["minTileW"] and th >= GEOM["minTileH"]
     total_w = cols * tw + (cols - 1) * gap
     total_h = rows * th + (rows - 1) * gap
-    x0 = round((vw - total_w) / 2)
-    y0 = round((vh - total_h) / 2)
+    x0 = _js_round((vw - total_w) / 2)
+    y0 = _js_round((vh - total_h) / 2)
     rects = []
     for i in range(array_n):
         c, r = i % cols, i // cols

@@ -60,7 +60,7 @@ npm run d7:stimuli:verify                   # every file matches the lock hash
 |---|---|---|
 | **E1** | 24 Julia-set fractals, mutually distinguishable by construction | **yes** |
 | **E2** | 8 faces + 8 bank marks + 8 landmarks from Wikimedia Commons | **yes, once fetched** |
-| **E3** | 16 generated marks | **no — placeholders, deliberately** |
+| **E3** | 8 everyday documents (vaccination card, census form, jury summons…) from Wikimedia Commons | **yes, once fetched — report separately, see caveat** |
 
 E1 is deliberately abstract: its validity depends on the participant having **no
 prior exposure**, so photographs of real things would smuggle in uncontrolled
@@ -78,9 +78,13 @@ not work around it: a cohort collected against stand-ins cannot be salvaged.
 block.** It is the only thing that catches a stimulus that changed between
 cohorts, which would otherwise be invisible and unfixable in analysis.
 
-E3 stays blocked on purpose — see
-[`public/stimuli/README.md`](public/stimuli/README.md), "E3 is still blocked",
-for the bar its stimuli have to clear before it is worth collecting.
+**E3 is collectable but its construct is weaker in kind, not just degree** — its
+cards probe topic exposure (semantic), not exposure to a specific image
+(episodic), so report it separately with that caveat and never let an E3 number
+support the mechanism claim. Free-licensing also left finance and legal at one
+item each; treat them as illustrative, not a category comparison. See
+[`public/stimuli/README.md`](public/stimuli/README.md), "E3: sourced, but read
+this before treating it like E1/E2".
 
 ### 1.4 Consent and debrief copy
 

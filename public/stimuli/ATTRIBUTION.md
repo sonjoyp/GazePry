@@ -34,5 +34,13 @@ recorded here is not a trademark clearance.
 | `l_sigiriya` | Sigiriya (141688197).jpeg | CC BY-SA 3.0 | Wrobell | <https://commons.wikimedia.org/wiki/File:Sigiriya_(141688197).jpeg> |
 | `l_sydney` | Sydney Australia. (21339175489).jpg | CC0 | Bernard Spragg. NZ from Christchurch, New Zealand | <https://commons.wikimedia.org/wiki/File:Sydney_Australia._(21339175489).jpg> |
 | `l_taj` | Taj Mahal (Edited).jpeg | CC BY-SA 4.0 | Yann; edited by Jim Carter | <https://commons.wikimedia.org/wiki/File:Taj_Mahal_(Edited).jpeg> |
+| `t_census` | Official 2020 United States census form.jpg | CC BY-SA 4.0 | Whoisjohngalt https://commons.wikimedia.org/wiki/User:Whoisjohngalt | <https://commons.wikimedia.org/wiki/File:Official_2020_United_States_census_form.jpg> |
+| `t_handwash` | Wash your hands poster CDC - Wellbee.jpg | Public domain | Photo Credit: Content Providers(s): CDC/Mary Hilpertshauser | <https://commons.wikimedia.org/wiki/File:Wash_your_hands_poster_CDC_-_Wellbee.jpg> |
+| `t_ivoted` | California Digital I Voted Sticker 2020.png | Public domain | California Secretary of State | <https://commons.wikimedia.org/wiki/File:California_Digital_I_Voted_Sticker_2020.png> |
+| `t_jury` | Jury Summons.jpg | Public domain | Jun at LA | <https://commons.wikimedia.org/wiki/File:Jury_Summons.jpg> |
+| `t_nutrition` | FDA Nutrition Facts Label 2016.png | Public domain | U.S. Food and Drug Administration | <https://commons.wikimedia.org/wiki/File:FDA_Nutrition_Facts_Label_2016.png> |
+| `t_paystub` | Paycheck.png | CC0 | Леонид Макаров | <https://commons.wikimedia.org/wiki/File:Paycheck.png> |
+| `t_recycle` | Recycle It! Poster (7699041718).png | Public domain | Pacific Southwest Region 5 | <https://commons.wikimedia.org/wiki/File:Recycle_It!_Poster_(7699041718).png> |
+| `t_vaxcard` | COVID-19 Vaccination record card and a blue pen on black background (51021144963).jpg | CC BY 2.0 | Jernej Furman from Maribor, Slovenia | <https://commons.wikimedia.org/wiki/File:COVID-19_Vaccination_record_card_and_a_blue_pen_on_black_background_(51021144963).jpg> |
 
-_24 assets, locked 2026-07-23T11:32:33-05:00._
+_32 assets, locked 2026-07-23T13:28:31-05:00._

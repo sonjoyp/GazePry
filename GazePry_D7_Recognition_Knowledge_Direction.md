@@ -447,8 +447,10 @@ plainly about E3:
   problem. The scoping is asserted by a test on each side so it cannot drift back
   in later.
 
-E3 stimuli are **not sourced yet** and the task page therefore refuses to collect
-E3. See §8 for what a valid E3 asset is.
+E3 now ships **8 real documents** and is collectable once fetched, but it is
+reported separately from E1/E2 (§6.4: its construct is semantic topic exposure,
+not episodic exposure to a specific image), and free-licensing left finance and
+legal at one item each. See §8 for the sourcing bar and the per-category caveat.
 
 ### 6.5 Counterbalancing — the RQ0 control
 
@@ -740,19 +742,28 @@ cannot drift from what is on disk. It is what a paper's stimulus figure cites.
 the sources, the lock, and the attribution are. E1's fractals *are* committed:
 they are generated from recorded seeds and carry no third-party rights.
 
-### 8.4 What a valid E3 asset is
+### 8.4 What a valid E3 asset is, and what was sourced
 
-E3 remains unsourced and therefore blocked. The bar it has to clear, before
-anyone spends a cohort on it:
+The bar an E3 card has to clear: it must be something a person plausibly
+**handled**, not merely something that depicts a familiar subject. A generated
+illustration of a mortgage carries no episodic trace for anyone, so the contrast
+would rest entirely on semantic familiarity with the phrase in the caption. Real,
+widely circulated documents clear the bar: standard government and agency forms,
+public-information posters, the recognisable article-card formats of major
+outlets.
 
-The card must be something a person plausibly **encountered before**, not merely
-something that depicts a familiar subject. A generated illustration of a mortgage
-carries no episodic trace for anyone, so the contrast would rest entirely on
-semantic familiarity with the phrase in the caption. Real, widely circulated
-topic material clears the bar: standard government and agency forms, public
-information posters, and the recognisable article-card formats of major outlets.
-Whatever is chosen, the construct caveat in §6.4 still applies and belongs in the
-paper.
+**E3 is now sourced against that bar** — 8 documents most people have held: a
+COVID-19 vaccination card, an FDA nutrition-facts label, and a CDC hygiene poster
+(health); a 2020 US Census form, an "I Voted" sticker, and a recycling poster
+(civic); a jury summons (legal); a payslip (finance). It is 8 rather than 16, and
+lopsided (3/3/1/1), because the fetcher only pulls freely-licensed Wikimedia
+Commons files, and Commons has canonical free versions of the health and civic
+documents but not of the modern US finance/legal forms (a current 1040, W-2,
+Miranda card are public-domain federal works simply not uploaded there). **Finance
+and legal are therefore illustrative, not a category comparison (n=1 each).**
+Closing that gap means uploading those PD forms to Commons, or extending the
+fetcher to accept direct `.gov` sources. Whatever the set, the construct caveat
+in §6.4 still applies and belongs in the paper.
 
 ### 8.5 Data handling
 
@@ -906,7 +917,7 @@ Report the full curve for each, and report the negative results.
 | **Cohort-level familiarity masquerading as individual recognition.** If every participant is a US student, the same bank marks are familiar to all of them and the "individual" signal is a cohort constant. | **High** | The item classes are chosen to span nationality (US, UK, Nordic, Spanish banks; regional landmarks; nationally-famous faces), and recruitment targets demographic spread. Report per-class variance in the self-report labels as evidence the contrast actually varies within the cohort. |
 | Effect sizes shrink 20–27% online [11], on top of an IR ceiling of AUC 0.67–0.87 [6]. Per-AOI webcam AUC may land near 0.60. | Medium | The per-item aggregation curve (§7.4) is the answer, and it is the honest one: a weak per-trial signal integrated over 20 tiles is still an oracle. Frame absolute numbers as a lower bound. |
 | **Sign reversal.** Familiarity produces *preference* in some paradigms and *avoidance* in others ([5] reports avoidance), and the early/late windows can differ. | Medium | Pre-register per-window, per-feature directional predictions. Use two-sided tests and report direction as a finding. Do not average across the reversal. |
-| **E3's construct is weaker than E1/E2's**, in kind and not only in degree (§6.4). | Medium | Report E3 separately, with the episodic-versus-semantic caveat stated. Do not let an E3 number support the mechanism claim. Leave E3 blocked until its stimuli clear the bar in §8.4. |
+| **E3's construct is weaker than E1/E2's**, in kind and not only in degree (§6.4). | Medium | Report E3 separately, with the episodic-versus-semantic caveat stated. Do not let an E3 number support the mechanism claim. E3's stimuli now clear the §8.4 bar, but free-licensing left finance and legal at n=1, so treat those as illustrative, not a category comparison. |
 | Microsaccade-based CIT results [7] are unreachable at 30 Hz. | Low | State it in the paper before a reviewer does; it is a sensor bound, not a flaw. |
 | Cover-task ecological validity: a lab array may not resemble real web content. | Medium | The two-level cover-task manipulation (§6.3) *is* the ecological-validity test. Report both. |
 | Deception plus sensitive labels. | Medium | Debrief script written before collection, separated label storage, no protected characteristics in E3. |

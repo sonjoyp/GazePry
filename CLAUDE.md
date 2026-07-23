@@ -101,9 +101,12 @@ than familiarity. A class must be a **contiguous block whose size is a multiple
 of `N_GROUPS`**, because the Latin square runs over the global item index — the
 checker and tests on both sides enforce this.
 
-E3 stays on placeholders on purpose (its construct is weaker in kind, not just
-in degree — see `public/stimuli/README.md`). The task page **disables Begin**
-while a set contains placeholders.
+E3 is sourced (8 everyday documents) but its construct is weaker in kind, not
+just in degree, so it is reported separately with an episodic-versus-semantic
+caveat and never supports the mechanism claim; free-licensing left finance and
+legal at one item each — see `public/stimuli/README.md`. The task page still
+**disables Begin** while any set contains placeholders (the guard is generic; no
+shipped set trips it now).
 
 ## Constraints that are not negotiable
 

@@ -141,14 +141,59 @@
     },
     "E3": {
       "note": [
-        "NOT SOURCED YET, on purpose. E3 probes exposure to a TOPIC rather than",
-        "to a specific image, so a card only carries the recognition effect if",
-        "the participant plausibly encountered that kind of card before. See",
-        "public/stimuli/README.md, 'What a valid E3 asset is', before filling",
-        "this in. Leaving it empty keeps E3 marked as placeholders, which is",
-        "what blocks the task page from collecting it."
+        "E3 probes exposure to a TOPIC, so a card only carries the recognition",
+        "effect if the participant plausibly HANDLED that kind of document. These",
+        "eight are documents most people have actually held: a vaccination card,",
+        "a nutrition label, a public-health poster, a census form, an 'I Voted'",
+        "sticker, a recycling poster, a jury summons, a payslip. It is 3 health /",
+        "3 civic / 1 legal / 1 finance because Wikimedia Commons has canonical",
+        "free versions for health and civic but not for the modern US finance and",
+        "legal forms (a current 1040, W-2, Miranda card) -- those are public",
+        "domain but simply not on Commons. Finance and legal are therefore present",
+        "but too thin to carry a per-category claim. See public/stimuli/README.md."
       ],
-      "items": []
+      "items": [
+        {
+          "id": "t_vaxcard",
+          "resolve": { "commonsFile": "COVID-19 Vaccination record card and a blue pen on black background (51021144963).jpg" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_nutrition",
+          "resolve": { "commonsFile": "FDA Nutrition Facts Label 2016.png" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_handwash",
+          "resolve": { "commonsFile": "Wash your hands poster CDC - Wellbee.jpg" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_census",
+          "resolve": { "commonsFile": "Official 2020 United States census form.jpg" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_ivoted",
+          "resolve": { "commonsFile": "California Digital I Voted Sticker 2020.png" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_recycle",
+          "resolve": { "commonsFile": "Recycle It! Poster (7699041718).png" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_jury",
+          "resolve": { "commonsFile": "Jury Summons.jpg" },
+          "fit": "cover"
+        },
+        {
+          "id": "t_paystub",
+          "resolve": { "commonsFile": "Paycheck.png" },
+          "fit": "cover"
+        }
+      ]
     }
   }
 }

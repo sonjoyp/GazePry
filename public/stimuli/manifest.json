@@ -577,151 +577,114 @@
       "studyPhase": false,
       "selfReportLabels": true,
       "arrayGroupBy": null,
-      "note": "Topic cards. E3 probes exposure to a TOPIC rather than to a specific image, which is a weaker construct than E1/E2 -- see public/stimuli/README.md before collecting.",
+      "note": "Real assets installed from Wikimedia Commons by scripts/fetch_stimuli.py; provenance per item, credits in ATTRIBUTION.md.",
       "items": [
         {
-          "id": "t_sleep",
-          "label": "Sleep problems",
-          "name": "Sleep problems",
-          "file": "e3/t_sleep.png",
+          "id": "t_vaxcard",
+          "label": "Vaccination records",
+          "name": "Vaccination records",
+          "file": "e3/t_vaxcard.jpg",
           "kind": "topic",
           "category": "health",
-          "placeholder": true
+          "placeholder": false,
+          "source": "https://commons.wikimedia.org/wiki/File:COVID-19_Vaccination_record_card_and_a_blue_pen_on_black_background_(51021144963).jpg",
+          "licence": "CC BY 2.0",
+          "attribution": "Jernej Furman from Maribor, Slovenia",
+          "retrieved": "2026-07-23"
         },
         {
-          "id": "t_diab",
-          "label": "Blood sugar",
-          "name": "Blood sugar",
-          "file": "e3/t_diab.png",
+          "id": "t_nutrition",
+          "label": "Nutrition labels",
+          "name": "Nutrition labels",
+          "file": "e3/t_nutrition.png",
           "kind": "topic",
           "category": "health",
-          "placeholder": true
+          "placeholder": false,
+          "focus": "50% 0%",
+          "source": "https://commons.wikimedia.org/wiki/File:FDA_Nutrition_Facts_Label_2016.png",
+          "licence": "Public domain",
+          "attribution": "U.S. Food and Drug Administration",
+          "retrieved": "2026-07-23"
         },
         {
-          "id": "t_ment",
-          "label": "Therapy options",
-          "name": "Therapy options",
-          "file": "e3/t_ment.png",
+          "id": "t_handwash",
+          "label": "Hand hygiene",
+          "name": "Hand hygiene",
+          "file": "e3/t_handwash.jpg",
           "kind": "topic",
           "category": "health",
-          "placeholder": true
+          "placeholder": false,
+          "focus": "50% 0%",
+          "source": "https://commons.wikimedia.org/wiki/File:Wash_your_hands_poster_CDC_-_Wellbee.jpg",
+          "licence": "Public domain",
+          "attribution": "Photo Credit: Content Providers(s): CDC/Mary Hilpertshauser",
+          "retrieved": "2026-07-23"
         },
         {
-          "id": "t_derm",
-          "label": "Skin conditions",
-          "name": "Skin conditions",
-          "file": "e3/t_derm.png",
-          "kind": "topic",
-          "category": "health",
-          "placeholder": true
-        },
-        {
-          "id": "t_debt",
-          "label": "Debt consolidation",
-          "name": "Debt consolidation",
-          "file": "e3/t_debt.png",
-          "kind": "topic",
-          "category": "finance",
-          "placeholder": true
-        },
-        {
-          "id": "t_mort",
-          "label": "Mortgage rates",
-          "name": "Mortgage rates",
-          "file": "e3/t_mort.png",
-          "kind": "topic",
-          "category": "finance",
-          "placeholder": true
-        },
-        {
-          "id": "t_pens",
-          "label": "Retirement planning",
-          "name": "Retirement planning",
-          "file": "e3/t_pens.png",
-          "kind": "topic",
-          "category": "finance",
-          "placeholder": true
-        },
-        {
-          "id": "t_tax",
-          "label": "Tax deductions",
-          "name": "Tax deductions",
-          "file": "e3/t_tax.png",
-          "kind": "topic",
-          "category": "finance",
-          "placeholder": true
-        },
-        {
-          "id": "t_tenc",
-          "label": "Tenant rights",
-          "name": "Tenant rights",
-          "file": "e3/t_tenc.png",
-          "kind": "topic",
-          "category": "legal",
-          "placeholder": true
-        },
-        {
-          "id": "t_will",
-          "label": "Making a will",
-          "name": "Making a will",
-          "file": "e3/t_will.png",
-          "kind": "topic",
-          "category": "legal",
-          "placeholder": true
-        },
-        {
-          "id": "t_emp",
-          "label": "Employment disputes",
-          "name": "Employment disputes",
-          "file": "e3/t_emp.png",
-          "kind": "topic",
-          "category": "legal",
-          "placeholder": true
-        },
-        {
-          "id": "t_claims",
-          "label": "Small claims court",
-          "name": "Small claims court",
-          "file": "e3/t_claims.png",
-          "kind": "topic",
-          "category": "legal",
-          "placeholder": true
-        },
-        {
-          "id": "t_vote",
-          "label": "Voter registration",
-          "name": "Voter registration",
-          "file": "e3/t_vote.png",
+          "id": "t_census",
+          "label": "Census forms",
+          "name": "Census forms",
+          "file": "e3/t_census.jpg",
           "kind": "topic",
           "category": "civic",
-          "placeholder": true
+          "placeholder": false,
+          "source": "https://commons.wikimedia.org/wiki/File:Official_2020_United_States_census_form.jpg",
+          "licence": "CC BY-SA 4.0",
+          "attribution": "Whoisjohngalt https://commons.wikimedia.org/wiki/User:Whoisjohngalt",
+          "retrieved": "2026-07-23"
         },
         {
-          "id": "t_coun",
-          "label": "Local council",
-          "name": "Local council",
-          "file": "e3/t_coun.png",
+          "id": "t_ivoted",
+          "label": "Voting",
+          "name": "Voting",
+          "file": "e3/t_ivoted.png",
           "kind": "topic",
           "category": "civic",
-          "placeholder": true
+          "placeholder": false,
+          "source": "https://commons.wikimedia.org/wiki/File:California_Digital_I_Voted_Sticker_2020.png",
+          "licence": "Public domain",
+          "attribution": "California Secretary of State",
+          "retrieved": "2026-07-23"
         },
         {
-          "id": "t_recy",
+          "id": "t_recycle",
           "label": "Recycling rules",
           "name": "Recycling rules",
-          "file": "e3/t_recy.png",
+          "file": "e3/t_recycle.png",
           "kind": "topic",
           "category": "civic",
-          "placeholder": true
+          "placeholder": false,
+          "focus": "50% 0%",
+          "source": "https://commons.wikimedia.org/wiki/File:Recycle_It!_Poster_(7699041718).png",
+          "licence": "Public domain",
+          "attribution": "Pacific Southwest Region 5",
+          "retrieved": "2026-07-23"
         },
         {
-          "id": "t_perm",
-          "label": "Building permits",
-          "name": "Building permits",
-          "file": "e3/t_perm.png",
+          "id": "t_jury",
+          "label": "Jury duty",
+          "name": "Jury duty",
+          "file": "e3/t_jury.jpg",
           "kind": "topic",
-          "category": "civic",
-          "placeholder": true
+          "category": "legal",
+          "placeholder": false,
+          "source": "https://commons.wikimedia.org/wiki/File:Jury_Summons.jpg",
+          "licence": "Public domain",
+          "attribution": "Jun at LA",
+          "retrieved": "2026-07-23"
+        },
+        {
+          "id": "t_paystub",
+          "label": "Payslips",
+          "name": "Payslips",
+          "file": "e3/t_paystub.png",
+          "kind": "topic",
+          "category": "finance",
+          "placeholder": false,
+          "source": "https://commons.wikimedia.org/wiki/File:Paycheck.png",
+          "licence": "CC0",
+          "attribution": "\u041b\u0435\u043e\u043d\u0438\u0434 \u041c\u0430\u043a\u0430\u0440\u043e\u0432",
+          "retrieved": "2026-07-23"
         }
       ]
     }

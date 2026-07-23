@@ -335,10 +335,14 @@ drift from what is on disk. The images themselves are gitignored; the manifest,
 sources, lock, and attribution are committed, so a clean checkout reproduces the
 pack with two commands.
 
-**E3** ships placeholders and stays blocked, deliberately — its topic cards probe
-exposure to a *topic* rather than to a specific image, which is a weaker
-construct than E1/E2 rather than just a weaker manipulation. The bar its stimuli
-have to clear is in [`public/stimuli/README.md`](public/stimuli/README.md).
+**E3** now ships 8 real everyday documents (a vaccination card, a census form, a
+jury summons, a payslip…) and is collectable once fetched, but its construct is
+kept separate on purpose: its cards probe exposure to a *topic* rather than to a
+specific image, a weaker construct than E1/E2 rather than just a weaker
+manipulation, so E3 is reported separately with an episodic-versus-semantic
+caveat and never used to support the mechanism claim. Free Commons coverage also
+makes finance and legal thin (one item each), so they are illustrative, not a
+category comparison. See [`public/stimuli/README.md`](public/stimuli/README.md).
 
 The task page **disables Begin** while a set contains placeholders rather than
 warning, since a cohort collected against stand-ins cannot be salvaged.

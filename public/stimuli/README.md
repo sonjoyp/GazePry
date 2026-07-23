@@ -13,7 +13,7 @@ npm run d7:stimuli:verify   # offline: hash-check installed assets against the l
 |---|---|---|---|
 | **E1** | 24 | Julia-set fractals, generated here | **Yes** |
 | **E2** | 24 | 8 faces + 8 bank marks + 8 landmarks, fetched from Commons | **Yes, once fetched** |
-| **E3** | 16 | Generated marks | **No — placeholders, see below** |
+| **E3** | 8 | Everyday documents (vaccination card, census form, jury summons…), fetched from Commons | **Yes, once fetched — with the construct caveat below** |
 
 The task page **blocks** a set while any of its items is marked
 `"placeholder": true`. That is deliberate rather than a warning: E2 and E3
@@ -178,23 +178,37 @@ manual asset hunting.
 
 ---
 
-## E3 is still blocked, on purpose
+## E3: sourced, but read this before treating it like E1/E2
 
-E3's 16 topic cards are placeholders and `sources.json` deliberately declares no
-E3 items, which is what keeps the task page refusing to collect it.
+E3 now ships **8 real documents** and is collectable once fetched, but its
+construct is deliberately kept at arm's length from E1/E2 and the material was
+chosen against a stricter bar than "depicts a familiar topic."
 
 **The construct is weaker than E1/E2's, in kind and not only in degree.** E1 and
 E2 rely on the participant having seen *that stimulus*, which is what the
 eye-movement memory effect actually predicts. A topic card the participant has
 never seen before cannot carry an episodic trace no matter how familiar the topic
 is; what it can carry is *semantic* familiarity with the subject matter. That is
-a real result if reported as one, and a misleading one if folded in with E1/E2.
+a real result if reported as one, and a misleading one if folded in with E1/E2 —
+so **report E3 separately, with the episodic-versus-semantic caveat stated, and
+do not let an E3 number support the mechanism claim.**
 
-**What a valid E3 asset is.** Something a person plausibly **encountered
-before**, not merely something that depicts a familiar subject: standard
-government and agency forms, public-information posters, the recognisable
-article-card formats of major outlets. A generated illustration of a mortgage
-carries no episodic trace for anyone.
+**What a valid E3 asset is, and what the eight are.** Something a person
+plausibly **handled**, not merely something that depicts a familiar subject. The
+shipped set is a COVID-19 vaccination card, an FDA nutrition-facts label, a CDC
+"wash your hands" poster (health); a 2020 US Census form, an "I Voted" sticker, a
+recycling poster (civic); a jury summons (legal); and a payslip (finance).
+
+**Why 8 and not 16, and why the lopsided split (3 health / 3 civic / 1 legal /
+1 finance).** A valid E3 asset has to be freely licensed *and* on Wikimedia
+Commons, since that is all the fetcher will pull. Commons has canonical free
+versions of the health and civic documents but **not** of the modern US finance
+and legal forms — a current IRS 1040, a W-2, a Miranda card are all public-domain
+federal works that simply have not been uploaded there. Finance and legal are
+therefore present but **too thin (n=1) to carry a per-category claim**; treat
+them as illustrative, not as a category comparison. Closing that gap means either
+uploading those PD forms to Commons first, or extending the fetcher to accept
+direct `.gov` sources.
 
 **Scope.** Keep to health, finance, legal, and civic. **Do not add protected
 characteristics** (sexual orientation, religion, immigration status): the method
@@ -202,5 +216,6 @@ would apply, the demonstration does not need them, and including them turns a
 privacy paper into an ethics problem. A JS test and a Python test both assert the
 shipped E3 categories, so adding one will fail the suite.
 
-To source E3 once you have chosen the material, add entries to the `E3` block of
-`sources.json` in the same form as E2 and re-run the fetcher.
+To change the E3 set, edit its items in `scripts/make_stimuli.py` (design) and
+the `E3` block of `sources.json` (sourcing) together, then re-run the generator
+and the fetcher — the same two-step flow as E2.

@@ -374,15 +374,27 @@ E2_ITEMS = [
 # E3 items DO carry an on-tile caption: the card is a headline plus an image,
 # which is what a topic card looks like in real web content, and the topic is
 # the construct being probed.
+#
+# Unlike E1/E2 this set is only EIGHT items, not by preference but by what free
+# material exists: a valid E3 stimulus has to be a document the participant
+# plausibly HANDLED (an episodic trace), and Wikimedia Commons has canonical,
+# freely-licensed versions of that for health and civic documents but not for
+# the modern US finance/legal forms (a current 1040, a W-2, a Miranda card),
+# which are public-domain federal works simply not uploaded there. The set is
+# therefore 3 health / 3 civic / 1 legal / 1 finance; finance and legal are
+# present but too thin to carry a per-category claim on their own. See
+# public/stimuli/README.md and the sources.json E3 note. A fourth tuple element
+# is an optional CSS object-position: the portrait posters are top-anchored so
+# the header survives the cover crop, matching FOCUS_BY_CLASS for E2 faces.
 E3_ITEMS = [
-    ("t_sleep", "Sleep problems", "health"), ("t_diab", "Blood sugar", "health"),
-    ("t_ment", "Therapy options", "health"), ("t_derm", "Skin conditions", "health"),
-    ("t_debt", "Debt consolidation", "finance"), ("t_mort", "Mortgage rates", "finance"),
-    ("t_pens", "Retirement planning", "finance"), ("t_tax", "Tax deductions", "finance"),
-    ("t_tenc", "Tenant rights", "legal"), ("t_will", "Making a will", "legal"),
-    ("t_emp", "Employment disputes", "legal"), ("t_claims", "Small claims court", "legal"),
-    ("t_vote", "Voter registration", "civic"), ("t_coun", "Local council", "civic"),
-    ("t_recy", "Recycling rules", "civic"), ("t_perm", "Building permits", "civic"),
+    ("t_vaxcard", "Vaccination records", "health"),
+    ("t_nutrition", "Nutrition labels", "health", "50% 0%"),
+    ("t_handwash", "Hand hygiene", "health", "50% 0%"),
+    ("t_census", "Census forms", "civic"),
+    ("t_ivoted", "Voting", "civic"),
+    ("t_recycle", "Recycling rules", "civic", "50% 0%"),
+    ("t_jury", "Jury duty", "legal"),
+    ("t_paystub", "Payslips", "finance"),
 ]
 
 
@@ -495,15 +507,25 @@ def build(out_dir: str, force_placeholders: bool = False) -> dict:
     d = os.path.join(out_dir, "e3")
     os.makedirs(d, exist_ok=True)
     e3 = []
-    for i, (iid, label, cat) in enumerate(E3_ITEMS):
+    for i, spec in enumerate(E3_ITEMS):
+        iid, label, cat = spec[0], spec[1], spec[2]
+        focus = spec[3] if len(spec) > 3 else None
         if iid in keep:
-            e3.append(keep[iid])
+            it = dict(keep[iid])
+            if focus:
+                it["focus"] = focus
+            else:
+                it.pop("focus", None)
+            e3.append(it)
             n_kept += 1
             continue
         fn = f"{iid}.png"
         write_png(os.path.join(d, fn), placeholder_mark(5003 + i * 71, (0.55 + i * 0.09) % 1.0))
-        e3.append({"id": iid, "label": label, "name": label, "file": f"e3/{fn}",
-                   "kind": "topic", "category": cat, "placeholder": True})
+        item = {"id": iid, "label": label, "name": label, "file": f"e3/{fn}",
+                "kind": "topic", "category": cat, "placeholder": True}
+        if focus:
+            item["focus"] = focus
+        e3.append(item)
     sets["E3"] = {
         "id": "E3", "label": "Sensitive-topic exposure", "studyPhase": False,
         "selfReportLabels": True,

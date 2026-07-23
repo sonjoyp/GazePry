@@ -22,12 +22,17 @@ checkout and is safe to commit.
 E2 and E3 are different
 -----------------------
 Those experiments measure *naturally acquired* familiarity, so they need the
-real thing: actual service logos or homepage screenshots (E2), and real article
-or topic-page cards (E3). This script writes **placeholders** so the harness
-runs out of the box, and `public/stimuli/README.md` documents how to drop in the
-real assets. Placeholders are marked ``"placeholder": true`` in the manifest,
-and the task page refuses to run E2/E3 on them without an explicit override --
-collecting a whole cohort against placeholder stimuli would be unrecoverable.
+real thing: the actual faces, logos, places, and topic cards the participant has
+or has not encountered in ordinary life. This script writes **placeholders** so
+the harness runs and the tests pass from a clean checkout, and
+``scripts/fetch_stimuli.py`` installs the real assets over the top from
+Wikimedia Commons. Placeholders are marked ``"placeholder": true`` in the
+manifest and the task page refuses to run a set that still contains any --
+collecting a whole cohort against stand-ins would be unrecoverable.
+
+This script is therefore the *design* of the stimulus packs (which items exist,
+what class and expected-penetration tier each one has) and the fetcher is the
+*sourcing* of them. Run them in that order.
 
 No image dependency: PNGs are written with stdlib zlib + struct.
 """
@@ -55,6 +60,10 @@ W, H = 800, 600
 # Minimum usable size for a REAL (dropped-in) asset. Below this the image is
 # upscaled into the tile and detail the recognition effect depends on is lost.
 MIN_W, MIN_H = 600, 450
+
+# Must match ProbeProtocol.N_GROUPS / probe_protocol.N_GROUPS. Only used to
+# validate that a class-grouped set can fill an array for every group.
+N_GROUPS = 4
 
 
 # ---- minimal PNG writer ---------------------------------------------------
@@ -293,31 +302,112 @@ def placeholder_mark(seed: int, hue: float) -> np.ndarray:
 # ---- item tables ----------------------------------------------------------
 E1_N = 24
 
+# E2: three CLASSES of eight, and the ordering is load-bearing twice over.
+#
+#  * Arrays are built class-homogeneously (see `arrayGroupBy` below), because an
+#    array mixing a face with three bank logos lets the probe be picked out by
+#    category rather than by familiarity, and adds category-driven saliency
+#    variance to every trial. The ocular-CIT arrays this design follows are
+#    all-faces for the same reason.
+#  * Each class occupies eight CONTIGUOUS indices. The Latin square makes item i
+#    familiar for group g iff ((i + g) mod 4) < 2, so a block of eight splits
+#    exactly 4 familiar / 4 unfamiliar for *every* group -- which is what
+#    guarantees each class can always fill a 4-tile array (1 probe + 3
+#    irrelevants). Reordering this table, or making a class a size that is not a
+#    multiple of N_GROUPS, silently breaks that guarantee.
+#
+# Tiers record *expected* penetration, which drives the "high-salience items
+# only" fallback analysis. They are a hypothesis about the cohort, not a label:
+# the ground truth is always the post-hoc questionnaire.
+#
+# Faces and logos carry no on-tile caption (label ""): a caption would let the
+# participant read the name instead of recognising the image, which is a
+# different memory system from the one the effect rests on. `name` is for the
+# questionnaire, the operator log, and the attribution file only.
 E2_ITEMS = [
-    ("mail", "Mailbox", "high"), ("vid", "Streamline", "high"),
-    ("shop", "Marketplace", "high"), ("soc", "Circle", "high"),
-    ("map", "Wayfind", "high"), ("news", "Dispatch", "medium"),
-    ("bank", "Ledger", "medium"), ("fit", "Stride", "medium"),
-    ("code", "Forge", "medium"), ("note", "Sheaf", "medium"),
-    ("trav", "Compass", "low"), ("food", "Larder", "low"),
-    ("game", "Arcade", "low"), ("learn", "Tutor", "low"),
-    ("photo", "Album", "low"), ("music", "Chord", "low"),
+    # (id, name, class, tier)
+    ("f_obama", "Barack Obama", "face", "high"),
+    ("f_swift", "Taylor Swift", "face", "high"),
+    ("f_messi", "Lionel Messi", "face", "high"),
+    ("f_merkel", "Angela Merkel", "face", "medium"),
+    ("f_ardern", "Jacinda Ardern", "face", "medium"),
+    ("f_thunberg", "Greta Thunberg", "face", "medium"),
+    ("f_miyamoto", "Shigeru Miyamoto", "face", "low"),
+    ("f_strickland", "Donna Strickland", "face", "low"),
+
+    ("b_chase", "Chase", "bank", "high"),
+    ("b_bofa", "Bank of America", "bank", "high"),
+    ("b_wells", "Wells Fargo", "bank", "high"),
+    ("b_citi", "Citi", "bank", "high"),
+    ("b_hsbc", "HSBC", "bank", "medium"),
+    ("b_barclays", "Barclays", "bank", "medium"),
+    ("b_santander", "Santander", "bank", "medium"),
+    ("b_nordea", "Nordea", "bank", "low"),
+
+    ("l_eiffel", "Eiffel Tower", "landmark", "high"),
+    ("l_liberty", "Statue of Liberty", "landmark", "high"),
+    ("l_taj", "Taj Mahal", "landmark", "high"),
+    ("l_colosseum", "Colosseum", "landmark", "high"),
+    ("l_sydney", "Sydney Opera House", "landmark", "medium"),
+    ("l_pena", "Pena Palace", "landmark", "low"),
+    ("l_sigiriya", "Sigiriya", "landmark", "low"),
+    ("l_dragon", "Dragon Bridge, Ljubljana", "landmark", "low"),
 ]
 
+# E3 is scoped to health / finance / legal / civic and deliberately contains NO
+# protected characteristic (sexual orientation, religion, immigration status).
+# The method would apply to them, the demonstration does not need them, and
+# including them turns a privacy paper into an ethics problem. A JS test and a
+# Python test both assert this scoping so it cannot drift back in.
+#
+# E3 items DO carry an on-tile caption: the card is a headline plus an image,
+# which is what a topic card looks like in real web content, and the topic is
+# the construct being probed.
 E3_ITEMS = [
     ("t_sleep", "Sleep problems", "health"), ("t_diab", "Blood sugar", "health"),
     ("t_ment", "Therapy options", "health"), ("t_derm", "Skin conditions", "health"),
     ("t_debt", "Debt consolidation", "finance"), ("t_mort", "Mortgage rates", "finance"),
     ("t_pens", "Retirement planning", "finance"), ("t_tax", "Tax deductions", "finance"),
     ("t_tenc", "Tenant rights", "legal"), ("t_will", "Making a will", "legal"),
-    ("t_emp", "Employment disputes", "legal"), ("t_imm", "Visa paperwork", "legal"),
+    ("t_emp", "Employment disputes", "legal"), ("t_claims", "Small claims court", "legal"),
     ("t_vote", "Voter registration", "civic"), ("t_coun", "Local council", "civic"),
     ("t_recy", "Recycling rules", "civic"), ("t_perm", "Building permits", "civic"),
 ]
 
 
-def build(out_dir: str) -> dict:
+def _installed_real(out_dir: str) -> dict:
+    """Item ids whose REAL asset is already installed, from the current manifest.
+
+    Regenerating used to stamp placeholders back over assets that
+    ``fetch_stimuli.py`` had installed, which is a quiet way to lose a stimulus
+    pack (and, if it happened between two participants, to split a cohort across
+    two different stimulus sets without anything failing). An item that is
+    marked ``placeholder: false`` and whose file is still on disk is left alone,
+    provenance and all, unless ``--force-placeholders`` is passed.
+    """
+    mpath = os.path.join(out_dir, "manifest.json")
+    if not os.path.exists(mpath):
+        return {}
+    try:
+        with open(mpath, encoding="utf-8") as fh:
+            m = json.load(fh)
+    except (OSError, ValueError):
+        return {}
+    keep = {}
+    for s in m.get("sets", {}).values():
+        for it in s.get("items", []):
+            if it.get("placeholder"):
+                continue
+            fp = os.path.join(out_dir, it.get("file", "").replace("/", os.sep))
+            if it.get("file") and os.path.exists(fp):
+                keep[it["id"]] = it
+    return keep
+
+
+def build(out_dir: str, force_placeholders: bool = False) -> dict:
     sets = {}
+    keep = {} if force_placeholders else _installed_real(out_dir)
+    n_kept = 0
 
     # --- E1 ---------------------------------------------------------------
     d = os.path.join(out_dir, "e1")
@@ -346,16 +436,27 @@ def build(out_dir: str) -> dict:
     d = os.path.join(out_dir, "e2")
     os.makedirs(d, exist_ok=True)
     e2 = []
-    for i, (iid, label, tier) in enumerate(E2_ITEMS):
+    for i, (iid, name, cls, tier) in enumerate(E2_ITEMS):
+        if iid in keep:
+            e2.append(keep[iid])
+            n_kept += 1
+            continue
         fn = f"{iid}.png"
         write_png(os.path.join(d, fn), placeholder_mark(3001 + i * 53, (i * 0.13) % 1.0))
-        e2.append({"id": iid, "label": label, "file": f"e2/{fn}",
-                   "kind": "brand", "tier": tier, "placeholder": True})
+        e2.append({"id": iid, "label": "", "name": name, "file": f"e2/{fn}",
+                   "kind": "brand", "class": cls, "tier": tier, "placeholder": True})
     sets["E2"] = {
-        "id": "E2", "label": "Real-world service familiarity", "studyPhase": False,
-        "selfReportLabels": True,
-        "note": "PLACEHOLDERS. Replace with real logos or homepage screenshots "
-                "before collecting E2 -- see public/stimuli/README.md.",
+        "id": "E2", "label": "Real-world familiarity (faces, banks, places)",
+        "studyPhase": False, "selfReportLabels": True,
+        # Arrays are drawn within a class, never across. See E2_ITEMS.
+        "arrayGroupBy": "class",
+        "classes": {
+            "face": "Public figures",
+            "bank": "Retail bank and payment brands",
+            "landmark": "Widely photographed places",
+        },
+        "note": "Real-world familiarity the participant brought with them. Install "
+                "the real assets with scripts/fetch_stimuli.py before collecting.",
         "items": e2,
     }
 
@@ -364,15 +465,24 @@ def build(out_dir: str) -> dict:
     os.makedirs(d, exist_ok=True)
     e3 = []
     for i, (iid, label, cat) in enumerate(E3_ITEMS):
+        if iid in keep:
+            e3.append(keep[iid])
+            n_kept += 1
+            continue
         fn = f"{iid}.png"
         write_png(os.path.join(d, fn), placeholder_mark(5003 + i * 71, (0.55 + i * 0.09) % 1.0))
-        e3.append({"id": iid, "label": label, "file": f"e3/{fn}",
+        e3.append({"id": iid, "label": label, "name": label, "file": f"e3/{fn}",
                    "kind": "topic", "category": cat, "placeholder": True})
     sets["E3"] = {
         "id": "E3", "label": "Sensitive-topic exposure", "studyPhase": False,
         "selfReportLabels": True,
-        "note": "PLACEHOLDERS. Replace with real topic/article cards before "
-                "collecting E3 -- see public/stimuli/README.md.",
+        # No grouping: every E3 card is the same visual format (image + headline),
+        # so an array mixing categories is already visually homogeneous, and
+        # four items per category is too few to fill a class-homogeneous array.
+        "arrayGroupBy": None,
+        "note": "Topic cards. E3 probes exposure to a TOPIC rather than to a "
+                "specific image, which is a weaker construct than E1/E2 -- see "
+                "public/stimuli/README.md before collecting.",
         "items": e3,
     }
 
@@ -383,8 +493,27 @@ def build(out_dir: str) -> dict:
         "minSize": {"w": MIN_W, "h": MIN_H},
         "sets": sets,
     }
+    # Sweep files the manifest no longer references. Renaming or retiring an
+    # item otherwise leaves its image on disk forever, and an orphan under
+    # public/stimuli/ is one manifest edit away from being served as a stimulus
+    # with no provenance behind it.
+    referenced = {it["file"] for s in sets.values() for it in s["items"]}
+    for sub in ("e1", "e2", "e3"):
+        d = os.path.join(out_dir, sub)
+        if not os.path.isdir(d):
+            continue
+        for fn in sorted(os.listdir(d)):
+            rel = f"{sub}/{fn}"
+            if fn.startswith(".") or rel in referenced:
+                continue
+            os.remove(os.path.join(d, fn))
+            print(f"  removed orphan {rel} (no longer in the item table)")
+
     with open(os.path.join(out_dir, "manifest.json"), "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
+    if n_kept:
+        print(f"  kept {n_kept} already-installed real asset(s) "
+              f"(--force-placeholders overwrites them)")
     return manifest
 
 
@@ -428,6 +557,36 @@ def check(out_dir: str) -> int:
             warnings.append(f"{sid}: {n_placeholder}/{len(items)} items are PLACEHOLDERS "
                             f"-- do not collect {sid} against these")
 
+        # A grouped set draws every array from within one class, so each class
+        # must be able to fill an array on its own for EVERY counterbalance
+        # group. The Latin square splits a contiguous block of size 4k into
+        # exactly 2k familiar / 2k unfamiliar for every group, so a class that
+        # is contiguous and a multiple of N_GROUPS always yields >= 1 probe and
+        # >= 3 irrelevants once it has 8 items. Anything else can leave a group
+        # unable to build a trial -- at run time, mid-session.
+        gb = s.get("arrayGroupBy")
+        if gb:
+            spans: dict = {}
+            for i, it in enumerate(items):
+                v = it.get(gb)
+                if v is None:
+                    problems.append(f"{sid}/{it['id']}: no '{gb}' value, but the set "
+                                    f"groups arrays by it")
+                    continue
+                spans.setdefault(v, []).append(i)
+            for v, idxs in spans.items():
+                if len(idxs) < 8:
+                    problems.append(f"{sid}: {gb}={v} has only {len(idxs)} items; a "
+                                    f"class-homogeneous 4-tile array needs at least 8")
+                if len(idxs) % N_GROUPS:
+                    problems.append(f"{sid}: {gb}={v} has {len(idxs)} items, not a multiple "
+                                    f"of {N_GROUPS}; the counterbalance square would not "
+                                    f"split it evenly for every group")
+                if idxs != list(range(idxs[0], idxs[0] + len(idxs))):
+                    problems.append(f"{sid}: {gb}={v} items are not contiguous in the item "
+                                    f"table; the counterbalance square is applied over the "
+                                    f"global index, so a split block unbalances the class")
+
     for w in warnings:
         print("WARN: " + w)
     for p in problems:
@@ -445,15 +604,18 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="generate/validate D7 stimulus packs")
     ap.add_argument("--out", default=OUT_DIR)
     ap.add_argument("--check", action="store_true", help="validate instead of generating")
+    ap.add_argument("--force-placeholders", action="store_true",
+                    help="overwrite already-installed real E2/E3 assets with "
+                         "placeholders (the default is to keep them)")
     a = ap.parse_args(argv)
     if a.check:
         return check(a.out)
     os.makedirs(a.out, exist_ok=True)
-    m = build(a.out)
+    m = build(a.out, force_placeholders=a.force_placeholders)
     total = sum(len(s["items"]) for s in m["sets"].values())
     print(f"wrote {total} images + manifest.json to {a.out}")
     print("  E1: real fractal stimuli, ready to use")
-    print("  E2/E3: PLACEHOLDERS -- see public/stimuli/README.md before collecting")
+    print("  E2/E3: install the real assets with scripts/fetch_stimuli.py")
     return check(a.out)
 
 

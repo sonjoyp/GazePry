@@ -20,9 +20,9 @@ Two design decisions carry most of the weight:
 
 2. **Within-trial relative scaling** (§7.2). Every feature is expressed
    relative to the trial's own AOI mean. That cancels per-participant and
-   per-session scale differences, including the logged-cadence confound that
-   contaminates the D4 pipeline (D4 plan §9), because all AOIs in a trial were
-   captured through the same sensor in the same second.
+   per-session scale differences, including differences in logged sample cadence
+   between trackers, because all AOIs in a trial were captured through the same
+   sensor in the same second.
 """
 from __future__ import annotations
 

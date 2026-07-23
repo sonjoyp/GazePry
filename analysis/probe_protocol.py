@@ -132,8 +132,11 @@ def is_familiar(item_index: int, group: int) -> bool:
 def build_trials(participant: str, experiment: str = "E1", array_n: int = 4,
                  n_trials: int = 40, group: Optional[int] = None) -> dict:
     """Rebuild one participant's counterbalanced trial plan. See the JS for the
-    design rationale (§6.4): one familiar-role probe per trial among
-    ``array_n - 1`` unfamiliar-role irrelevants, slot order randomised."""
+    design rationale (§6.5): one familiar-role probe per trial among
+    ``array_n - 1`` unfamiliar-role irrelevants, slot order randomised.
+
+    When the set declares ``arrayGroupBy`` the irrelevants come from the probe's
+    own class, so an array is never one face among three bank logos."""
     s = sets().get(experiment)
     if not s:
         raise ValueError("unknown experiment: " + str(experiment))
@@ -149,13 +152,23 @@ def build_trials(participant: str, experiment: str = "E1", array_n: int = 4,
     if not fam or len(unf) < array_n - 1:
         raise ValueError(f"stimulus set too small for arrayN={array_n}")
 
+    group_by = s.get("arrayGroupBy") or None
+
     trials = []
     probe_queue: List[dict] = []
     for t in range(n_trials):
         if not probe_queue:
             probe_queue = shuffled(fam, rnd)
         probe = probe_queue.pop()
-        pool = [r for r in shuffled(unf, rnd) if r["item"]["id"] != probe["item"]["id"]]
+        cand = ([r for r in unf
+                 if r["item"].get(group_by) == probe["item"].get(group_by)]
+                if group_by else unf)
+        if len(cand) < array_n - 1:
+            raise ValueError(
+                f"not enough unfamiliar items in "
+                f"{group_by + '=' + str(probe['item'].get(group_by)) if group_by else experiment}"
+                f" to fill arrayN={array_n}")
+        pool = [r for r in shuffled(cand, rnd) if r["item"]["id"] != probe["item"]["id"]]
         slots = shuffled([probe] + pool[:array_n - 1], rnd)
         trials.append({
             "index": t,

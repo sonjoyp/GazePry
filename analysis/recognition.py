@@ -24,6 +24,8 @@ and, before any of it is allowed to count, the **RQ0 gate**:
 Usage:
   python recognition.py --data ../data
   python recognition.py --data ../data_probe_sim --experiment E1 --plot k.png
+  python recognition.py --data ../data --experiment E2 --labels ../labels \
+                        --item-class bank        # per-class contrast
 """
 from __future__ import annotations
 
@@ -43,9 +45,40 @@ from aoi_features import (  # noqa: E402
 from labels import (  # noqa: E402
     DEFAULT_THRESHOLD, apply_labels, class_balance, load_labels,
 )
+import probe_protocol  # noqa: E402
 
 CHANCE = 0.5
 SELF_REPORT_EXPERIMENTS = ("E2", "E3")
+
+
+def item_attribute(experiment: Optional[str], item_id: str, attr: str):
+    """Look up a manifest attribute of an item (its class, its tier, ...).
+
+    The AOI rows carry only the item id, because the session file records what
+    was on screen rather than a copy of the item table. The manifest is the
+    single source of the item table for both languages, so the attribute is
+    resolved from there rather than duplicated into every session.
+    """
+    for sid, s in probe_protocol.sets().items():
+        if experiment and sid != experiment:
+            continue
+        for it in s["items"]:
+            if it["id"] == item_id:
+                return it.get(attr)
+    return None
+
+
+def filter_by_item_attribute(rows: List[dict], attr: str, value: str) -> List[dict]:
+    """Restrict to items whose manifest ``attr`` equals ``value``.
+
+    E2 arrays are class-homogeneous, so filtering by class keeps whole trials
+    intact. Filtering by tier does not: it can strip the probe out of a trial,
+    which leaves the per-AOI AUC well defined but makes probe-identification
+    accuracy skip those trials. That is handled by the trial scorer rather than
+    papered over here.
+    """
+    return [r for r in rows
+            if item_attribute(r.get("experiment"), r.get("itemId"), attr) == value]
 
 
 # ---- loading --------------------------------------------------------------
@@ -406,12 +439,24 @@ def evaluate(sessions: List[dict], soft: bool = True, l2: float = 1.0,
              seed: int = 0, n_boot: int = 400,
              labels_dir: Optional[str] = None,
              label_threshold: int = DEFAULT_THRESHOLD,
+             item_class: Optional[str] = None,
+             item_tier: Optional[str] = None,
              verbose: bool = False) -> dict:
     rows: List[dict] = []
     for s in sessions:
         rows.extend(extract_session(s, soft=soft))
     if not rows:
         return {"error": "no scorable AOI rows"}
+
+    subset = None
+    for attr, value in (("class", item_class), ("tier", item_tier)):
+        if not value:
+            continue
+        rows = filter_by_item_attribute(rows, attr, value)
+        subset = f"{attr}={value}" if subset is None else f"{subset}, {attr}={value}"
+        if not rows:
+            return {"error": f"no AOI rows with {attr}={value!r}; check the manifest "
+                             f"for the values this experiment actually uses"}
 
     # E2/E3 ground truth is the questionnaire, not the counterbalance role
     # (labels.py explains why). Refuse rather than score the wrong label.
@@ -460,6 +505,7 @@ def evaluate(sessions: List[dict], soft: bool = True, l2: float = 1.0,
         "fixations_per_trial": fix_per_trial,
         "label_source": "self-report" if needs_self_report else "counterbalance",
         "label_report": label_report,
+        "item_subset": subset,
     }
     res["auc_per_aoi"] = auc(scores[valid], y[valid])
     res["auc_ci"] = bootstrap_ci(rows, scores, n_boot=n_boot, seed=seed)
@@ -519,6 +565,9 @@ def report(res: dict, plot: Optional[str] = None) -> None:
         return
     print(f"sessions={res['n_sessions']}  participants={res['n_participants']}  "
           f"items={res['n_items']}  AOI rows={res['n_rows']} (scored {res['n_scored']})")
+    if res.get("item_subset"):
+        print(f"item subset: {res['item_subset']} — this is a per-class contrast, "
+              f"not the pooled result")
     src = res.get("label_source", "counterbalance")
     print(f"labels: {src}"
           + (f"  (threshold >= {res['label_report']['threshold']}, "
@@ -598,6 +647,12 @@ def main(argv=None) -> int:
     ap.add_argument("--label-threshold", type=int, default=DEFAULT_THRESHOLD,
                     help="ordinal cut for 'familiar' on the 0-3 self-report scale "
                          f"(default {DEFAULT_THRESHOLD} = has genuine prior exposure)")
+    ap.add_argument("--item-class",
+                    help="restrict to one manifest item class (E2: face/bank/landmark). "
+                         "Arrays are class-homogeneous, so this keeps whole trials.")
+    ap.add_argument("--item-tier",
+                    help="restrict to one expected-penetration tier (high/medium/low) — "
+                         "the 'high-salience items only' fallback analysis")
     ap.add_argument("--hard-aoi", action="store_true",
                     help="hard nearest-AOI assignment instead of soft (the §7.1 contrast)")
     ap.add_argument("--l2", type=float, default=1.0)
@@ -615,7 +670,8 @@ def main(argv=None) -> int:
           f"{' [' + a.experiment + ']' if a.experiment else ''}")
     print(f"AOI assignment: {'hard' if a.hard_aoi else 'soft'}\n")
     res = evaluate(sessions, soft=not a.hard_aoi, l2=a.l2, seed=a.seed, n_boot=a.boot,
-                   labels_dir=a.labels, label_threshold=a.label_threshold, verbose=True)
+                   labels_dir=a.labels, label_threshold=a.label_threshold,
+                   item_class=a.item_class, item_tier=a.item_tier, verbose=True)
     if "error" in res:
         print("ERROR:", res["error"])
         return 1

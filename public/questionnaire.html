@@ -77,26 +77,87 @@
     // Ordinal scales. The RAW ordinal is stored, never just the binary — the
     // familiar/unfamiliar cut is an analysis decision (recognition.py
     // --label-threshold), and baking it in here would make it unrevisable.
+    //
+    // E2 spans three item classes and each needs its own wording: "how do you
+    // use this service" is meaningless for a face and wrong for a place. What
+    // must NOT vary is the ORDINAL SEMANTICS, because one threshold is applied
+    // across the whole experiment:
+    //
+    //   0  no exposure at all
+    //   1  vague/indirect exposure — has heard of it, cannot place the face
+    //   2  genuine prior exposure          <- the default familiar/unfamiliar cut
+    //   3  substantial, repeated exposure
+    //
+    // Level 1 is deliberately below the cut everywhere: knowing a brand name
+    // without ever using it, or half-recognising a face, is a much weaker memory
+    // trace than the effect predicts, and lumping it in would pad the positive
+    // class with cases the mechanism does not cover.
     var SCALES = {
       E2: {
-        question: "How would you describe your use of this service?",
-        options: [
-          [0, "Never heard of it"],
-          [1, "Heard of it, never used it"],
-          [2, "Used it occasionally"],
-          [3, "Use it regularly"],
-        ],
+        byClass: {
+          face: {
+            key: "face",
+            question: "How well do you know each of these people?",
+            options: [
+              [0, "Never seen them before"],
+              [1, "Look familiar, can't place them"],
+              [2, "I recognise them"],
+              [3, "I know exactly who they are"],
+            ],
+          },
+          bank: {
+            key: "bank",
+            question: "How would you describe your use of each of these banks?",
+            options: [
+              [0, "Never heard of it"],
+              [1, "Heard of it, never used it"],
+              [2, "Used it / have had an account"],
+              [3, "Bank with them regularly"],
+            ],
+          },
+          landmark: {
+            key: "landmark",
+            question: "How familiar is each of these places to you?",
+            options: [
+              [0, "Never seen it before"],
+              [1, "Looks familiar, can't place it"],
+              [2, "I recognise it"],
+              [3, "I know it well / have been there"],
+            ],
+          },
+        },
       },
       E3: {
-        question: "Before today, had you read about or looked into this topic?",
-        options: [
-          [0, "Never"],
-          [1, "Once or twice"],
-          [2, "Several times"],
-          [3, "Regularly"],
-        ],
+        single: {
+          key: "topic",
+          question: "Before today, had you read about or looked into this topic?",
+          options: [
+            [0, "Never"],
+            [1, "Once or twice"],
+            [2, "Several times"],
+            [3, "Regularly"],
+          ],
+        },
       },
     };
+
+    // Which scale an item is asked on. An E2 item without a class would be
+    // silently asked the wrong question, so fail loudly instead.
+    function scaleFor(exp, item) {
+      var s = SCALES[exp];
+      if (!s) throw new Error("no questionnaire scale for " + exp);
+      if (s.single) return s.single;
+      var sc = s.byClass[item["class"]];
+      if (!sc) {
+        throw new Error("item " + item.id + " has class '" + item["class"] +
+          "', which has no questionnaire wording — add one before collecting");
+      }
+      return sc;
+    }
+
+    function displayName(item) {
+      return item.name || item.label || item.id;
+    }
 
     var state = { items: [], responses: {}, exp: null };
 
@@ -155,19 +216,30 @@
       }
       state.items = P.SETS[exp].items;
       state.responses = {};
-      render();
+      try {
+        render();
+      } catch (e) {
+        el("setuperr").textContent = e.message;
+      }
     }
 
     function render() {
-      var scale = SCALES[state.exp];
       var box = el("items");
       box.innerHTML = "";
-      var head = document.createElement("p");
-      head.className = "gp-note";
-      head.textContent = scale.question;
-      box.appendChild(head);
+      var lastScaleKey = null;
 
+      // Items keep their manifest order, which groups E2 by class, so each
+      // block of items sits under the question it is actually being asked.
       state.items.forEach(function (item) {
+        var scale = scaleFor(state.exp, item);
+        if (scale.key !== lastScaleKey) {
+          var head = document.createElement("p");
+          head.className = "gp-note";
+          head.textContent = scale.question;
+          box.appendChild(head);
+          lastScaleKey = scale.key;
+        }
+
         var d = document.createElement("div");
         d.className = "qitem";
         // Show the SAME image the participant saw in the probe. Asking about a
@@ -178,7 +250,7 @@
         thumb.className = "qthumb";
         thumb.src = "stimuli/" + item.file;
         thumb.alt = "";
-        h3.textContent = item.label || item.id;
+        h3.textContent = displayName(item);
         h3.appendChild(thumb);
         d.appendChild(h3);
         var s = document.createElement("div");
@@ -215,18 +287,31 @@
     }
 
     async function submit() {
+      // Record every scale that was actually put in front of the participant,
+      // keyed the same way the items reference it. Reconstructing the wording
+      // from this file months later would mean trusting that nobody edited it.
+      var scales = {};
+      state.items.forEach(function (it) {
+        var sc = scaleFor(state.exp, it);
+        scales[sc.key] = {
+          question: sc.question,
+          options: sc.options.map(function (o) { return { value: o[0], label: o[1] }; }),
+        };
+      });
       var payload = {
         schema: "gazepry.labels.v1",
         participant: el("pid").value.trim(),
         session: el("sess").value.trim(),
         experiment: state.exp,
         collectedAt: Date.now(),
-        scale: SCALES[state.exp].options.map(function (o) {
-          return { value: o[0], label: o[1] };
-        }),
+        scales: scales,
         // Raw ordinals only. No derived boolean here on purpose.
         items: state.items.map(function (it) {
-          return { itemId: it.id, response: state.responses[it.id] };
+          return {
+            itemId: it.id,
+            scaleKey: scaleFor(state.exp, it).key,
+            response: state.responses[it.id],
+          };
         }),
       };
       el("submitmsg").textContent = "Saving…";

@@ -1,0 +1,154 @@
+{
+  "schema": "gazepry.stimuli.sources.v1",
+  "fetchedBy": "scripts/fetch_stimuli.py",
+  "note": [
+    "Where every REAL E2/E3 stimulus comes from. This file is the intent (which",
+    "person, brand, or place each item denotes); stimuli.lock.json is the record",
+    "of what was actually resolved and downloaded, and is what makes a later",
+    "fetch reproducible. Edit this file, then re-run the fetcher with --relock.",
+    "",
+    "Only freely-licensed Wikimedia Commons files are permitted. The fetcher",
+    "refuses anything outside its licence allow-list rather than downloading it,",
+    "because a non-free logo is exactly what this repo must not redistribute."
+  ],
+  "targetWidth": 900,
+  "sets": {
+    "E2": {
+      "items": [
+        {
+          "id": "f_obama",
+          "resolve": { "wikipediaLead": "Barack Obama" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_swift",
+          "resolve": { "wikipediaLead": "Taylor Swift" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_messi",
+          "resolve": { "wikipediaLead": "Lionel Messi" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_merkel",
+          "resolve": { "wikipediaLead": "Angela Merkel" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_ardern",
+          "resolve": { "wikipediaLead": "Jacinda Ardern" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_thunberg",
+          "resolve": { "wikipediaLead": "Greta Thunberg" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_miyamoto",
+          "resolve": { "wikipediaLead": "Shigeru Miyamoto" },
+          "fit": "cover"
+        },
+        {
+          "id": "f_strickland",
+          "resolve": { "wikipediaLead": "Donna Strickland" },
+          "fit": "cover"
+        },
+
+        {
+          "id": "b_chase",
+          "resolve": { "commonsFile": "Chase logo 2007.svg" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_bofa",
+          "resolve": { "commonsFile": "Bank of America 2018 logo.svg" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_wells",
+          "resolve": { "commonsFile": "Wells Fargo Bank.svg" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_citi",
+          "resolve": { "commonsFile": "Citi.svg" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_hsbc",
+          "resolve": { "commonsFile": "HSBC UK logo.svg" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_barclays",
+          "resolve": { "commonsFile": "Barclays wordmark.svg" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_santander",
+          "resolve": { "commonsFile": "Santander bank logo.png" },
+          "fit": "contain"
+        },
+        {
+          "id": "b_nordea",
+          "resolve": { "commonsFile": "Nordea logo.svg" },
+          "fit": "contain"
+        },
+
+        {
+          "id": "l_eiffel",
+          "resolve": { "wikipediaLead": "Eiffel Tower" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_liberty",
+          "resolve": { "wikipediaLead": "Statue of Liberty" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_taj",
+          "resolve": { "wikipediaLead": "Taj Mahal" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_colosseum",
+          "resolve": { "wikipediaLead": "Colosseum" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_sydney",
+          "resolve": { "wikipediaLead": "Sydney Opera House" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_pena",
+          "resolve": { "wikipediaLead": "Pena Palace" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_sigiriya",
+          "resolve": { "wikipediaLead": "Sigiriya" },
+          "fit": "cover"
+        },
+        {
+          "id": "l_dragon",
+          "resolve": { "wikipediaLead": "Dragon Bridge (Ljubljana)" },
+          "fit": "cover"
+        }
+      ]
+    },
+    "E3": {
+      "note": [
+        "NOT SOURCED YET, on purpose. E3 probes exposure to a TOPIC rather than",
+        "to a specific image, so a card only carries the recognition effect if",
+        "the participant plausibly encountered that kind of card before. See",
+        "public/stimuli/README.md, 'What a valid E3 asset is', before filling",
+        "this in. Leaving it empty keeps E3 marked as placeholders, which is",
+        "what blocks the task page from collecting it."
+      ],
+      "items": []
+    }
+  }
+}

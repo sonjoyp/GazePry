@@ -1,11 +1,11 @@
 /*
  * Unit tests for public/probe-protocol.js — the Direction D7 trial protocol.
  *
- * The counterbalancing tests are the important ones. D7's whole claim to having
- * escaped the D4 person-vs-apparatus confound rests on "every item is familiar
- * for half the participants, and slot position carries no information". If that
- * silently breaks, the direction's RQ0 gate is measuring nothing and every
- * downstream number is unfalsifiable — so it is pinned here rather than trusted.
+ * The counterbalancing tests are the important ones. The direction's whole claim
+ * to a confound-free contrast rests on "every item is familiar for half the
+ * participants, and slot position carries no information". If that silently
+ * breaks, the RQ0 gate is measuring nothing and every downstream number is
+ * unfalsifiable — so it is pinned here rather than trusted.
  */
 "use strict";
 const test = require("node:test");
@@ -175,7 +175,7 @@ test("stimulus sets are big enough for a 4-tile array and have unique ids", () =
   }
 });
 
-test("items are real image files, and E2/E3 are flagged as placeholders", () => {
+test("items are real image files, and placeholder state is honestly reported", () => {
   const fs = require("fs");
   const stimRoot = path.join(__dirname, "..", "public", "stimuli");
   for (const expId of ["E1", "E2", "E3"]) {
@@ -184,11 +184,74 @@ test("items are real image files, and E2/E3 are flagged as placeholders", () => 
       assert.ok(fs.existsSync(path.join(stimRoot, it.file)), "missing " + it.file);
     }
   }
-  // E2/E3 measure naturally acquired familiarity, so shipping generated
-  // stand-ins must be visible to the code, not only to a reader of the docs.
+  // E1 is generated here and always real. For E2/E3 the assertion is not "they
+  // are placeholders" but "the flag matches the manifest", because whether the
+  // real assets are installed depends on whether fetch_stimuli.py has run —
+  // pinning it either way would fail on one of the two legitimate states.
   assert.equal(P.usesPlaceholders("E1"), false);
-  assert.equal(P.usesPlaceholders("E2"), true);
-  assert.equal(P.usesPlaceholders("E3"), true);
+  for (const expId of ["E2", "E3"]) {
+    const anyPlaceholder = P.SETS[expId].items.some((i) => i.placeholder);
+    assert.equal(P.usesPlaceholders(expId), anyPlaceholder,
+      expId + ": usesPlaceholders() disagrees with the manifest");
+  }
+});
+
+test("a fetched item carries its provenance", () => {
+  // Attribution is a licence obligation for the CC BY / CC BY-SA assets, and a
+  // stimulus figure with no source is unreproducible. An item that claims to be
+  // real must say where it came from.
+  for (const expId of ["E2", "E3"]) {
+    for (const it of P.SETS[expId].items) {
+      if (it.placeholder) continue;
+      assert.ok(it.source, `${expId}/${it.id} is marked real but has no source URL`);
+      assert.ok(it.licence, `${expId}/${it.id} is marked real but has no licence`);
+      assert.ok(it.retrieved, `${expId}/${it.id} is marked real but has no retrieval date`);
+    }
+  }
+});
+
+test("grouped sets build class-homogeneous arrays", () => {
+  // An array of one face among three bank logos would let the probe be picked
+  // out by category rather than by familiarity, and adds category-driven
+  // saliency variance to every trial.
+  for (const expId of ["E1", "E2", "E3"]) {
+    const groupBy = P.SETS[expId].arrayGroupBy;
+    if (!groupBy) continue;
+    const byId = new Map(P.SETS[expId].items.map((i) => [i.id, i]));
+    for (const arrayN of [2, 4]) {
+      for (const p of PIDS.slice(0, 12)) {
+        const built = P.buildTrials({ participant: p, experiment: expId, arrayN, nTrials: 20 });
+        for (const tr of built.trials) {
+          const classes = new Set(tr.slots.map((s) => byId.get(s.itemId)[groupBy]));
+          assert.equal(classes.size, 1,
+            `${expId} ${p} trial ${tr.index} mixes ${groupBy}: ${[...classes].join(", ")}`);
+        }
+      }
+    }
+  }
+});
+
+test("every class of a grouped set can fill an array for every group", () => {
+  // The Latin square is applied over the GLOBAL item index, so a class that is
+  // not a contiguous multiple of N_GROUPS can leave some counterbalance group
+  // with too few unfamiliar items — and it fails mid-session, not at startup.
+  for (const expId of ["E1", "E2", "E3"]) {
+    const groupBy = P.SETS[expId].arrayGroupBy;
+    if (!groupBy) continue;
+    const items = P.SETS[expId].items;
+    for (let g = 0; g < P.N_GROUPS; g++) {
+      const tally = new Map();
+      items.forEach((it, i) => {
+        const e = tally.get(it[groupBy]) || [0, 0];
+        e[P.isFamiliar(i, g) ? 0 : 1]++;
+        tally.set(it[groupBy], e);
+      });
+      for (const [cls, [nf, nu]] of tally) {
+        assert.ok(nf >= 1, `${expId} group ${g} class ${cls}: no familiar item`);
+        assert.ok(nu >= 3, `${expId} group ${g} class ${cls}: only ${nu} unfamiliar, needs 3`);
+      }
+    }
+  }
 });
 
 test("installStimuli rejects a foreign manifest", () => {
@@ -198,7 +261,7 @@ test("installStimuli rejects a foreign manifest", () => {
 
 test("E3 contains no protected-characteristic topics", () => {
   // The direction deliberately scopes E3 to health/finance/legal/civic
-  // (D7 §6.5). This asserts that scoping so it cannot drift in later.
+  // (D7 §6.4). This asserts that scoping so it cannot drift in later.
   const allowed = new Set(["health", "finance", "legal", "civic"]);
   for (const it of P.SETS.E3.items) {
     assert.ok(allowed.has(it.category), "unexpected E3 category: " + it.category);

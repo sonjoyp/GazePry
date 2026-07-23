@@ -544,7 +544,7 @@
         task: task,
         tracker: a.id,
         trackerFamily: a.family,
-        // D7 design cell (§6.6) — every axis the analysis slices on.
+        // D7 design cell (§6.8) — every axis the analysis slices on.
         experiment: opts.experiment || null,
         arrayN: opts.arrayN || null,
         coverTask: opts.coverTask || null,

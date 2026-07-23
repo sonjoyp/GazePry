@@ -5,7 +5,7 @@ E1 installs familiarity in the lab, so its ground truth is the counterbalance
 assignment recorded in the session itself. **E2 and E3 do not work that way.**
 There, familiarity is whatever the participant actually brought with them, and
 the only source of truth is the questionnaire they fill in afterwards
-(D7 §6.5). Scoring E2/E3 against the counterbalance flag would be scoring a
+(D7 §6.6). Scoring E2/E3 against the counterbalance flag would be scoring a
 label the design never controlled -- the trial builder's `familiar` role is,
 for those experiments, only a slot-assignment device.
 

@@ -39,36 +39,48 @@ git check-ignore -v data/anything.json labels/anything.json    # both must match
 ### 1.2 Environment check
 
 ```bash
-npm test                 # 71 JS + 76 Python, must be green
+npm test                 # JS + Python, must be green
 npm run d7:verify        # effect dataset PASSes RQ0, null dataset correctly refuses
-npm run d7:stimuli:check # every stimulus file present and large enough
 ```
 
 ### 1.3 Stimuli
 
 The task shows **real image files** from `public/stimuli/`, described by
-`manifest.json`. Generate or refresh them with:
+`manifest.json`. From a clean checkout:
 
 ```bash
-npm run d7:stimuli       # python scripts/make_stimuli.py
+npm run d7:stimuli                          # design the packs; generate E1
+export GAZEPRY_CONTACT="you@example.edu"    # Wikimedia needs a contactable UA
+npm run d7:stimuli:fetch                    # install the real E2 assets
+npm run d7:stimuli:check                    # every file present and large enough
+npm run d7:stimuli:verify                   # every file matches the lock hash
 ```
 
 | Set | Ships as | Ready? |
 |---|---|---|
 | **E1** | 24 Julia-set fractals, mutually distinguishable by construction | **yes** |
-| **E2** | 16 generated marks | **no — placeholders** |
-| **E3** | 16 generated marks | **no — placeholders** |
+| **E2** | 8 faces + 8 bank marks + 8 landmarks from Wikimedia Commons | **yes, once fetched** |
+| **E3** | 16 generated marks | **no — placeholders, deliberately** |
 
 E1 is deliberately abstract: its validity depends on the participant having **no
 prior exposure**, so photographs of real things would smuggle in uncontrolled
 familiarity that no counterbalancing removes.
 
-**E2 and E3 are the opposite** — they measure familiarity the participant
-brought with them, so they need real logos, screenshots, or topic cards. The
-task page **disables Begin** for a set that still contains placeholders. Do not
-work around it: a cohort collected against stand-ins cannot be salvaged. See
-[`public/stimuli/README.md`](public/stimuli/README.md) for how to install real
-assets and record their provenance.
+**E2 is the opposite** — it measures familiarity the participant brought with
+them, so it uses real faces, bank marks, and places. Arrays are drawn *within* a
+class, never across, so a trial is four faces or four bank marks and the probe
+cannot be picked out by category.
+
+The task page **disables Begin** for a set that still contains placeholders. Do
+not work around it: a cohort collected against stand-ins cannot be salvaged.
+
+**Run `npm run d7:stimuli:verify` before the first participant of every session
+block.** It is the only thing that catches a stimulus that changed between
+cohorts, which would otherwise be invisible and unfixable in analysis.
+
+E3 stays blocked on purpose — see
+[`public/stimuli/README.md`](public/stimuli/README.md), "E3 is still blocked",
+for the bar its stimuli have to clear before it is worth collecting.
 
 ### 1.4 Consent and debrief copy
 
@@ -276,6 +288,15 @@ python recognition.py --data ../data --experiment E1 --plot e1_k.png
 
 # E2/E3 — ground truth is the questionnaire; the tool REFUSES without it
 python recognition.py --data ../data --experiment E2 --labels ../labels --plot e2_k.png
+
+# E2 per-class contrast: faces vs bank marks vs landmarks.
+# The classes differ in visual detail and in how many times a familiar viewer
+# has seen them, so the ordering is a result, and it is what tells an attacker
+# which content types make a usable probe. It is also the fallback if the
+# pooled E2 number underwhelms.
+python recognition.py --data ../data --experiment E2 --labels ../labels --item-class face
+python recognition.py --data ../data --experiment E2 --labels ../labels --item-class bank
+python recognition.py --data ../data --experiment E2 --labels ../labels --item-class landmark
 
 # RQ4: what an informed participant recovers
 python recognition.py --data ../data --experiment E1 --awareness naive

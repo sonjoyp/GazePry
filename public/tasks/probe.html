@@ -246,7 +246,7 @@
       });
     }
 
-    // E1 study phase: install familiarity, with perfect ground truth (§6.5).
+    // E1 study phase: install familiarity, with perfect ground truth (§6.7).
     async function studyPhase(plan) {
       var items = P.studySet(plan);
       fix.textContent = "Take a look at these. You will not be tested on them.";
@@ -331,7 +331,7 @@
           timing: P.TIMING,
           geom: { tileW: L.tileW, tileH: L.tileH, gap: L.gap },
           coverDemandsMemory: coverDef.demandsMemory,
-          stimulusNotes: P.STIMULUS_NOTES,
+          stimulusNotes: P.stimulusNotes(built.experiment),
           protocolVersion: "d7.v1",
         },
         sequence: async function (ctx) {

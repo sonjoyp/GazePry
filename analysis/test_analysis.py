@@ -711,12 +711,66 @@ class TestStimulusPack(unittest.TestCase):
             self.assertGreaterEqual(size[0], min_w)
             self.assertGreaterEqual(size[1], min_h)
 
-    def test_e1_is_real_and_e2_e3_are_flagged_placeholders(self):
+    def test_placeholder_state_is_reported_honestly(self):
         """E2/E3 measure naturally acquired familiarity, so shipping stand-ins
-        must be visible to the tooling, not just documented."""
+        must be visible to the tooling, not just documented.
+
+        Whether the real assets are installed depends on whether
+        ``fetch_stimuli.py`` has run, so the assertion is that the flag matches
+        the manifest -- pinning it either way would fail on one of two
+        legitimate states.
+        """
         self.assertFalse(probe_protocol.uses_placeholders("E1"))
-        self.assertTrue(probe_protocol.uses_placeholders("E2"))
-        self.assertTrue(probe_protocol.uses_placeholders("E3"))
+        for exp in ("E2", "E3"):
+            any_ph = any(i.get("placeholder") for i in probe_protocol.sets()[exp]["items"])
+            self.assertEqual(probe_protocol.uses_placeholders(exp), any_ph)
+
+    def test_real_items_carry_provenance(self):
+        """Attribution is a licence obligation for the CC BY / CC BY-SA assets,
+        and a stimulus figure with no source is unreproducible."""
+        for exp in ("E2", "E3"):
+            for it in probe_protocol.sets()[exp]["items"]:
+                if it.get("placeholder"):
+                    continue
+                for field in ("source", "licence", "retrieved"):
+                    self.assertTrue(it.get(field),
+                                    f"{exp}/{it['id']} is marked real but has no {field}")
+
+    def test_grouped_arrays_never_mix_classes(self):
+        """An array of one face among three bank logos would let the probe be
+        picked out by category rather than by familiarity."""
+        for exp, s in probe_protocol.sets().items():
+            group_by = s.get("arrayGroupBy")
+            if not group_by:
+                continue
+            by_id = {i["id"]: i for i in s["items"]}
+            for array_n in (2, 4):
+                for pid in (f"P{i:02d}" for i in range(1, 13)):
+                    b = probe_protocol.build_trials(pid, exp, array_n, 20)
+                    for t in b["trials"]:
+                        classes = {by_id[sl["itemId"]][group_by] for sl in t["slots"]}
+                        self.assertEqual(len(classes), 1,
+                                         f"{exp} {pid} trial {t['index']} mixes {group_by}")
+
+    def test_every_class_can_fill_an_array_for_every_group(self):
+        """The Latin square runs over the GLOBAL item index, so a class that is
+        not a contiguous multiple of N_GROUPS can leave some counterbalance
+        group unable to build a trial -- mid-session, not at startup."""
+        for exp, s in probe_protocol.sets().items():
+            group_by = s.get("arrayGroupBy")
+            if not group_by:
+                continue
+            for g in range(probe_protocol.N_GROUPS):
+                tally: dict = {}
+                for i, it in enumerate(s["items"]):
+                    fam, unf = tally.setdefault(it.get(group_by), [0, 0])
+                    if probe_protocol.is_familiar(i, g):
+                        tally[it.get(group_by)] = [fam + 1, unf]
+                    else:
+                        tally[it.get(group_by)] = [fam, unf + 1]
+                for cls, (nf, nu) in tally.items():
+                    self.assertGreaterEqual(nf, 1, f"{exp} group {g} class {cls}: no probe")
+                    self.assertGreaterEqual(nu, 3, f"{exp} group {g} class {cls}: {nu} irrelevants")
 
     def test_e1_stimuli_are_mutually_distinguishable(self):
         """A 'novel' tile that looks like a studied one contaminates the
@@ -769,6 +823,144 @@ class TestStimulusPack(unittest.TestCase):
             self.assertIn("missing file", buf.getvalue())
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class TestItemSubsets(unittest.TestCase):
+    """`--item-class` / `--item-tier`: the per-class contrast and the
+    high-salience-only fallback analysis."""
+
+    def test_attribute_lookup_reads_the_manifest(self):
+        item = probe_protocol.sets()["E2"]["items"][0]
+        self.assertEqual(
+            recognition.item_attribute("E2", item["id"], "class"), item["class"])
+        self.assertIsNone(recognition.item_attribute("E2", "no-such-item", "class"))
+
+    def test_filter_keeps_only_the_named_class(self):
+        e2 = probe_protocol.sets()["E2"]["items"]
+        rows = [{"experiment": "E2", "itemId": i["id"]} for i in e2]
+        for cls in {i["class"] for i in e2}:
+            kept = recognition.filter_by_item_attribute(rows, "class", cls)
+            self.assertTrue(kept)
+            self.assertEqual(len(kept), sum(1 for i in e2 if i["class"] == cls))
+            for r in kept:
+                self.assertEqual(
+                    recognition.item_attribute("E2", r["itemId"], "class"), cls)
+
+    def test_unknown_subset_is_an_error_not_an_empty_result(self):
+        """An empty subset scored silently would report nan and read as a
+        negative result rather than as a typo."""
+        sessions = [simulate_probe.make_session("P01", "E1", 4, 8, 0.9, 1, "webgazer",
+                                                "naive", "memory-adjacent", "immediate")]
+        res = recognition.evaluate(sessions, item_class="not-a-class", n_boot=20)
+        self.assertIn("error", res)
+        self.assertIn("not-a-class", res["error"])
+
+
+class TestStimulusSourcing(unittest.TestCase):
+    """The fetcher that installs the real E2/E3 assets. All offline: nothing
+    here touches the network, so the suite stays runnable without one."""
+
+    def _mod(self):
+        sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+        import fetch_stimuli
+        return fetch_stimuli
+
+    def _sources(self):
+        with open(os.path.join(os.path.dirname(probe_protocol.MANIFEST_PATH),
+                               "sources.json"), encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_sources_describe_items_that_actually_exist(self):
+        src = self._sources()
+        self.assertEqual(src["schema"], "gazepry.stimuli.sources.v1")
+        for sid, sset in src["sets"].items():
+            known = {i["id"] for i in probe_protocol.sets()[sid]["items"]}
+            seen = set()
+            for spec in sset["items"]:
+                self.assertIn(spec["id"], known,
+                              f"sources.json names {sid}/{spec['id']}, which is not "
+                              f"in the item table -- the asset would be orphaned")
+                self.assertNotIn(spec["id"], seen, f"duplicate source for {spec['id']}")
+                seen.add(spec["id"])
+                self.assertIn(spec.get("fit", "cover"), ("cover", "contain"))
+                res = spec.get("resolve") or {}
+                self.assertTrue(res.get("commonsFile") or res.get("wikipediaLead"),
+                                f"{spec['id']}: no way to resolve a file")
+
+    def test_non_free_licences_are_refused(self):
+        """The whole point of the licence gate: a fair-use logo must never be
+        downloaded into a GPLv3 repo intended for public release."""
+        m = self._mod()
+        for good in ("Public domain", "CC0", "CC BY 4.0", "CC BY-SA 3.0",
+                     "PD-textlogo", "FAL"):
+            self.assertTrue(m.licence_is_free(good), good)
+        for bad in ("Fair use", "Non-free logo", "All rights reserved",
+                    "Copyrighted, dedicated to the public", "", None):
+            self.assertFalse(m.licence_is_free(bad), str(bad))
+
+    def test_png_decoder_round_trips_the_writer(self):
+        """The decoder exists only because a logo has to be composited onto a
+        uniform canvas; a mis-decoded logo is a corrupted stimulus."""
+        import numpy as np
+        m = self._mod()
+        sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+        import make_stimuli
+        rng = np.random.default_rng(3)
+        img = rng.integers(0, 256, size=(37, 53, 3), dtype=np.uint8)
+        tmp = tempfile.mkdtemp(prefix="gp-png-")
+        try:
+            fp = os.path.join(tmp, "x.png")
+            make_stimuli.write_png(fp, img)
+            back = m.read_png(fp)
+            self.assertEqual(back.shape, (37, 53, 4))
+            self.assertTrue((back[:, :, :3] == img).all(), "PNG round-trip corrupted pixels")
+            self.assertTrue((back[:, :, 3] == 255).all())
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_letterbox_centres_without_overflowing(self):
+        import numpy as np
+        m = self._mod()
+        wide = np.zeros((60, 900, 4), dtype=np.uint8)
+        wide[:, :, :3] = 10
+        wide[:, :, 3] = 255
+        out = m.letterbox(wide, 400, 300)
+        self.assertEqual(out.shape, (300, 400, 3))
+        # corners stay canvas background; the mark lands in the middle
+        self.assertTrue((out[0, 0] == np.array(m.CANVAS_BG, dtype=np.uint8)).all())
+        self.assertTrue((out[150, 200] < 60).all())
+
+    def test_verify_reports_a_tampered_asset(self):
+        m = self._mod()
+        tmp = tempfile.mkdtemp(prefix="gp-lock-")
+        try:
+            os.makedirs(os.path.join(tmp, "e2"))
+            fp = os.path.join(tmp, "e2", "x.png")
+            with open(fp, "wb") as fh:
+                fh.write(b"original")
+            lock = {"schema": "gazepry.stimuli.lock.v1", "items": {
+                "x": {"file": "e2/x.png", "sha256": m.sha256_file(fp)}}}
+            with open(os.path.join(tmp, "stimuli.lock.json"), "w", encoding="utf-8") as fh:
+                json.dump(lock, fh)
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(m.verify(tmp), 0)
+            with open(fp, "wb") as fh:
+                fh.write(b"tampered")
+            with contextlib.redirect_stdout(io.StringIO()) as buf:
+                self.assertEqual(m.verify(tmp), 1)
+            self.assertIn("changed since it was locked", buf.getvalue())
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+    def test_installed_assets_match_the_lock(self):
+        """If a lock exists, what is on disk must be what was locked."""
+        m = self._mod()
+        root = os.path.dirname(probe_protocol.MANIFEST_PATH)
+        if not os.path.exists(os.path.join(root, "stimuli.lock.json")):
+            self.skipTest("no assets fetched yet (python scripts/fetch_stimuli.py)")
+        with contextlib.redirect_stdout(io.StringIO()) as buf:
+            rc = m.verify(root)
+        self.assertEqual(rc, 0, buf.getvalue())
 
 
 class TestSelfReportLabels(unittest.TestCase):

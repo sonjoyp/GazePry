@@ -304,8 +304,10 @@ manifest that both the browser and the Python analysis read, so the item table
 cannot drift between them.
 
 ```bash
-npm run d7:stimuli         # generate the packs
-npm run d7:stimuli:check   # validate: files present, big enough, ids unique
+npm run d7:stimuli          # design the packs; generate E1 and any placeholders
+npm run d7:stimuli:fetch    # install the real E2 assets from Wikimedia Commons
+npm run d7:stimuli:check    # validate: files present, big enough, ids unique
+npm run d7:stimuli:verify   # offline: assets still match their lock hashes
 ```
 
 **E1** ships 24 Julia-set fractals. It is abstract on purpose: E1's validity
@@ -317,12 +319,29 @@ and little to recognise), and resamples candidates until **every pair differs by
 at least 22 mean absolute RGB levels** — a "novel" tile that resembles a studied
 one contaminates the contrast irreparably.
 
-**E2 and E3** ship placeholders and need real logos, screenshots, or topic
-cards, because they measure familiarity the participant already had. The task
-page **disables Begin** while a set contains placeholders rather than warning,
-since a cohort collected against stand-ins cannot be salvaged. Third-party
-images are gitignored — this repo is GPLv3 and cannot relicense someone else's
-trademarks. See [`public/stimuli/README.md`](public/stimuli/README.md).
+**E2** measures familiarity the participant already had, so it uses the real
+thing: 24 items in three classes of eight — **public figures**, **retail-bank
+wordmarks**, and **widely photographed places** — each class spanning universal
+to niche recognition. Arrays are drawn *within* a class, never across, so a trial
+is four faces or four bank marks; a mixed array would let the probe be picked out
+by category rather than by familiarity.
+
+`scripts/fetch_stimuli.py` installs them from Wikimedia Commons and enforces
+three things the honour system would not: only **freely-licensed** files (a
+machine-checked allow-list; anything else is refused, not downloaded), a **lock
+file** pinning the resolved file and the SHA-256 of every byte written so two
+cohorts provably saw the same stimuli, and **generated attribution** that cannot
+drift from what is on disk. The images themselves are gitignored; the manifest,
+sources, lock, and attribution are committed, so a clean checkout reproduces the
+pack with two commands.
+
+**E3** ships placeholders and stays blocked, deliberately — its topic cards probe
+exposure to a *topic* rather than to a specific image, which is a weaker
+construct than E1/E2 rather than just a weaker manipulation. The bar its stimuli
+have to clear is in [`public/stimuli/README.md`](public/stimuli/README.md).
+
+The task page **disables Begin** while a set contains placeholders rather than
+warning, since a cohort collected against stand-ins cannot be salvaged.
 
 Four things the page enforces rather than assumes:
 

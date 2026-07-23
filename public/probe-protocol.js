@@ -2,11 +2,11 @@
  * probe-protocol.js — stimulus sets and the counterbalanced trial builder for
  * Direction D7 (recognition & concealed-knowledge leakage).
  *
- * See GazePry_D7_Recognition_Knowledge_Direction.md §6.2–§6.5. This module is
+ * See GazePry_D7_Recognition_Knowledge_Direction.md §6.2–§6.7. This module is
  * the single source of truth for *what is shown and in what role*, so the task
  * page, the simulator, and the tests all agree.
  *
- * THE CORE CONTROL (§6.4, RQ0). Every item appears as `familiar` for half the
+ * THE CORE CONTROL (§6.5, RQ0). Every item appears as `familiar` for half the
  * participants and `unfamiliar` for the other half, assigned by a Latin square
  * over `counterbalanceGroup`. Item saliency, colour, and semantic category are
  * therefore held constant across the familiarity contrast, and screen position
@@ -69,8 +69,10 @@
   //
   // E1 ships fractal images -- richly detailed but genuinely novel, so
   // familiarity is created only by the study phase and the ground truth is
-  // exact. E2/E3 ship PLACEHOLDERS which must be replaced with real logos,
-  // screenshots, or topic cards before collecting (public/stimuli/README.md).
+  // exact. E2 ships real faces, bank marks, and places installed by
+  // scripts/fetch_stimuli.py, because it measures familiarity the participant
+  // brought with them. E3 is still on placeholders and therefore still blocked
+  // (public/stimuli/README.md).
   //
   // The browser loads the manifest asynchronously via loadStimuli(); Node
   // (tests, simulator, parity CLI) reads it straight off disk, so both sides
@@ -153,9 +155,16 @@
    *
    * Each trial pairs exactly ONE familiar-role item (the probe) with
    * (arrayN-1) unfamiliar-role items (the irrelevants), which is the
-   * array-CIT structure of Nahari 2019 [C2] and Schwedes & Wentura 2012 [C1].
+   * array-CIT structure of Nahari et al. 2019 and Schwedes & Wentura 2012.
    * Slot order is randomised per trial so screen position carries no
    * information about familiarity.
+   *
+   * When the set declares `arrayGroupBy` (E2 uses "class"), the irrelevants are
+   * drawn from the probe's OWN class. A trial showing one face among three bank
+   * logos would let the probe be identified by category instead of by
+   * familiarity, and would add category-driven saliency variance to a contrast
+   * that is otherwise between four visually comparable tiles. The published
+   * ocular-CIT arrays are all-faces for the same reason.
    */
   function buildTrials(opts) {
     opts = opts || {};
@@ -176,6 +185,10 @@
       throw new Error("stimulus set too small for arrayN=" + arrayN);
     }
 
+    // Null for an ungrouped set, in which case the pool below is the whole
+    // unfamiliar list and the draw is exactly as it was before grouping existed.
+    var groupBy = set.arrayGroupBy || null;
+
     var nTrials = opts.nTrials || 40;
     var trials = [];
     // Cycle the probe list (shuffled per pass) so every familiar item is used a
@@ -184,7 +197,15 @@
     for (var t = 0; t < nTrials; t++) {
       if (!probeQueue.length) probeQueue = shuffled(fam, rnd);
       var probe = probeQueue.pop();
-      var pool = shuffled(unf, rnd).filter(function (r) { return r.item.id !== probe.item.id; });
+      var cand = groupBy
+        ? unf.filter(function (r) { return r.item[groupBy] === probe.item[groupBy]; })
+        : unf;
+      if (cand.length < arrayN - 1) {
+        throw new Error("not enough unfamiliar items in " +
+          (groupBy ? groupBy + "=" + probe.item[groupBy] : expId) +
+          " to fill arrayN=" + arrayN);
+      }
+      var pool = shuffled(cand, rnd).filter(function (r) { return r.item.id !== probe.item.id; });
       var slots = [probe].concat(pool.slice(0, arrayN - 1));
       slots = shuffled(slots, rnd);
       trials.push({
@@ -214,7 +235,7 @@
   }
 
   // ---- geometry (§6.2) ---------------------------------------------------
-  // Pinned by Van der Cruyssen et al. 2024 [W1], whose novelty-preference
+  // Pinned by Van der Cruyssen et al. 2024, whose novelty-preference
   // replication worked on WebGazer with 472x331 px images 295 px apart, and by
   // the <=4-AOI webcam bound. Tiles shrink to fit a small viewport but never
   // below MIN_TILE — a smaller tile is outside the validated envelope, so the
@@ -249,13 +270,13 @@
   var TIMING = { fixationMs: 500, arrayMs: 4000, blankMs: 300 };
 
   var COVER_TASKS = {
-    // Weaker per Nahari 2019 [C2], but maximally plausible as ordinary content.
+    // Weaker per Nahari et al. 2019, but maximally plausible as ordinary content.
     "low-demand": {
       id: "low-demand",
       prompt: "Which image best fits the section you just read?",
       demandsMemory: false,
     },
-    // Imposes the memory demand [C2] found countermeasure-resistant, while
+    // Imposes the memory demand Nahari et al. 2019 found countermeasure-resistant, while
     // still reading as an ordinary onboarding/preference prompt.
     "memory-adjacent": {
       id: "memory-adjacent",
@@ -264,10 +285,19 @@
     },
   };
 
-  var STIMULUS_NOTES =
-    "Procedural SVG placeholders. For a real E2 run, replace makeBrandItems() " +
-    "with actual service logos/screenshots and record their provenance; do not " +
-    "commit third-party marks to this repo without checking their licence.";
+  // Written into every session's meta, so it has to describe the pack that was
+  // actually on screen rather than a note someone forgot to update. Built from
+  // the manifest at call time for that reason.
+  function stimulusNotes(expId) {
+    var s = requireSets()[expId];
+    if (!s) return "unknown experiment: " + expId;
+    var ph = s.items.filter(function (i) { return i.placeholder; }).length;
+    var real = s.items.length - ph;
+    return s.label + ": " + s.items.length + " items (" + real + " real, " +
+      ph + " placeholder)" +
+      (s.arrayGroupBy ? ", arrays grouped by " + s.arrayGroupBy : ", arrays ungrouped") +
+      (ph ? " -- PLACEHOLDERS PRESENT, this session is not collectable data" : "");
+  }
 
   return {
     get SETS() { return requireSets(); },
@@ -275,7 +305,7 @@
     loadStimuli: loadStimuli, installStimuli: installStimuli,
     usesPlaceholders: usesPlaceholders,
     GEOM: GEOM, TIMING: TIMING, COVER_TASKS: COVER_TASKS,
-    N_GROUPS: N_GROUPS, STIMULUS_NOTES: STIMULUS_NOTES,
+    N_GROUPS: N_GROUPS, stimulusNotes: stimulusNotes,
     mulberry32: mulberry32, hashSeed: hashSeed, shuffled: shuffled,
     groupFor: groupFor, isFamiliar: isFamiliar,
     buildTrials: buildTrials, studySet: studySet, layout: layout,

@@ -4,7 +4,7 @@ tags: [project-doc, direction, d7, recognition, research-plan]
 aliases: [D7 direction, GazePry_D7_Recognition_Knowledge_Direction.md, Recognition Oracle, D7 Recognition and Concealed-Knowledge Leakage]
 sources: [d7-recognition-knowledge-direction]
 reviewed: false
-updated: 2026-07-22
+updated: 2026-07-23
 ---
 
 `GazePry_D7_Recognition_Knowledge_Direction.md` — the research-direction
@@ -13,8 +13,14 @@ blueprint for **D7, recognition and concealed-knowledge leakage**
 **new** vector beyond the [[leakage-vectors-d1-d6]] taxonomy: the leaked payload
 is **memory contents** (what the visitor has seen or used before), which is
 neither a biometric ([[gaze-re-identification]], D4) nor present-tense intent
-([[reading-search-intent-leakage]], D2). Companion to, not a replacement for,
-[[reid-research-plan]] and [[d2-reading-search-intent-direction]].
+([[reading-search-intent-leakage]], D2).
+
+**Standalone since 2026-07-23.** It was previously a companion to
+[[reid-research-plan]] and [[d2-reading-search-intent-direction]]; it now
+carries its own apparatus, ethics, data-handling and bibliography sections and
+contrasts itself against *classes* of gaze attack rather than against the
+sibling plans. The D1–D6 placement is still true and still recorded in the wiki
+([[leakage-vectors-d1-d6]]) — it is simply no longer stated in the document.
 
 ## Key facts
 
@@ -43,9 +49,14 @@ neither a biometric ([[gaze-re-identification]], D4) nor present-tense intent
   RQ2 real-world familiarity (headline), RQ3 [[ceiling-vs-commodity]],
   RQ4 countermeasures, RQ5 [[gaze-perturbation-defense]].
 - **Three experiments.** E1 lab-installed familiarity with delay manipulation
-  (perfect ground truth, run first); E2 naturally acquired familiarity — which web
-  services the visitor actually uses (the headline, and the weakest link);
-  E3 sensitive-topic exposure, ethically scoped (no protected characteristics).
+  (perfect ground truth, run first); E2 naturally acquired familiarity — public
+  figures, retail bank marks, and widely photographed places (the headline, and
+  the weakest link); E3 sensitive-topic exposure, ethically scoped (no protected
+  characteristics), and explicitly a **weaker construct** rather than merely a
+  weaker manipulation.
+- **E2 arrays are class-homogeneous** (§6.4): four faces, or four bank marks,
+  never a mix, because a mixed array lets the probe be identified by category
+  instead of by familiarity.
 - **Sourced stimulus geometry:** 2 or 4 tiles, ≥ 400 × 300 px, ≥ 250 px apart —
   pinned by [[van-der-cruyssen-2024-validation]]'s working online geometry
   (472 × 331 px, 295 px apart) and the ≤ 4-AOI webcam bound
@@ -59,8 +70,24 @@ neither a biometric ([[gaze-re-identification]], D4) nor present-tense intent
 - **Metrics:** per-trial AUC, **per-user AUC as a function of k trials** (the
   headline curve — *"how many tiles before a page knows which sites you use"*),
   TPR at FPR = 0.1, d′ per feature family.
-- **Status: proposal only.** No D7 data exists. H0–H5 are pre-registered
+- **§8 documents the implemented pipeline** — the end-to-end order of
+  operations, which steps *refuse* rather than warn, the JS↔Python parity
+  requirement, and the stimulus sourcing/provenance machinery.
+- **Status: instrumented, not run.** No D7 data exists. H0–H5 are pre-registered
   predictions, not findings.
+
+## Citation numbering — local, and it collides
+
+**Since 2026-07-23 this document carries its own complete bibliography,
+renumbered [1]–[30], which does *not* match the shared project numbering in
+`GazePry_ReID_Research_Plan.md` §21.** The overlaps are silent: [5] is Weinberg
+(history sniffing) in the shared scheme but Nahari et al. 2019 here; [6] is
+Liebling & Preibusch there and Millen & Hancock here; Weinberg is [16] here.
+The doc-local `[M1]`/`[C1]`/`[W1]`/`[P1]` labels of the previous draft are gone.
+
+Wiki pages continue to cite the **shared** numbering. Resolve any claim traced
+to this document by author-year, never by carrying its bracket number across.
+See [[SCHEMA]] and [[2026-07-23-d7-standalone-and-e2-stimuli]].
 
 ## Related
 
@@ -78,9 +105,15 @@ neither a biometric ([[gaze-re-identification]], D4) nor present-tense intent
 
 ## Open questions
 
-- **Three unverified citations** ([C6] Lancry-Dayan 2018, [C7] Van der Cruyssen
-  2024 CIT-leakage, [P1] the decade privacy review) plus [W5]; §12 step 1.
-- **Scoop risk** (§10): Van der Cruyssen, Ben-Shakhar, Pertzov & Verschuere hold
+- **Four unverified citations** — Lancry-Dayan 2018, Van der Cruyssen 2024
+  CIT-leakage, the *Collabra* five-paradigm replication, and the decade privacy
+  review (doc-local [9], [10], [15], [17]; formerly [C6], [C7], [W5], [P1]);
+  §13 step 2.
+- **Scoop risk** (§11): Van der Cruyssen, Ben-Shakhar, Pertzov & Verschuere hold
   both the CIT expertise and the webcam validation and are one reframing away.
-- Bibliography merge into plan §21 as [55]–… is deferred until after the E1 pilot
-  (§12 step 7), mirroring the [50]–[54] flow and the D2 doc's deferral.
+- **The bibliography merge into plan §21 as [55]–… no longer applies** as
+  written: the document was made standalone instead, so its references now
+  duplicate rather than extend the shared list. If the two are ever
+  reconciled, the local [1]–[30] must be mapped, not appended.
+- **E3 is unsourced and blocked** (§8.4) — a construct problem, not a sourcing
+  one.

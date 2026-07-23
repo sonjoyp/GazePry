@@ -4,7 +4,7 @@ tags: [d7, recognition, memory, content-dependent, leakage, direction, core]
 aliases: [D7, Recognition Knowledge Leakage, Recognition Oracle, Concealed-Knowledge Leakage, Knowledge Extraction, What You Already Know]
 sources: [d7-recognition-knowledge-direction]
 reviewed: false
-updated: 2026-07-22
+updated: 2026-07-23
 ---
 
 **Recognition & concealed-knowledge leakage** is **D7**, a *new* vector beyond the
@@ -61,10 +61,14 @@ extraction attack, resting on the [[eye-movement-memory-effect]].
 - **RQ0 is the gate:** the classifier must beat a **saliency-and-position-only**
   baseline and collapse under a **shuffled familiarity-label null** — the D7
   analogue of [[reid-confound-controls]] and of D2's saliency-prior gate.
-- **Status: instrumented, not yet run** — the collection and analysis pipeline
-  exists and passes its nulls on synthetic data, but **no human D7 data has been
-  collected**; H0–H5 remain pre-registered predictions
-  ([[pilot-empirical-status]]).
+- **Status: instrumented and stimulus-complete for E1/E2, not yet run** — the
+  collection and analysis pipeline exists and passes its nulls on synthetic
+  data, but **no human D7 data has been collected**; H0–H5 remain pre-registered
+  predictions ([[pilot-empirical-status]]).
+- **E2 ships 24 real items in three classes of eight** — public figures, retail
+  bank wordmarks, and widely photographed places — each class spanning universal
+  to niche recognition. **E3 remains blocked**, for a construct reason rather
+  than a sourcing one (below).
 
 ## Instrumentation constraints (from building it)
 
@@ -85,6 +89,20 @@ Established while implementing the pipeline; see
 - **Counterbalance group is derived from the participant number**, so IDs must
   be assigned sequentially; hashed IDs give uneven groups and item identity
   starts leaking into familiarity.
+- **Arrays are class-homogeneous** (four faces, or four bank marks, never a
+  mix). A mixed array lets the probe be identified by *category* instead of by
+  familiarity and injects category-driven saliency variance; the published
+  ocular-CIT arrays are all-faces for the same reason. Because the
+  counterbalance square runs over the **global** item index, each class must be
+  a contiguous block sized a multiple of `N_GROUPS` — otherwise some group
+  cannot fill an array, and it fails *mid-session* rather than at startup.
+  See [[2026-07-23-d7-standalone-and-e2-stimuli]].
+- **E2's construct holds and E3's does not.** E1/E2 rest on the participant
+  having seen *that stimulus*, which is what the
+  [[eye-movement-memory-effect]] predicts. A topic card the participant has
+  never seen carries no episodic trace however familiar the topic is — it can
+  only carry *semantic* familiarity, a different memory system. E2's stimulus
+  gap was closable by sourcing; E3's is not.
 
 ## Related
 
@@ -105,6 +123,13 @@ Established while implementing the pipeline; see
 
 - `GazePry_D7_Recognition_Knowledge_Direction.md` (all sections); plan §4 (the
   D1–D6 table D7 extends).
+- **The D2/D4 comparison above is the wiki's own synthesis, not the document's.**
+  Since 2026-07-23 the D7 document is standalone and contrasts itself against
+  *classes* of gaze attack rather than against the sibling plans; the
+  cross-direction framing lives here and in [[leakage-vectors-d1-d6]]. Its
+  bracket citations are also **local to that file** and do not match the shared
+  numbering — see [[SCHEMA]] and
+  [[2026-07-23-d7-standalone-and-e2-stimuli]].
 
 ## Open questions
 
@@ -113,8 +138,15 @@ Established while implementing the pipeline; see
   [[nahari-2019-concealed-familiarity]]) and are one reframing away from this
   paper. Their venues are psychology/forensic, not security.
 - **E2 is much weaker than E1:** naturally acquired familiarity ("has an account
-  on this site") cannot be assigned, so the counterbalancing that protects E1 is
+  at this bank") cannot be assigned, so the counterbalancing that protects E1 is
   statistical rather than structural. This is the honest gap in the direction.
+- **Cohort-level familiarity may masquerade as individual recognition** — the
+  highest-severity threat to the E2 headline. If every participant shares a
+  nationality, the same bank marks are familiar to all of them and the
+  "individual" signal is a cohort constant. Partially mitigated by item classes
+  spanning nationality and by recruiting for spread; the free check is to report
+  per-class variance in the self-report labels as evidence the contrast varies
+  *within* the cohort.
 - **Sign instability:** familiarity produces *preference* in some paradigms and
   *avoidance* in others ([[nahari-2019-concealed-familiarity]] reports avoidance),
   and the early/late viewing windows can differ in direction. Directional

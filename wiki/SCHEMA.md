@@ -87,11 +87,21 @@ e.g. "EER ≈0.58% at a 60 s window [20]". Do not renumber; do not invent new
 numbers — a genuinely new reference is added to the source documents first, then
 the wiki reflects it (as happened for [50]–[54]).
 
-**Trap:** `raw/related-papers.txt` is a reference-collection export with its
+**Trap 1:** `raw/related-papers.txt` is a reference-collection export with its
 own independent numbering ([1]–[67]) that does **not** match the project
 numbering — never cite its bracket numbers (e.g. the five 2026-07-13 papers are
 [63]–[67] there but [50]–[54] in the plan). Papers in `raw/` that are not in
 plan §21 are cited by author-year (their `sources/` page), not by number.
+
+**Trap 2 (added 2026-07-23):** `GazePry_D7_Recognition_Knowledge_Direction.md`
+was made standalone and now carries its **own** complete bibliography,
+renumbered **[1]–[30] local to that file**, which does not match the project
+numbering. The collisions are silent rather than obviously wrong — [5] is
+Weinberg (history sniffing) in the shared scheme but Nahari et al. 2019 in the
+D7 document, [6] is Liebling & Preibusch there and Millen & Hancock here, and
+Weinberg is [16] in D7. Wiki pages keep citing the **shared** numbering;
+resolve anything traced to the D7 document by author-year and never carry its
+bracket number across. See [[d7-recognition-knowledge-direction]].
 
 ## Workflows
 

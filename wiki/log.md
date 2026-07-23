@@ -571,3 +571,70 @@ operation, a history scrub is a separate destructive decision; (2) real E2/E3 as
 are not installed, so only E1 can be run; (3) the four unverified citations from the
 prior note are unchanged; (4) run the E1 pilot at N ≈ 12 asking only *does RQ0 clear on
 real eyes?*. Prior open items otherwise unchanged.
+
+## [2026-07-23] note | D7 made standalone, and E2 stimuli sourced for real
+
+Filed [[2026-07-23-d7-standalone-and-e2-stimuli]] from a session that did two jobs:
+made `GazePry_D7_Recognition_Knowledge_Direction.md` independent of the other two
+direction plans, and closed the E2 stimulus gap the 2026-07-22 note left open.
+
+**Wiki-affecting change first.** The D7 document now carries its **own** bibliography,
+renumbered **[1]–[30] local to that file**, which does *not* match the shared project
+numbering. The collisions are silent: [5] is Weinberg (history sniffing) in the shared
+scheme but Nahari et al. 2019 in D7; [6] is Liebling & Preibusch there and Millen &
+Hancock here; Weinberg is [16] in D7. Recorded as **Trap 2** in [[SCHEMA]]'s citation
+convention, alongside the existing `raw/related-papers.txt` trap. Wiki pages keep the
+shared numbering; D7 claims resolve by author-year.
+
+**What changed in the direction.**
+
+1. **E2 is collectable.** 24 real items in three classes of eight — public figures,
+   retail bank wordmarks, widely photographed places — each class spanning universal
+   to niche recognition. All fetched and hash-verified from Wikimedia Commons under
+   free licences (the eight bank wordmarks all public domain as plain wordmarks).
+2. **Arrays are class-homogeneous**, a protocol change made on both the JS and Python
+   sides in one commit. A mixed array would let the probe be identified by *category*
+   rather than by familiarity. This exposed a non-obvious invariant: the counterbalance
+   square runs over the **global** item index, so a class must be a contiguous block
+   sized a multiple of `N_GROUPS`, or a group cannot fill an array — and it fails
+   *mid-session*, not at startup. Now checked and tested on both sides.
+3. **E3 stays blocked, and the reason changed.** The prior note treated E2 and E3 as
+   symmetric ("both need real assets"). They are not: E1/E2 rest on the participant
+   having seen *that stimulus*, which is what the [[eye-movement-memory-effect]]
+   predicts, while a topic card carries only *semantic* familiarity. E2's gap was
+   closable by sourcing; E3's is not. §5 of the note supersedes that framing.
+4. **Two dead ends worth not repeating.** Wikipedia lead images resolve well for people
+   (12/12) and places (14/14) but return **headquarters buildings** for banks; Commons
+   free-text search for topic photographs returns digitised books, not images.
+5. **A gotcha:** MediaWiki snaps `iiurlwidth` to standard buckets (720 and 900 both
+   returned 960), which broke the logo letterbox until the fit was done against what
+   arrived rather than what was requested.
+6. **Provenance is machine-enforced**: licence allow-list that refuses rather than
+   downloads, a lock file pinning resolved file + SHA-256 per asset, and generated
+   attribution. Two cohorts months apart provably saw the same stimuli, or it surfaces.
+7. **An ethics-scoping bug, fixed.** E3 shipped `t_imm` ("Visa paperwork") while both
+   the plan and the stimulus README exclude immigration status as a protected
+   characteristic. The scoping test asserts the *category* vocabulary, and `t_imm` was
+   categorised `legal`, so it passed. Replaced with `t_claims`.
+
+**Pages updated.** [[recognition-knowledge-leakage]] — status moves to "instrumented
+and stimulus-complete for E1/E2"; gains the class-homogeneity control, the
+contiguous-block invariant, the E2/E3 construct asymmetry, and cohort-level
+familiarity as the top threat to the headline. Its D2/D4 comparison is kept but now
+labelled as the *wiki's* synthesis, since the document no longer carries it.
+[[d7-recognition-knowledge-direction]] — standalone status, E2 composition, the local
+citation numbering, and the now-void plan-§21 merge item. [[SCHEMA]] — Trap 2.
+
+**Verification:** `npm test` **162 pass / 0 fail** (74 JS + 88 Python), up from 147;
+`npm run d7:verify` effect PASS + null FAIL as designed; `npm run d7:stimuli:check`
+3 sets, 64 items, 1 expected warning; `npm run d7:stimuli:verify` 24 locked assets
+present and unmodified.
+
+**Open for a human / next passes:** (1) the data-hygiene blocker is **unchanged** —
+still 44 tracked participant sessions, still the one thing gating collection; (2) E3
+unsourced by choice; (3) the four unverified citations are still unverified, now
+numbered [9], [10], [15], [17] in D7's local scheme; (4) every D7 number remains
+synthetic — the E1 pilot at N ≈ 12 still asks only *does RQ0 clear on real eyes?*;
+(5) noticed outside D7's scope: `README.md`'s header links to
+`GazePry_Direction1_ReID_Study_Protocol.md` and `GazePry_Information_Leakage_Report.md`
+at the repo root, but both live in `raw/`, so the links are dead.

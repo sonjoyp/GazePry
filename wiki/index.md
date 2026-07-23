@@ -205,6 +205,11 @@ webcam-reachable), [[zangrossi-2024-aiat-eye-movements]] [C5],
 *Dated research notes: session findings, decisions and their rationale, dead ends.
 Newest first.*
 
+- [[2026-07-23-d7-standalone-and-e2-stimuli]] — the D7 doc made standalone (and
+  the **citation-numbering trap** that creates), E2 sourced as 24 real faces /
+  bank marks / landmarks, class-homogeneous arrays and the contiguous-block
+  invariant, two sourcing dead ends, and why **E3's gap is a construct problem,
+  not a sourcing one**.
 - [[2026-07-22-d7-instrumentation-findings]] — four things building the D7 probe
   exposed: the lab I-DT threshold finds **zero** fixations on webcam noise, LOPO
   folds break the saliency control, the RQ0 gate verified by sabotage

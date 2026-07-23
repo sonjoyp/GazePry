@@ -106,7 +106,7 @@ licence and author, the SHA-256 of the bytes written, and the date.
 `ATTRIBUTION.md` is regenerated from the lock on every fetch.
 
 ```bash
-export GAZEPRY_CONTACT="you@example.edu"   # Wikimedia requires a contactable UA
+export GAZEPRY_CONTACT="skpaul@tamu.edu"   # Wikimedia requires a contactable UA
 npm run d7:stimuli:fetch
 ```
 

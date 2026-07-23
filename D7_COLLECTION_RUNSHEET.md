@@ -50,7 +50,7 @@ The task shows **real image files** from `public/stimuli/`, described by
 
 ```bash
 npm run d7:stimuli                          # design the packs; generate E1
-export GAZEPRY_CONTACT="you@example.edu"    # Wikimedia needs a contactable UA
+export GAZEPRY_CONTACT="skpaul@tamu.edu"    # Wikimedia needs a contactable UA
 npm run d7:stimuli:fetch                    # install the real E2 assets
 npm run d7:stimuli:check                    # every file present and large enough
 npm run d7:stimuli:verify                   # every file matches the lock hash

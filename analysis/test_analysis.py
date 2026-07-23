@@ -763,6 +763,18 @@ class TestStimulusPack(unittest.TestCase):
                     self.assertTrue(it.get(field),
                                     f"{exp}/{it['id']} is marked real but has no {field}")
 
+    def test_faces_carry_a_top_anchored_crop_focus(self):
+        """Faces are portrait but the tile is landscape 4:3, so a centred cover
+        crop keeps the collar and drops the face. Faces must be top-anchored;
+        nothing else should carry a focus, so other classes stay centred."""
+        for it in probe_protocol.sets()["E2"]["items"]:
+            if it.get("class") == "face":
+                self.assertEqual(it.get("focus"), "50% 0%",
+                                 f"{it['id']} (face) must be top-anchored")
+            else:
+                self.assertIsNone(it.get("focus"),
+                                  f"{it['id']} ({it.get('class')}) should not set focus")
+
     def test_grouped_arrays_never_mix_classes(self):
         """An array of one face among three bank logos would let the probe be
         picked out by category rather than by familiarity."""

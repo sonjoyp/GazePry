@@ -324,6 +324,17 @@ E1_N = 24
 # participant read the name instead of recognising the image, which is a
 # different memory system from the one the effect rests on. `name` is for the
 # questionnaire, the operator log, and the attribution file only.
+#
+# `focus` is the CSS object-position the task page applies to the cover crop.
+# The tile is landscape 4:3 (the validated geometry) but the face photos come
+# off Commons portrait, so a *centred* cover crop keeps the middle band — the
+# collar — and drops the face. Anchoring faces at the top edge keeps the head,
+# which is the whole stimulus. It is class-level rather than per-item because
+# "top" is safe for any head-and-shoulders portrait (the head is always at the
+# top); no other class needs a non-default anchor. Server-side cropping is not
+# an option: the faces are JPEGs and the stdlib decoder here is PNG-only.
+FOCUS_BY_CLASS = {"face": "50% 0%"}
+
 E2_ITEMS = [
     # (id, name, class, tier)
     ("f_obama", "Barack Obama", "face", "high"),
@@ -437,14 +448,26 @@ def build(out_dir: str, force_placeholders: bool = False) -> dict:
     os.makedirs(d, exist_ok=True)
     e2 = []
     for i, (iid, name, cls, tier) in enumerate(E2_ITEMS):
+        focus = FOCUS_BY_CLASS.get(cls)
         if iid in keep:
-            e2.append(keep[iid])
+            it = dict(keep[iid])
+            # Stamp focus onto real assets too: the fetcher preserves whatever
+            # fields it does not own, so a manifest kept from before this field
+            # existed would otherwise never gain it.
+            if focus:
+                it["focus"] = focus
+            else:
+                it.pop("focus", None)
+            e2.append(it)
             n_kept += 1
             continue
         fn = f"{iid}.png"
         write_png(os.path.join(d, fn), placeholder_mark(3001 + i * 53, (i * 0.13) % 1.0))
-        e2.append({"id": iid, "label": "", "name": name, "file": f"e2/{fn}",
-                   "kind": "brand", "class": cls, "tier": tier, "placeholder": True})
+        item = {"id": iid, "label": "", "name": name, "file": f"e2/{fn}",
+                "kind": "brand", "class": cls, "tier": tier, "placeholder": True}
+        if focus:
+            item["focus"] = focus
+        e2.append(item)
     sets["E2"] = {
         "id": "E2", "label": "Real-world familiarity (faces, banks, places)",
         "studyPhase": False, "selfReportLabels": True,
@@ -455,8 +478,16 @@ def build(out_dir: str, force_placeholders: bool = False) -> dict:
             "bank": "Retail bank and payment brands",
             "landmark": "Widely photographed places",
         },
-        "note": "Real-world familiarity the participant brought with them. Install "
-                "the real assets with scripts/fetch_stimuli.py before collecting.",
+        # Mirror the note fetch_stimuli.py would set, keyed on the same
+        # placeholder state, so re-running the generator on an already-fetched
+        # repo does not revert the note to "install before collecting" while the
+        # assets are in fact installed.
+        "note": ("Real assets installed from Wikimedia Commons by "
+                 "scripts/fetch_stimuli.py; provenance per item, credits in "
+                 "ATTRIBUTION.md."
+                 if not any(it.get("placeholder") for it in e2) else
+                 "Real-world familiarity the participant brought with them. Install "
+                 "the real assets with scripts/fetch_stimuli.py before collecting."),
         "items": e2,
     }
 

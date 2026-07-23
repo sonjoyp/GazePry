@@ -132,17 +132,27 @@ dropped straight into a 4:3 tile the browser would scale each to a different
 apparent size, which is an item-saliency difference dressed up as a stimulus.
 Marks are composited at the same margin onto the same canvas, so the only thing
 varying across a bank array is which bank it is. Photographs are installed at
-their own aspect, and the **tile letterboxes them rather than cropping them**
-(`object-fit: contain`) — a crop centred on a 960 × 1440 portrait keeps the
-collar and throws the face away, which looks like data and is not. The tile
-itself is held at 4:3 by `ProbeProtocol.layout()` for the same reason.
+their own aspect and the tile is held at 4:3 by `ProbeProtocol.layout()`, so the
+stimulus **fills the whole tile** (`object-fit: cover`) — the largest the sensor
+geometry allows.
 
-The consequence for sourcing: **a photograph far from 4:3 is shown smaller**,
-because the whole of it has to fit the tile. Prefer head-and-shoulders framing
-near 4:3 or 3:4 over a full-length shot — the face is then a much larger share
-of the tile. The per-item drawn rectangle is logged in every trial as
-`imageRect`, so how much of each AOI was actually stimulus is recoverable
-afterwards.
+The catch is the face photos: they are portrait, so a *centred* cover crop of a
+960 × 1440 portrait keeps the middle band — a collar — and throws the face away,
+which looks like data and is not. The crop is therefore anchored per item by the
+manifest **`focus`** field (a CSS `object-position`). `make_stimuli.py` sets
+`focus: "50% 0%"` on every `face` so the crop is taken from the top edge, where
+the head is; banks and landmarks carry no `focus` and stay centred. This is
+class-level because "top" is safe for any head-and-shoulders portrait. Server-side
+cropping is not an option here — the faces are JPEGs and the decoder in these
+scripts is PNG-only — so the crop happens in the browser.
+
+The consequence for sourcing: **prefer head-and-shoulders framing over a
+full-length shot**, so the face is a large share of the frame the top crop keeps.
+A distant or off-centre face will be small or clipped; the fix is a better source
+file. If one portrait genuinely needs a different anchor, change it in
+`make_stimuli.py` (the design owns `focus`, and re-running the generator restamps
+it) rather than editing the manifest by hand, which the next regenerate would
+overwrite.
 
 **Requirements for any asset:** at least 600 × 450 px (below that it is upscaled
 into the tile and loses the detail recognition depends on). The fetcher enforces

@@ -214,6 +214,20 @@ test("items are real image files, and placeholder state is honestly reported", (
   }
 });
 
+test("face items carry a top-anchored crop focus", () => {
+  // The tile is landscape 4:3 but the face photos are portrait, so a centred
+  // cover crop keeps the collar and drops the face. Faces must declare a focus
+  // that anchors the crop at the top; nothing else should, so the crop of the
+  // 4:3 assets and the landmarks stays centred.
+  for (const it of P.SETS.E2.items) {
+    if (it.class === "face") {
+      assert.equal(it.focus, "50% 0%", `${it.id} (face) must be top-anchored`);
+    } else {
+      assert.equal(it.focus, undefined, `${it.id} (${it.class}) should not set focus`);
+    }
+  }
+});
+
 test("a fetched item carries its provenance", () => {
   // Attribution is a licence obligation for the CC BY / CC BY-SA assets, and a
   // stimulus figure with no source is unreproducible. An item that claims to be

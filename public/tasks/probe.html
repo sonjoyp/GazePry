@@ -13,15 +13,15 @@
     #stage.on { display: block; }
     .ptile { position: absolute; border-radius: 14px; overflow: hidden;
       border: 1px solid var(--gp-border); background: #12151a; }
-    /* contain, never cover. The tile is 4:3 and so is every generated item and
-       every composited logo, so for those two the result is identical — but the
-       E2 photographs come off Commons at their own aspect (a 960x1440 portrait,
-       say), and cover crops such an image to the middle horizontal band, which
-       is the participant looking at a chin and a shirt collar with the face
-       gone. A cropped-away stimulus is unrecoverable and looks like data, so the
-       tile letterboxes instead. The letterbox bars are logged per trial as
-       `imageRect` — see drawnRect(). */
-    .ptile img { width: 100%; height: 100%; display: block; object-fit: contain; }
+    /* cover, so the stimulus fills the whole 4:3 tile — the biggest the sensor
+       geometry allows. For the 4:3 assets (E1 fractals, the composited bank
+       marks) cover and contain are identical, no crop. For the E2 portraits,
+       which come off Commons tall (960x1440), a *centred* cover crop showed the
+       middle band — a chin and a shirt collar with the face gone. The fix is not
+       to shrink the face by letterboxing it, but to move the crop: object-fit
+       is set per tile from the item's `focus` (object-position), which
+       make_stimuli.py anchors on the head for faces. See renderArray(). */
+    .ptile img { width: 100%; height: 100%; display: block; object-fit: cover; }
     .ptile .plabel { position: absolute; left: 0; right: 0; bottom: 0;
       text-align: center; font: 600 20px/2.2 system-ui, sans-serif;
       color: #e8ecf1; background: rgba(0,0,0,.45); }
@@ -195,6 +195,10 @@
       el.src = "../stimuli/" + item.file;
       el.alt = "";
       el.draggable = false;
+      // Anchor the cover crop from the item's manifest focus (faces are
+      // top-anchored so the head, not the collar, survives the crop). Absent =
+      // centred, which is right for the 4:3 assets and for landmarks.
+      el.style.objectPosition = item.focus || "50% 50%";
       // A stimulus that fails to load would silently become a blank tile and
       // quietly corrupt that trial, so make it loud instead.
       el.onerror = function () {
@@ -208,20 +212,15 @@
       if (missingAssets.indexOf(file) < 0) missingAssets.push(file);
     }
 
-    // Natural pixel size per item id, measured once before capture starts.
-    // The tile letterboxes anything that is not 4:3, so the drawn image is a
-    // sub-rectangle of the AOI, and an AOI the analysis believes is stimulus
-    // all the way to its edges is an AOI it will score wrongly.
-    var naturalSize = {};
-
+    // Load every stimulus once before capture so a broken asset becomes a
+    // refusal at Begin, not a blank tile discovered at the end of a session that
+    // then has to be thrown away. cover fills the tile, so there is no natural
+    // size to measure — success/failure is all we need here.
     function preload(items) {
       return Promise.all(items.map(function (it) {
         return new Promise(function (resolve) {
           var im = new Image();
-          im.onload = function () {
-            naturalSize[it.id] = { w: im.naturalWidth, h: im.naturalHeight };
-            resolve();
-          };
+          im.onload = function () { resolve(); };
           im.onerror = function () { noteMissing(it.file); resolve(); };
           im.src = "../stimuli/" + it.file;
         });
@@ -235,18 +234,6 @@
       built.trials.forEach(function (t) { t.slots.forEach(function (s) { add(s.item); }); });
       if (includeStudy) P.studySet(plan).forEach(add);
       return out;
-    }
-
-    // Where object-fit: contain actually draws the image inside tile rect `r`.
-    // Returns null rather than guessing when the natural size is unknown, which
-    // only happens for an asset that failed to load and is reported separately.
-    function drawnRect(itemId, r) {
-      var n = naturalSize[itemId];
-      if (!n || !n.w || !n.h) return null;
-      var s = Math.min(r.w / n.w, r.h / n.h);
-      var w = Math.round(n.w * s), h = Math.round(n.h * s);
-      return { x: r.x + Math.round((r.w - w) / 2), y: r.y + Math.round((r.h - h) / 2),
-        w: w, h: h };
     }
 
     function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -269,9 +256,10 @@
           d.appendChild(lb);
         }
         stage.appendChild(d);
+        // cover fills the tile, so the stimulus occupies the whole AOI rect —
+        // there is no separate drawn sub-rectangle to record.
         aois.push({ slot: i, itemId: sl.itemId, familiar: sl.familiar,
-          rect: { x: r.x, y: r.y, w: r.w, h: r.h },
-          imageRect: drawnRect(sl.itemId, r) });
+          rect: { x: r.x, y: r.y, w: r.w, h: r.h } });
       });
       return aois;
     }
@@ -348,10 +336,9 @@
       var awareness = el("aware").value;
       var delay = el("exp").value === "E1" ? el("delay").value : null;
 
-      // Load every stimulus before the participant sees anything. This measures
-      // the natural sizes drawnRect() needs, and it turns a broken asset into a
-      // refusal here instead of blank tiles discovered at the end of a session
-      // that then has to be thrown away.
+      // Load every stimulus before the participant sees anything, so a broken
+      // asset becomes a refusal here instead of blank tiles discovered at the
+      // end of a session that then has to be thrown away.
       el("begin").disabled = true;
       await preload(itemsOf(built, built.experiment === "E1" && delay === "immediate", plan));
       if (missingAssets.length) {

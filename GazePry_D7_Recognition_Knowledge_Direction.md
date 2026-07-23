@@ -345,12 +345,17 @@ comparable to anything published.
 
 **Tile shape is part of the geometry, not a detail of styling.** The tile is held
 at the 4:3 aspect of the stimulus canvas and grown only until it hits the
-limiting dimension; surplus viewport becomes outer margin, never a wider gap. A
-tile of some other shape can only be filled by cropping the stimulus, and a
-centre crop of a portrait photograph removes the face — the participant then
-free-views a collar for 4000 ms and the trial scores as an ordinary null. Off-4:3
-images are letterboxed inside the tile, and the drawn rectangle is recorded per
-trial (`aois[].imageRect`) alongside the AOI rectangle itself.
+limiting dimension; surplus viewport becomes outer margin, never a wider gap. The
+stimulus fills the whole tile (`object-fit: cover`), which is the largest the
+sensor geometry allows. The face photographs, however, are portrait, so a
+*centred* cover crop of one keeps its middle band — a collar — and drops the
+face, and the participant then free-views a collar for 4000 ms while the trial
+scores as an ordinary null. The crop anchor is therefore set per item from the
+manifest `focus` field (`make_stimuli.py` anchors faces at the top edge so the
+head survives); the 4:3 assets and the landmarks stay centred, where there is
+nothing to lose. Server-side cropping is not available — the faces are JPEGs and
+the stdlib image code is PNG-only — so the crop is done by the browser at
+display time.
 
 ### 6.3 Trial structure
 
